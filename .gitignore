@@ -4,3 +4,6 @@ config/connections/
 .env
 Thumbs.db
 .DS_Store
+input.txt
+output_errors.txt
+output_partial.txt
