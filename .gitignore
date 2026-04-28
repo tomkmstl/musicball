@@ -1,0 +1,6 @@
+config/spotify_config.php
+config/connections/
+*.log
+.env
+Thumbs.db
+.DS_Store

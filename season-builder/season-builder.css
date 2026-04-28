@@ -1,0 +1,234 @@
+/* Season Builder-only styles */
+
+.voter-name,
+.submission-summary-label {
+    color: var(--muted);
+}
+
+.voters-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--brand);
+}
+
+.cat,
+.q2-group,
+.q3-group,
+.choice-group {
+    margin-bottom: 14px;
+}
+
+.cat {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.cat-main {
+    flex: 1 1 auto;
+}
+
+.cat-title,
+.choice-heading,
+.q2-group strong,
+.q3-group strong {
+    margin: 0 0 4px;
+    color: var(--text);
+}
+
+.cat-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.cat-desc,
+.choice-values {
+    font-size: 0.95rem;
+    color: var(--muted);
+}
+
+.choice-heading {
+    margin-left: 12px;
+    font-size: 1.65rem;
+}
+
+.choice-group,
+.cat-choice,
+.q2-group,
+.q3-group {
+    margin-left: 12px;
+}
+
+.choice-values {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+
+.cat-choice {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.submission-summary {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr) minmax(160px, 220px);
+    gap: 20px;
+    align-items: start;
+    margin: 18px 0 26px;
+    padding: 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+}
+
+.mb-progress-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mb-progress-chart {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    flex: 0 0 100px;
+    background:
+        conic-gradient(#3dacec 0 var(--mb-progress), #ec3d6680 var(--mb-progress) 100%);
+    position: relative;
+}
+
+.mb-progress-chart::after {
+    content: '';
+    position: absolute;
+    inset: 14px;
+    border-radius: 50%;
+    background: var(--surface-2);
+}
+
+.submission-summary-count {
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.submission-summary-voters {
+    display: grid;
+    gap: 16px;
+    padding-left: 16px;
+    border-left: 1px solid var(--line);
+}
+
+.submission-summary-voter-group {
+    display: grid;
+    gap: 8px;
+}
+
+.choice-page-intro h3,
+.questions-page-intro h3 {
+    margin: 0;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--muted);
+}
+
+.choice-page-intro,
+.questions-page-intro {
+    display: flex;
+    flex-direction: column;
+}
+
+.choice-page-intro h3,
+.questions-page-intro h3 {
+    margin-top: -8px;
+    margin-bottom: 18px;
+}
+
+.choice-values,
+.voter-name {
+    color: var(--text);
+}
+
+.choice-value-item {
+    margin-left: 20px;
+}
+
+.choice-buttons-centered {
+    justify-content: center;
+    margin-top: 24px;
+}
+
+@media (max-width: 700px) {
+    .submission-summary {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+        justify-items: center;
+        text-align: center;
+    }
+
+    .submission-summary-main {
+        width: 100%;
+        justify-items: center;
+    }
+
+    .submission-summary-chart {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .submission-summary-text {
+        width: 100%;
+        justify-items: center;
+        text-align: center;
+    }
+
+    .submission-summary-voters {
+        width: 100%;
+        padding-left: 0;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+        padding-top: 16px;
+    }
+
+    .choice-heading {
+        margin-left: 0;
+        font-size: 1.35rem;
+    }
+
+    .choice-group,
+    .cat-choice,
+    .q2-group,
+    .q3-group {
+        margin-left: 0;
+    }
+}
+
+.admin-schedule-field.is-locked .admin-input,
+.admin-input.is-locked {
+    background: color-mix(in srgb, var(--surface) 82%, #808080 18%);
+    color: var(--muted);
+    border-color: var(--line);
+    cursor: not-allowed;
+    opacity: 1;
+}
+
+.admin-schedule-field.is-invalid .admin-input,
+.admin-input.is-invalid {
+    border-color: #d64545;
+    box-shadow: 0 0 0 2px rgba(214, 69, 69, 0.15);
+}
+
+.admin-round-card.has-invalid-schedule {
+    border: 1px solid rgba(214, 69, 69, 0.45);
+    background: color-mix(in srgb, var(--surface-2) 90%, #d64545 10%);
+}
