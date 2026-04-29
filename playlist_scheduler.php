@@ -16,7 +16,7 @@ if (!isset($_SERVER['DOCUMENT_ROOT']) || trim((string)$_SERVER['DOCUMENT_ROOT'])
 date_default_timezone_set('UTC');
 
 require_once __DIR__ . '/ml_config.php';
-require_once __DIR__ . '/ml_gameplay.php';
+require_once __DIR__ . '/gameplay/bootstrap.php';
 require_once __DIR__ . '/spotify_client.php';
 
 function mlSchedulerLog(string $message): void

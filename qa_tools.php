@@ -1,7 +1,7 @@
 <?php
 require_once 'ml_session_boot.php';
 require_once 'ml_config.php';
-require_once 'ml_gameplay.php';
+require_once __DIR__ . '/gameplay/bootstrap.php';
 
 $currentUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : 0;
 if (!mlIsAdminUserId($pdo, $currentUserId)) {

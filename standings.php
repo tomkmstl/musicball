@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/ml_gameplay.php';
+require_once __DIR__ . '/gameplay/bootstrap.php';
 
 $currentUser = mlRequireAuthenticatedUser($pdo);
 $currentPage = 'standings';

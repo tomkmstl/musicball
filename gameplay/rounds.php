@@ -1,0 +1,338 @@
+<?php
+// gameplay/rounds.php
+// Round state, presentation, and progress helpers.
+
+function mlRoundReadyForPlaylistGeneration(array $round, array $playlistRecord, DateTimeImmutable $now, int $songSubmissionCount, int $expectedPlayers, string $playlistBuildMode): bool {
+    if (!empty($playlistRecord)) {
+        return false;
+    }
+
+    if ($songSubmissionCount <= 0) {
+        return false;
+    }
+
+    $songsDue = mlCreateUtcDate(isset($round['SongsDue']) ? $round['SongsDue'] : null);
+    if (!$songsDue instanceof DateTimeImmutable) {
+        return false;
+    }
+
+    if ($now <= $songsDue) {
+        return false;
+    }
+
+    if ($playlistBuildMode === 'wait') {
+        return $expectedPlayers > 0 && $songSubmissionCount >= $expectedPlayers;
+    }
+
+    return true;
+}
+function mlCanChooseSongForRound(array $round, array $playlistRecord, DateTimeImmutable $now, string $playlistBuildMode, int $songSubmissionCount = 0, int $expectedPlayers = 0): bool {
+    if (!empty($playlistRecord)) {
+        return false;
+    }
+
+    $songsDue = mlCreateUtcDate(isset($round['SongsDue']) ? $round['SongsDue'] : null);
+    if (!$songsDue instanceof DateTimeImmutable) {
+        return true;
+    }
+
+    if ($now <= $songsDue) {
+        return true;
+    }
+
+    if ($playlistBuildMode === 'wait') {
+        return $expectedPlayers > 0 && $songSubmissionCount < $expectedPlayers;
+    }
+
+    return false;
+}
+function mlCanManuallyGeneratePlaylist(array $round, array $playlistRecord, DateTimeImmutable $now, int $songSubmissionCount = 0, int $expectedPlayers = 0, string $playlistBuildMode = 'due'): bool {
+    if (!empty($playlistRecord)) {
+        return false;
+    }
+
+    if ($songSubmissionCount <= 0) {
+        return false;
+    }
+
+    $songsDue = mlCreateUtcDate(isset($round['SongsDue']) ? $round['SongsDue'] : null);
+    $allSubmitted = ($expectedPlayers > 0 && $songSubmissionCount >= $expectedPlayers);
+
+    if ($allSubmitted) {
+        return true;
+    }
+
+    if (!$songsDue instanceof DateTimeImmutable) {
+        return false;
+    }
+
+    return $now > $songsDue;
+}
+function mlRoundEligibleForAutomaticPlaylistBuild(array $round, array $playlistRecord, int $songSubmissionCount, int $expectedPlayers, DateTimeImmutable $now, string $playlistBuildMode): bool {
+    return mlRoundReadyForPlaylistGeneration($round, $playlistRecord, $now, $songSubmissionCount, $expectedPlayers, $playlistBuildMode);
+}
+function mlResolveRoundState(array $round, DateTimeImmutable $now, ?DateTimeImmutable $previousVotesDue, int $expectedPlayers, int $songSubmissionCount, int $voteSubmissionCount, array $playlistRecord = [], string $playlistBuildMode = 'due'): array {
+    $songsDue = mlCreateUtcDate(isset($round['SongsDue']) ? $round['SongsDue'] : null);
+    $votesDue = mlCreateUtcDate(isset($round['VotesDue']) ? $round['VotesDue'] : null);
+    $hasPlaylist = !empty($playlistRecord) && trim((string)($playlistRecord['SpotifyPlaylistURL'] ?? $playlistRecord['SpotifyPlaylistID'] ?? '')) !== '';
+
+    if ($previousVotesDue instanceof DateTimeImmutable && $now <= $previousVotesDue) {
+        $roundState = 'upcoming';
+    } elseif ($hasPlaylist) {
+        if ($votesDue instanceof DateTimeImmutable && $now > $votesDue) {
+            $roundState = 'closed';
+        } else {
+            $roundState = 'voting';
+        }
+    } else {
+        $roundState = 'submission';
+    }
+
+    $statusMap = [
+        'upcoming' => ['Upcoming', 'pill-neutral'],
+        'submission' => ['Choose a Song Stage', 'pill-open'],
+        'voting' => ['Voting Stage', 'pill-open'],
+        'closed' => ['Round Closed', 'pill-complete'],
+    ];
+
+    $status = $statusMap[$roundState] ?? $statusMap['upcoming'];
+
+    return [
+        'round_state' => $roundState,
+        'status_key' => $roundState,
+        'status_label' => $status[0],
+        'status_class' => $status[1],
+        'can_choose_song' => $roundState === 'submission' && mlCanChooseSongForRound($round, $playlistRecord, $now, $playlistBuildMode, $songSubmissionCount, $expectedPlayers),
+        'can_vote' => $roundState === 'voting',
+        'can_view_playlist' => in_array($roundState, ['voting', 'closed'], true) && $hasPlaylist,
+        'can_manual_generate_playlist' => false,
+        'has_playlist' => $hasPlaylist,
+        'songs_due_utc' => isset($round['SongsDue']) ? (string)$round['SongsDue'] : '',
+        'votes_due_utc' => isset($round['VotesDue']) ? (string)$round['VotesDue'] : '',
+        'songs_due_label' => mlFormatRoundDate(isset($round['SongsDue']) ? $round['SongsDue'] : null),
+        'votes_due_label' => mlFormatRoundDate(isset($round['VotesDue']) ? $round['VotesDue'] : null),
+        'submission_closed' => ($roundState === 'submission' && !mlCanChooseSongForRound($round, $playlistRecord, $now, $playlistBuildMode, $songSubmissionCount, $expectedPlayers)),
+    ];
+}
+function mlComputeRoundPresentation(PDO $pdo, array $rounds, int $currentUserId): array {
+    static $cache = [];
+
+    $cacheRoundParts = [];
+    foreach ($rounds as $round) {
+        $cacheRoundParts[] = (int)($round['SeasonRoundID'] ?? 0)
+            . ':'
+            . (string)($round['SongsDue'] ?? '')
+            . ':'
+            . (string)($round['VotesDue'] ?? '');
+    }
+
+    $cacheKey = $currentUserId . '|' . implode('|', $cacheRoundParts);
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+
+    $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+    $resolved = [];
+    $previousVotesDue = null;
+    $expectedPlayers = mlGetExpectedPlayerCount($pdo);
+    $playlistBuildMode = mlGetPlaylistBuildMode($pdo);
+    $allUsers = null;
+
+    $roundIds = array_map(static function ($round) {
+        return (int)$round['SeasonRoundID'];
+    }, $rounds);
+    $playlistRecords = mlFetchPlaylistRecordsForRounds($pdo, $roundIds);
+
+    $currentRoundIndex = null;
+
+    foreach ($rounds as $index => $round) {
+        $seasonRoundId = (int)$round['SeasonRoundID'];
+        $playlistRecord = $playlistRecords[$seasonRoundId] ?? [];
+        $votesDue = mlCreateUtcDate(isset($round['VotesDue']) ? $round['VotesDue'] : null);
+        $hasPlaylist = !empty($playlistRecord) && trim((string)($playlistRecord['SpotifyPlaylistURL'] ?? $playlistRecord['SpotifyPlaylistID'] ?? '')) !== '';
+
+        if ($previousVotesDue instanceof DateTimeImmutable && $now <= $previousVotesDue) {
+            $roundState = 'upcoming';
+        } elseif ($votesDue instanceof DateTimeImmutable && $now > $votesDue) {
+            $roundState = 'closed';
+        } else {
+            $roundState = $hasPlaylist ? 'voting' : 'submission';
+            if ($currentRoundIndex === null) {
+                $currentRoundIndex = $index;
+            }
+        }
+
+        $statusMap = [
+            'upcoming' => ['Upcoming', 'pill-neutral'],
+            'submission' => ['Choose a Song Stage', 'pill-open'],
+            'voting' => ['Voting Stage', 'pill-open'],
+            'closed' => ['Round Closed', 'pill-complete'],
+        ];
+        $status = $statusMap[$roundState] ?? $statusMap['upcoming'];
+
+        $round['expected_players'] = $expectedPlayers;
+        $round['song_submission_count'] = 0;
+        $round['vote_submission_count'] = 0;
+        $round['playlist_record'] = $playlistRecord;
+        $round['playlist_url'] = (string)($playlistRecord['SpotifyPlaylistURL'] ?? '');
+        $round['has_playlist'] = $hasPlaylist;
+        $round['song_draft'] = [];
+        $round['vote_draft'] = [];
+        $round['song_saved'] = false;
+        $round['vote_saved'] = false;
+        $round['vote_submitted'] = false;
+        $round['progress_completed_users'] = [];
+        $round['progress_pending_users'] = [];
+        $round['progress_completed_names'] = 'None';
+        $round['progress_pending_names'] = 'None';
+        $round['round_state'] = $roundState;
+        $round['status_key'] = $roundState;
+        $round['status_label'] = $status[0];
+        $round['status_class'] = $status[1];
+        $round['can_choose_song'] = false;
+        $round['can_vote'] = false;
+        $round['can_view_playlist'] = in_array($roundState, ['voting', 'closed'], true) && $hasPlaylist;
+        $round['can_manual_generate_playlist'] = false;
+        $round['songs_due_utc'] = isset($round['SongsDue']) ? (string)$round['SongsDue'] : '';
+        $round['votes_due_utc'] = isset($round['VotesDue']) ? (string)$round['VotesDue'] : '';
+        $round['songs_due_label'] = mlFormatRoundDate(isset($round['SongsDue']) ? $round['SongsDue'] : null);
+        $round['votes_due_label'] = mlFormatRoundDate(isset($round['VotesDue']) ? $round['VotesDue'] : null);
+        $round['submission_closed'] = false;
+
+        $resolved[] = $round;
+
+        if ($votesDue instanceof DateTimeImmutable) {
+            $previousVotesDue = $votesDue;
+        }
+    }
+
+    foreach ($resolved as $index => $resolvedRound) {
+        $seasonRoundId = (int)$resolvedRound['SeasonRoundID'];
+        $seasonId = (int)$resolvedRound['SeasonID'];
+        $playlistRecord = $resolvedRound['playlist_record'] ?? [];
+        $roundState = (string)($resolvedRound['round_state'] ?? '');
+
+        if ($roundState === 'submission') {
+            $songSubmissionCount = mlFetchSongSubmissionCount($pdo, $seasonRoundId);
+            $resolvedRound['song_submission_count'] = $songSubmissionCount;
+            $resolvedRound['can_choose_song'] = mlCanChooseSongForRound($resolvedRound, $playlistRecord, $now, $playlistBuildMode, $songSubmissionCount, $expectedPlayers);
+            $resolvedRound['submission_closed'] = !$resolvedRound['can_choose_song'];
+
+            $songDraft = mlGetRoundSongDraft($pdo, $currentUserId, $seasonId, $seasonRoundId);
+            $resolvedRound['song_draft'] = $songDraft;
+            $resolvedRound['song_saved'] = !empty($songDraft);
+
+            if ($index === $currentRoundIndex) {
+                $resolvedRound['can_manual_generate_playlist'] = mlCanManuallyGeneratePlaylist($resolvedRound, $playlistRecord, $now, $songSubmissionCount, $expectedPlayers, $playlistBuildMode);
+
+                $allUsers = $allUsers ?? mlLoadAllUsers($pdo);
+                $progress = mlBuildRoundProgressUsers($pdo, $seasonRoundId, 'submission', $allUsers);
+                $resolvedRound['progress_completed_users'] = $progress['completed'];
+                $resolvedRound['progress_pending_users'] = $progress['pending'];
+                $resolvedRound['progress_completed_names'] = $progress['completed_names'];
+                $resolvedRound['progress_pending_names'] = $progress['pending_names'];
+            }
+        } elseif ($roundState === 'upcoming') {
+            $resolvedRound['can_choose_song'] = true;
+            $songDraft = mlGetRoundSongDraft($pdo, $currentUserId, $seasonId, $seasonRoundId);
+            $resolvedRound['song_draft'] = $songDraft;
+            $resolvedRound['song_saved'] = !empty($songDraft);
+        } elseif ($index === $currentRoundIndex && $roundState === 'voting') {
+            $voteSubmissionCount = mlFetchVoteSubmissionCount($pdo, $seasonRoundId);
+            $resolvedRound['vote_submission_count'] = $voteSubmissionCount;
+            $resolvedRound['can_vote'] = true;
+            $voteDraft = mlGetRoundVoteDraft($currentUserId, $seasonId, $seasonRoundId);
+            $resolvedRound['vote_draft'] = $voteDraft;
+            $resolvedRound['vote_saved'] = !empty($voteDraft);
+            $resolvedRound['vote_submitted'] = mlFetchCurrentUserVoteSubmission($pdo, $seasonRoundId, $currentUserId) || !empty($voteDraft['submitted_at']);
+
+            $allUsers = $allUsers ?? mlLoadAllUsers($pdo);
+            $progress = mlBuildRoundProgressUsers($pdo, $seasonRoundId, 'voting', $allUsers);
+            $resolvedRound['progress_completed_users'] = $progress['completed'];
+            $resolvedRound['progress_pending_users'] = $progress['pending'];
+            $resolvedRound['progress_completed_names'] = $progress['completed_names'];
+            $resolvedRound['progress_pending_names'] = $progress['pending_names'];
+        }
+
+        $resolved[$index] = $resolvedRound;
+    }
+
+    $cache[$cacheKey] = $resolved;
+    return $resolved;
+}
+function mlLoadAllUsers(PDO $pdo): array {
+    static $cache = null;
+
+    if ($cache !== null) {
+        return $cache;
+    }
+
+    $select = 'SELECT UserID, UserName';
+    if (mlUsersHasProfileImageColumn($pdo)) {
+        $select .= ', ProfileImageFilename';
+    }
+    $select .= ' FROM ML_Users ORDER BY UserID ASC';
+
+    $stmt = $pdo->query($select);
+    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($users as &$user) {
+        $user['profile_image_path'] = mlGetUserProfilePath((int)$user['UserID'], $user['ProfileImageFilename'] ?? null);
+    }
+    unset($user);
+
+    $cache = $users;
+    return $cache;
+}
+function mlFetchRoundCompletedUserIds(PDO $pdo, int $seasonRoundId, string $mode): array {
+    static $cache = [];
+    $cacheKey = $mode . ':' . $seasonRoundId;
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
+    }
+
+    $ids = [];
+    try {
+        if ($mode === 'submission' && mlTableExists($pdo, 'ML_RoundSongs')) {
+            $stmt = $pdo->prepare('SELECT DISTINCT UserID FROM ML_RoundSongs WHERE SeasonRoundID = ? ORDER BY UserID ASC');
+            $stmt->execute([$seasonRoundId]);
+            $ids = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+        } elseif ($mode === 'voting' && mlTableExists($pdo, 'ML_RoundVoteSubmissions')) {
+            $stmt = $pdo->prepare('SELECT DISTINCT UserID FROM ML_RoundVoteSubmissions WHERE SeasonRoundID = ? ORDER BY UserID ASC');
+            $stmt->execute([$seasonRoundId]);
+            $ids = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+        }
+    } catch (Throwable $e) {
+        $ids = [];
+    }
+
+    $cache[$cacheKey] = $ids;
+    return $ids;
+}
+function mlBuildRoundProgressUsers(PDO $pdo, int $seasonRoundId, string $mode, array $allUsers): array {
+    $completedIds = mlFetchRoundCompletedUserIds($pdo, $seasonRoundId, $mode);
+    $completedLookup = array_fill_keys($completedIds, true);
+    $completedUsers = [];
+    $pendingUsers = [];
+
+    foreach ($allUsers as $user) {
+        $row = [
+            'user_id' => (int)$user['UserID'],
+            'user_name' => (string)$user['UserName'],
+            'profile_image_path' => (string)($user['profile_image_path'] ?? mlGetUserProfilePath((int)$user['UserID'], $user['ProfileImageFilename'] ?? null)),
+        ];
+
+        if (isset($completedLookup[$row['user_id']])) {
+            $completedUsers[] = $row;
+        } else {
+            $pendingUsers[] = $row;
+        }
+    }
+
+    return [
+        'completed' => $completedUsers,
+        'pending' => $pendingUsers,
+        'completed_names' => !empty($completedUsers) ? implode(', ', array_map(static fn($u) => $u['user_name'], $completedUsers)) : 'None',
+        'pending_names' => !empty($pendingUsers) ? implode(', ', array_map(static fn($u) => $u['user_name'], $pendingUsers)) : 'None',
+    ];
+}

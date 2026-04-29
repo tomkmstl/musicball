@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/ml_gameplay.php';
+require_once __DIR__ . '/gameplay/bootstrap.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 

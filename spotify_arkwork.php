@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/spotify_client.php';
-require_once __DIR__ . '/ml_gameplay.php';
+require_once __DIR__ . '/gameplay/bootstrap.php';
 
 header('Content-Type: text/plain; charset=UTF-8');
 
