@@ -1,5 +1,6 @@
 config/spotify_config.php
 config/connections/
+_sessions/
 *.log
 .env
 Thumbs.db

@@ -1,18 +1,42 @@
 <?php
 // ml_session_boot.php
 // Centralized session setup for Musicball.
-// Makes sessions last longer so users don’t get kicked out constantly.
 
-$lifetime = 60 * 60 * 24 * 14; // 14 days in seconds
+$lifetime = 60 * 60 * 24 * 14; // 14 days
 
-// Let PHP know sessions can live this long on the server side
+if (PHP_OS_FAMILY === 'Windows') {
+    $sessionPath = 'C:\\laragon\\data\\musicball_sessions';
+} else {
+    $sessionPath = '/var/www/musicball_private/sessions';
+}
+
+if (!is_dir($sessionPath)) {
+    mkdir($sessionPath, 0755, true);
+}
+
+if (!is_writable($sessionPath)) {
+    error_log("Session path not writable: " . $sessionPath);
+} else {
+    ini_set('session.save_path', $sessionPath);
+}
+
 ini_set('session.gc_maxlifetime', $lifetime);
+ini_set('session.cookie_lifetime', $lifetime);
+ini_set('session.use_only_cookies', '1');
+ini_set('session.use_strict_mode', '1');
 
-// Make the session cookie itself last this long in the browser
-// (path '/' so it works across the whole site)
-session_set_cookie_params($lifetime, '/');
+$isSecure =
+    (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+    (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
 
-// Start the session if it isn't already active
+session_set_cookie_params([
+    'lifetime' => $lifetime,
+    'path' => '/',
+    'secure' => $isSecure,
+    'httponly' => true,
+    'samesite' => 'Lax',
+]);
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

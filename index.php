@@ -44,8 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ((string)$user['Passcode'] !== $passcode) {
             $loginError = 'Incorrect passcode.';
         } else {
-            $_SESSION['UserID'] = (int)$user['UserID'];
-            $_SESSION['UserName'] = $user['UserName'];
+			session_regenerate_id(true);
+
+			$_SESSION['UserID'] = (int)$user['UserID'];
+			$_SESSION['UserName'] = $user['UserName'];
 
             unset(
                 $_SESSION['ml_user_id'],
