@@ -2,8 +2,8 @@
 // gameplay/bootstrap.php
 // Gameplay compatibility bootstrap. Pages should include this file instead of individual gameplay modules.
 
-require_once __DIR__ . '/../ml_session_boot.php';
-require_once __DIR__ . '/../ml_config.php';
+require_once __DIR__ . '/../session_boot.php';
+require_once __DIR__ . '/../config.php';
 
 require_once __DIR__ . '/schema.php';
 require_once __DIR__ . '/auth.php';

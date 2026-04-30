@@ -31,4 +31,4 @@ $mlThemeColor = mlGetThemeMode() === 'light' ? '#f4f7fb' : '#000614';
 window.ML_DEV_MODE = <?= $mlDevModeEnabled ? 'true' : 'false' ?>;
 window.ML_SW_URL = <?= json_encode(mlAssetUrl('service-worker.js') . ($mlDevModeEnabled ? '&dev_mode=1' : '')) ?>;
 </script>
-<script src="<?= htmlspecialchars(mlAssetUrl('pwa.js')) ?>" defer></script>
+<script src="<?= htmlspecialchars(mlAssetUrl('assets/js/pwa.js')) ?>" defer></script>

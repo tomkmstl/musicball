@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/gameplay/bootstrap.php';
-require_once __DIR__ . '/spotify_client.php';
+require_once __DIR__ . '/integrations/spotify/client.php';
 
 $currentUser = mlRequireAuthenticatedUser($pdo);
 $currentUserId = (int)$currentUser['UserID'];
@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', function () {
         activeRequest += 1;
         var requestId = activeRequest;
         setStatus('Searching Spotify...', 'muted');
-        fetch('spotify_search.php?q=' + encodeURIComponent(query), { credentials: 'same-origin' })
+        fetch('integrations/spotify/search.php?q=' + encodeURIComponent(query), { credentials: 'same-origin' })
             .then(function (response) { return response.json().then(function (data) { return { status: response.status, data: data }; }); })
             .then(function (payload) {
                 if (requestId !== activeRequest) { return; }

@@ -115,7 +115,7 @@ function mlSaveRoundVoteDraft(int $userId, int $seasonId, int $seasonRoundId, ar
     $pdo = mlGameplayPdo();
 
     if ($pdo && mlTableExists($pdo, 'ML_RoundVotes')) {
-        require_once __DIR__ . '/ml_discord.php';
+        require_once __DIR__ . '/../integrations/discord/discord.php';
         try {
             $entries = isset($votePayload['entries']) && is_array($votePayload['entries']) ? $votePayload['entries'] : [];
             $pdo->beginTransaction();

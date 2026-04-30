@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var requestId = activeRequest;
         setStatus('Searching Spotify...', 'muted');
 
-        fetch('spotify_search.php?q=' + encodeURIComponent(query), {
+        fetch('integrations/spotify/search.php?q=' + encodeURIComponent(query), {
             credentials: 'same-origin'
         })
             .then(function (response) {

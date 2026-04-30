@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/ml_config.php';
+require_once dirname(__DIR__, 2) . '/config.php';
 
 function mlSpotifyConfig(): array
 {
@@ -23,7 +23,7 @@ function mlSpotifyConfig(): array
         ],
     ];
 
-    $configFile = __DIR__ . '/config/spotify_config.php';
+    $configFile = dirname(__DIR__, 2) . '/config/spotify_config.php';
     if (is_file($configFile)) {
         $loaded = require $configFile;
         if (is_array($loaded)) {

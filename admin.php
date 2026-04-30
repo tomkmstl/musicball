@@ -1,10 +1,10 @@
 <?php
-require_once 'ml_session_boot.php';
-require_once 'ml_config.php';
-require_once __DIR__ . '/season-builder/ml_season_builder.php';
+require_once 'session_boot.php';
+require_once 'config.php';
+require_once __DIR__ . '/season-builder/sb_season_builder.php';
 require_once __DIR__ . '/gameplay/bootstrap.php';
-require_once 'spotify_client.php';
-require_once 'ml_discord.php';
+require_once __DIR__ . '/integrations/spotify/client.php';
+require_once __DIR__ . '/integrations/discord/discord.php';
 
 $currentUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : 0;
 if (!mlIsAdminUserId($pdo, $currentUserId)) {
@@ -645,9 +645,9 @@ $nextSeasonDefaultName = 's' . $nextSeasonId;
                         <?php endif; ?>
 
                         <div class="settings-spotify-actions">
-                            <a href="<?= htmlspecialchars(mlUrl('spotify_connect.php')) ?>" class="button-primary"><?= $spotifyConnection['is_connected'] ? 'Reconnect Spotify' : 'Connect Spotify' ?></a>
+                            <a href="<?= htmlspecialchars(mlUrl('integrations/spotify/connect.php')) ?>" class="button-primary"><?= $spotifyConnection['is_connected'] ? 'Reconnect Spotify' : 'Connect Spotify' ?></a>
                             <?php if ($spotifyConnection['is_connected']): ?>
-                                <a href="<?= htmlspecialchars(mlUrl('spotify_disconnect.php')) ?>" class="button-secondary">Disconnect Spotify</a>
+                                <a href="<?= htmlspecialchars(mlUrl('integrations/spotify/disconnect.php')) ?>" class="button-secondary">Disconnect Spotify</a>
                             <?php endif; ?>
                         </div>
                         <p>This account stays separate from player settings and is controlled only here in Admin.</p>

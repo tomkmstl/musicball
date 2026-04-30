@@ -137,7 +137,7 @@ foreach ($ballot as $entry) {
             <div class="status-banner error"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
 
-        <form method="post" action="round_vote.php?season_round_id=<?= (int)$seasonRoundId ?>" class="vote-form-shell vote-form-shell-questions" id="round-vote-form">
+        <form method="post" action="vote.php?season_round_id=<?= (int)$seasonRoundId ?>" class="vote-form-shell vote-form-shell-questions" id="round-vote-form">
             <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
 
             <div class="step-header vote-step-header">

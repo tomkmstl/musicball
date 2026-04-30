@@ -1,7 +1,7 @@
 <?php
 // questions.php
-require_once __DIR__ . '/../ml_session_boot.php';
-require_once __DIR__ . '/../ml_config.php';
+require_once __DIR__ . '/../session_boot.php';
+require_once __DIR__ . '/../config.php';
 
 $votingSeason = mlGetVotingSeason($pdo);
 if (!$votingSeason) {
@@ -13,7 +13,7 @@ if (!$votingSeason) {
 $seasonId = (int)$votingSeason['SeasonID'];
 $seasonName = (string)$votingSeason['SeasonName'];
 $votingOpen = true;
-require_once __DIR__ . '/ml_questions.php';
+require_once __DIR__ . '/sb_questions.php';
 if (!$votingOpen) {
     $_SESSION['ml_notice'] = 'Voting for the next season is currently closed.';
     header('Location: ' . mlUrl('index.php'));

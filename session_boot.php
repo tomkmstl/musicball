@@ -1,5 +1,5 @@
 <?php
-// ml_session_boot.php
+// session_boot.php
 // Centralized session setup for Musicball.
 
 $lifetime = 60 * 60 * 24 * 14; // 14 days

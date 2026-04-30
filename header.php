@@ -24,7 +24,7 @@ $hasNextSeasonImage = is_file($nextSeasonImagePath);
 $isPrimaryNavPage = ($headerActivePrimaryPage !== '');
 $headerNextSeason = isset($nextSeason) && is_array($nextSeason) ? $nextSeason : mlGetNextSeason($pdo);
 $headerShowNextSeasonButton = false;
-$headerNextSeasonHref = mlUrl('season-builder/vote.php');
+$headerNextSeasonHref = mlUrl('season-builder/sb_vote.php');
 $headerNextSeasonLabel = 'Vote For Next Season';
 $headerNextSeasonAria = 'Vote For Next Season';
 $headerNextSeasonSubmittedCount = 0;
@@ -110,7 +110,7 @@ if ($headerNextSeason) {
 document.addEventListener('DOMContentLoaded', function () {
     var subnav = document.querySelector('.mb-subnav');
     var subnavLinks = Array.prototype.slice.call(document.querySelectorAll('.mb-subnav-card'));
-    var pageTransitionLinks = Array.prototype.slice.call(document.querySelectorAll('.game-round-action-link[href*="song.php"], .game-round-action-link[href*="round_vote.php"], .game-round-action-link[href*="results.php"], .mb-settings-link[href], .mb-next-season-link[href]'));
+    var pageTransitionLinks = Array.prototype.slice.call(document.querySelectorAll('.game-round-action-link[href*="song.php"], .game-round-action-link[href*="vote.php"], .game-round-action-link[href*="results.php"], .mb-settings-link[href], .mb-next-season-link[href]'));
     var lightbox = document.getElementById('mb-image-lightbox');
     var lightboxImage = document.getElementById('mb-image-lightbox-image');
     var lightboxClose = document.getElementById('mb-image-lightbox-close');

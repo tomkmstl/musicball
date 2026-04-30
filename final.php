@@ -1,6 +1,6 @@
 <?php
-require_once 'ml_session_boot.php';
-require_once 'ml_config.php';
+require_once 'session_boot.php';
+require_once 'config.php';
 
 $preview = isset($_GET['preview']) && $_GET['preview'] == '1';
 $votingSeason = mlGetVotingSeason($pdo);
@@ -18,8 +18,8 @@ if (!$votingSeason) {
 $seasonId = (int)$votingSeason['SeasonID'];
 $seasonName = (string)$votingSeason['SeasonName'];
 $votingOpen = true;
-require_once __DIR__ . '/season-builder/ml_questions.php';
-require_once __DIR__ . '/season-builder/ml_season_builder.php';
+require_once __DIR__ . '/season-builder/sb_questions.php';
+require_once __DIR__ . '/season-builder/sb_season_builder.php';
 
 $totalPlayersStmt = $pdo->query('SELECT COUNT(*) FROM ML_Users');
 $totalPlayers = (int)$totalPlayersStmt->fetchColumn();

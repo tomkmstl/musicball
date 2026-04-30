@@ -1,7 +1,7 @@
 <?php
 // submit.php
-require_once __DIR__ . '/../ml_config.php';
-require_once __DIR__ . '/../ml_discord.php';
+require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../integrations/discord/discord.php';
 
 $votingSeason = mlGetVotingSeason($pdo);
 if (!$votingSeason) {
@@ -13,7 +13,7 @@ if (!$votingSeason) {
 $seasonId = (int)$votingSeason['SeasonID'];
 $seasonName = (string)$votingSeason['SeasonName'];
 $votingOpen = true;
-require_once __DIR__ . '/ml_questions.php';
+require_once __DIR__ . '/sb_questions.php';
 
 if (!$votingOpen) {
     $_SESSION['ml_notice'] = 'Voting for the next season is currently closed.';
@@ -25,7 +25,7 @@ $cookieName = 'ml_league_user';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     // If someone hits this directly, bounce them to the app root
-    header('Location: ' . mlUrl('season-builder/vote.php'));
+    header('Location: ' . mlUrl('season-builder/sb_vote.php'));
     exit;
 }
 
@@ -38,7 +38,7 @@ if (!$check->fetch()) {
     // Invalid user: clear any bad cookie and send them back to root
     setcookie($cookieName, '', time() - 3600, '/');
     setcookie('ml_user_id', '', time() - 3600, '/');
-    header('Location: ' . mlUrl('season-builder/vote.php'));
+    header('Location: ' . mlUrl('season-builder/sb_vote.php'));
     exit;
 }
 
@@ -197,5 +197,5 @@ try {
 }
 
 // Go back to app root; index.php router will include choice.php
-header('Location: ' . mlUrl('season-builder/vote.php'));
+header('Location: ' . mlUrl('season-builder/sb_vote.php'));
 exit;

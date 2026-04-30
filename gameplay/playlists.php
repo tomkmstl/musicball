@@ -233,7 +233,7 @@ function mlGetSconeGhettoPendingSongCount(PDO $pdo, int $afterRoundPlaylistId = 
     return $count;
 }
 function mlCreateOrSyncSconeGhettoPlaylist(PDO $pdo): array {
-    require_once __DIR__ . '/spotify_client.php';
+    require_once __DIR__ . '/../integrations/spotify/client.php';
 
     if (!mlTableExists($pdo, 'ML_AggregatePlaylists')) {
         throw new RuntimeException('The ML_AggregatePlaylists table does not exist yet.');
@@ -355,7 +355,7 @@ function mlFetchPlayerPlaylistSourceSongs(PDO $pdo, int $userId, int $afterRound
     }
 }
 function mlCreateOrSyncPlayerSongsPlaylist(PDO $pdo, int $userId): array {
-    require_once __DIR__ . '/spotify_client.php';
+    require_once __DIR__ . '/../integrations/spotify/client.php';
 
     if ($userId <= 0) {
         throw new RuntimeException('A valid player is required for this playlist.');
@@ -519,8 +519,8 @@ function mlSaveRoundPlaylistItems(PDO $pdo, int $roundPlaylistId, int $seasonRou
     }
 }
 function mlGeneratePlaylistForRound(PDO $pdo, array $round, bool $force = false): array {
-    require_once __DIR__ . '/spotify_client.php';
-    require_once __DIR__ . '/ml_discord.php';
+    require_once __DIR__ . '/../integrations/spotify/client.php';
+    require_once __DIR__ . '/../integrations/discord/discord.php';
 
     $seasonRoundId = (int)$round['SeasonRoundID'];
     $playlistRecord = mlGetRoundPlaylistRecord($pdo, $seasonRoundId, true);

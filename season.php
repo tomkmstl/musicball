@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/gameplay/bootstrap.php';
-require_once __DIR__ . '/ml_discord.php';
+require_once __DIR__ . '/integrations/discord/discord.php';
 
 $currentUser = mlRequireAuthenticatedUser($pdo);
 $currentPage = 'season';

@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/gameplay/bootstrap.php';
-require_once __DIR__ . '/spotify_client.php';
-require_once __DIR__ . '/ml_discord.php';
+require_once __DIR__ . '/integrations/spotify/client.php';
+require_once __DIR__ . '/integrations/discord/discord.php';
 
 $currentUser = mlRequireAuthenticatedUser($pdo);
 $currentPage = 'season';
@@ -432,9 +432,9 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
         syncSongComment();
     })();
     </script>
-    <script src="<?= htmlspecialchars(mlAssetUrl('song_spotify.js')) ?>"></script>
+    <script src="<?= htmlspecialchars(mlAssetUrl('assets/js/song_spotify.js')) ?>"></script>
 <?php endif; ?>
-<script src="<?= htmlspecialchars(mlAssetUrl('song_database.js')) ?>"></script>
+<script src="<?= htmlspecialchars(mlAssetUrl('assets/js/song_database.js')) ?>"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var body = document.body;

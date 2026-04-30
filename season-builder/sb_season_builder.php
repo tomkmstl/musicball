@@ -1,5 +1,5 @@
 <?php
-// ml_season_builder.php
+// sb_season_builder.php
 // Helper functions for database-driven season setup / round rendering.
 
 function mlTableExists(PDO $pdo, $tableName) {

@@ -1,7 +1,7 @@
 <?php
-require_once __DIR__ . '/../ml_session_boot.php';
-require_once __DIR__ . '/../ml_config.php';
-require_once __DIR__ . '/ml_season_builder.php';
+require_once __DIR__ . '/../session_boot.php';
+require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/sb_season_builder.php';
 
 $currentUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : 0;
 if (!mlIsAdminUserId($pdo, $currentUserId)) {

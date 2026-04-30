@@ -1,9 +1,9 @@
 <?php
-require_once 'ml_session_boot.php';
-require_once 'ml_config.php';
-require_once __DIR__ . '/season-builder/ml_questions.php';
-require_once __DIR__ . '/season-builder/ml_season_builder.php';
-require_once 'ml_discord.php';
+require_once 'session_boot.php';
+require_once 'config.php';
+require_once __DIR__ . '/season-builder/sb_questions.php';
+require_once __DIR__ . '/season-builder/sb_season_builder.php';
+require_once __DIR__ . '/integrations/discord/discord.php';
 
 $currentUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : 0;
 if (!mlIsAdminUserId($pdo, $currentUserId)) {

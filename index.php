@@ -1,6 +1,6 @@
 <?php
-require_once 'ml_session_boot.php';
-require_once 'ml_config.php';
+require_once 'session_boot.php';
+require_once 'config.php';
 
 $loginError = isset($_SESSION['login_error']) ? $_SESSION['login_error'] : '';
 unset($_SESSION['login_error']);

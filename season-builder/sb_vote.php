@@ -1,9 +1,9 @@
 <?php
-// vote.php
+// sb_vote.php
 // Routes the logged-in user into the current voting flow.
 
-require_once __DIR__ . '/../ml_session_boot.php';
-require_once __DIR__ . '/../ml_config.php';
+require_once __DIR__ . '/../session_boot.php';
+require_once __DIR__ . '/../config.php';
 
 $currentUserId = 0;
 

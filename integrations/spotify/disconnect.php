@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/spotify_client.php';
-require_once __DIR__ . '/gameplay/bootstrap.php';
+require_once __DIR__ . '/client.php';
+require_once dirname(__DIR__, 2) . '/gameplay/bootstrap.php';
 
 $currentUser = mlRequireAuthenticatedUser($pdo);
 $isAdminUser = mlUserIsAdmin($currentUser);

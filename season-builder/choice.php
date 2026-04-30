@@ -1,7 +1,7 @@
 <?php
 // choice.php
-require_once __DIR__ . '/../ml_session_boot.php';
-require_once __DIR__ . '/../ml_config.php';
+require_once __DIR__ . '/../session_boot.php';
+require_once __DIR__ . '/../config.php';
 
 $votingSeason = mlGetVotingSeason($pdo);
 if (!$votingSeason) {
@@ -13,7 +13,7 @@ if (!$votingSeason) {
 $seasonId = (int)$votingSeason['SeasonID'];
 $seasonName = (string)$votingSeason['SeasonName'];
 $votingOpen = true;
-require_once __DIR__ . '/ml_questions.php';
+require_once __DIR__ . '/sb_questions.php';
 if (!$votingOpen) {
     $_SESSION['ml_notice'] = 'Voting for the next season is currently closed.';
     header('Location: ' . mlUrl('index.php'));
@@ -112,7 +112,7 @@ if ($q3Row) {
     ];
 }
 
-// Helpers to map indexes -> labels from ml_questions.php
+// Helpers to map indexes -> labels from sb_questions.php
 function mapQ2LabelsForPart(array $optionsForPart, array $indexes): array {
     $labels = [];
     foreach ($indexes as $idx) {

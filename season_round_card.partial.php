@@ -118,7 +118,7 @@ $hasChosenSong = !empty($round['song_saved'])
                 <img src="<?= htmlspecialchars(mlThemeIconPath('results')) ?>" alt="Results" class="game-round-action-icon">
             </a>
         <?php elseif (($round['round_state'] ?? '') === 'voting'): ?>
-            <a href="round_vote.php?season_round_id=<?= (int)$round['SeasonRoundID'] ?>" class="game-round-action-link" aria-label="Vote">
+            <a href="vote.php?season_round_id=<?= (int)$round['SeasonRoundID'] ?>" class="game-round-action-link" aria-label="Vote">
                 <img src="<?= htmlspecialchars(mlThemeIconPath('vote')) ?>" alt="Vote" class="game-round-action-icon">
             </a>
         <?php elseif (($round['round_state'] ?? '') === 'closed'): ?>

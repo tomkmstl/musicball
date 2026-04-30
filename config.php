@@ -1,5 +1,4 @@
 <?php
-// ml_config.php
 // Shared Music League configuration and helper functions.
 
 require_once __DIR__ . '/config/connections/conn_musicball.php';

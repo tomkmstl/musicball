@@ -1,12 +1,12 @@
 <?php
-// ml_discord.php
+// discord.php
 // Phase 1 Discord webhook helpers for Musicball.
 //musicball-testing
 //https://discordapp.com/api/webhooks/1490354992681455636/IIg37_xaYKwzM5WpTvuf2W0EKImy4p-wDZGWl2iA9LzcNnqrTvRMNQNJ8OwBbxnroRHe
 //private channel
 //https://discordapp.com/api/webhooks/1490347619795599511/p46cTMgaBp7OkaDD2xG2WUFsS2TU0ht890jLpsM1MeEaaDS-ds8TZ5IQ_5x5ofKNJR-9
 
-require_once __DIR__ . '/ml_config.php';
+require_once dirname(__DIR__, 2) . '/config.php';
 
 function mlDiscordLog(string $message, array $context = []): void
 {
