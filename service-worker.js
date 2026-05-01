@@ -1,23 +1,13 @@
 const swUrl = new URL(self.location.href);
 const DEV_MODE = swUrl.searchParams.get('dev_mode') === '1';
-const CACHE_NAME = DEV_MODE ? 'musicball-dev-cache' : 'musicball-static-v2';
+const CACHE_NAME = DEV_MODE ? 'musicball-dev-cache' : 'musicball-static-v3';
+
 const APP_SHELL = [
     '/',
     'index.php',
     'offline.html',
     'styles.css',
-    'questions.js',
-	'assets/js/progress.js',
-	'assets/js/user_router.js',
-	'assets/js/pwa.js',
-    'manifest.json',
-    'images/musicball_logo.png',
-    'images/next_season.png',
-    'images/app-icons/favicon-16x16.png',
-    'images/app-icons/favicon-32x32.png',
-    'images/app-icons/apple-touch-icon.png',
-    'images/app-icons/icon-192.png',
-    'images/app-icons/icon-512.png'
+    'manifest.json'
 ];
 
 self.addEventListener('install', function (event) {
@@ -28,9 +18,16 @@ self.addEventListener('install', function (event) {
 
     event.waitUntil(
         caches.open(CACHE_NAME).then(function (cache) {
-            return cache.addAll(APP_SHELL);
+            return Promise.all(
+                APP_SHELL.map(function (url) {
+                    return cache.add(url).catch(function () {
+                        return Promise.resolve();
+                    });
+                })
+            );
         })
     );
+
     self.skipWaiting();
 });
 
@@ -47,6 +44,7 @@ self.addEventListener('activate', function (event) {
             );
         })
     );
+
     self.clients.claim();
 });
 
