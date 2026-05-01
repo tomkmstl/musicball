@@ -59,8 +59,53 @@ function mlQaGetTableCount(PDO $pdo, string $tableName): ?int
     return (int)$stmt->fetchColumn();
 }
 
+function mlQaGetEnvironmentSpecificSettingRows(PDO $pdo): array
+{
+    if (!mlQaTableExists($pdo, 'QA_ML_Settings')) {
+        return [];
+    }
+
+    $stmt = $pdo->query("
+        SELECT SettingKey, SettingValue, UpdatedAt
+        FROM QA_ML_Settings
+        WHERE SettingKey LIKE 'discord\\_%'
+    ");
+
+    $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    return is_array($rows) ? $rows : [];
+}
+
+function mlQaRestoreEnvironmentSpecificSettingRows(PDO $pdo, array $settingRows): void
+{
+    if (!$settingRows || !mlQaTableExists($pdo, 'QA_ML_Settings')) {
+        return;
+    }
+
+    $stmt = $pdo->prepare("
+        INSERT INTO QA_ML_Settings (SettingKey, SettingValue, UpdatedAt)
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+            SettingValue = VALUES(SettingValue),
+            UpdatedAt = VALUES(UpdatedAt)
+    ");
+
+    foreach ($settingRows as $row) {
+        if (!isset($row['SettingKey'])) {
+            continue;
+        }
+
+        $stmt->execute([
+            (string)$row['SettingKey'],
+            array_key_exists('SettingValue', $row) ? $row['SettingValue'] : null,
+            array_key_exists('UpdatedAt', $row) ? $row['UpdatedAt'] : null,
+        ]);
+    }
+}
+
 function mlQaPushLiveToQa(PDO $pdo, array $tables): void
 {
+    $qaEnvironmentSettings = mlQaGetEnvironmentSpecificSettingRows($pdo);
+
     $pdo->beginTransaction();
 
     try {
@@ -76,6 +121,9 @@ function mlQaPushLiveToQa(PDO $pdo, array $tables): void
             $pdo->exec('TRUNCATE TABLE ' . mlQaQuoteIdentifier($qaTable));
             $pdo->exec('INSERT INTO ' . mlQaQuoteIdentifier($qaTable) . ' SELECT * FROM ' . mlQaQuoteIdentifier($liveTable));
         }
+
+        mlQaRestoreEnvironmentSpecificSettingRows($pdo, $qaEnvironmentSettings);
+        mlQaClearCurrentSeasonRoundId($pdo);
 
         $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
         $pdo->commit();
@@ -186,20 +234,139 @@ function mlQaGetPreviousRound(PDO $pdo, array $currentRound): ?array
     return is_array($row) ? $row : null;
 }
 
+function mlQaGetSettingValue(PDO $pdo, string $settingKey, $default = null)
+{
+    if (!mlQaTableExists($pdo, 'QA_ML_Settings')) {
+        return $default;
+    }
+
+    $stmt = $pdo->prepare('SELECT SettingValue FROM QA_ML_Settings WHERE SettingKey = ? LIMIT 1');
+    $stmt->execute([$settingKey]);
+    $value = $stmt->fetchColumn();
+
+    return ($value === false) ? $default : $value;
+}
+
+function mlQaSetSettingValue(PDO $pdo, string $settingKey, ?string $settingValue): void
+{
+    if (!mlQaTableExists($pdo, 'QA_ML_Settings')) {
+        throw new RuntimeException('Missing required QA table: QA_ML_Settings. Run qa_clone_setup.sql and push live data first.');
+    }
+
+    $stmt = $pdo->prepare('
+        INSERT INTO QA_ML_Settings (SettingKey, SettingValue)
+        VALUES (?, ?)
+        ON DUPLICATE KEY UPDATE SettingValue = VALUES(SettingValue)
+    ');
+    $stmt->execute([$settingKey, $settingValue]);
+}
+
+function mlQaClearSettingValue(PDO $pdo, string $settingKey): void
+{
+    if (!mlQaTableExists($pdo, 'QA_ML_Settings')) {
+        return;
+    }
+
+    $stmt = $pdo->prepare('DELETE FROM QA_ML_Settings WHERE SettingKey = ?');
+    $stmt->execute([$settingKey]);
+}
+
+function mlQaSetCurrentSeasonRoundId(PDO $pdo, int $seasonRoundId): void
+{
+    if ($seasonRoundId <= 0) {
+        mlQaClearSettingValue($pdo, 'qa_current_season_round_id');
+        return;
+    }
+
+    mlQaSetSettingValue($pdo, 'qa_current_season_round_id', (string)$seasonRoundId);
+}
+
+function mlQaClearCurrentSeasonRoundId(PDO $pdo): void
+{
+    mlQaClearSettingValue($pdo, 'qa_current_season_round_id');
+}
+
+function mlQaGetCurrentSeasonRoundId(PDO $pdo): int
+{
+    $value = mlQaGetSettingValue($pdo, 'qa_current_season_round_id', '0');
+    return is_numeric($value) ? (int)$value : 0;
+}
+
+function mlQaGetActiveSeasonId(PDO $pdo): int
+{
+    if (!mlQaTableExists($pdo, 'QA_ML_Seasons')) {
+        return 0;
+    }
+
+    $stmt = $pdo->query('SELECT SeasonID FROM QA_ML_Seasons WHERE IsActive = 1 ORDER BY SeasonID DESC LIMIT 1');
+    $seasonId = $stmt ? $stmt->fetchColumn() : false;
+
+    return is_numeric($seasonId) ? (int)$seasonId : 0;
+}
+
+function mlQaGetRoundById(PDO $pdo, int $seasonRoundId): ?array
+{
+    if ($seasonRoundId <= 0) {
+        return null;
+    }
+
+    foreach (['QA_ML_SeasonRounds', 'QA_ML_Seasons'] as $tableName) {
+        if (!mlQaTableExists($pdo, $tableName)) {
+            return null;
+        }
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT sr.SeasonRoundID,
+               sr.SeasonID,
+               sr.RoundNumber,
+               sr.Title,
+               sr.RoundState,
+               sr.SongsDue,
+               sr.VotesDue,
+               s.SeasonName,
+               s.IsActive
+        FROM QA_ML_SeasonRounds sr
+        INNER JOIN QA_ML_Seasons s ON sr.SeasonID = s.SeasonID
+        WHERE sr.SeasonRoundID = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$seasonRoundId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return is_array($row) ? $row : null;
+}
+
+function mlQaGetCurrentRound(PDO $pdo): ?array
+{
+    $overrideSeasonRoundId = mlQaGetCurrentSeasonRoundId($pdo);
+    if ($overrideSeasonRoundId > 0) {
+        $overrideRound = mlQaGetRoundById($pdo, $overrideSeasonRoundId);
+        $activeSeasonId = mlQaGetActiveSeasonId($pdo);
+
+        if ($overrideRound && ($activeSeasonId <= 0 || (int)$overrideRound['SeasonID'] === $activeSeasonId)) {
+            return $overrideRound;
+        }
+
+        mlQaClearCurrentSeasonRoundId($pdo);
+    }
+
+    return mlQaGetLatestRound($pdo);
+}
 function mlQaGetRollbackStages(): array
 {
     return [
         'submission' => [
             'label' => 'Song Submission - Current Round',
-            'description' => 'Deletes songs, votes, vote submissions, playlists, playlist items, and Discord log entries for the latest QA round. Opens song submission again.',
+            'description' => 'Deletes songs, votes, vote submissions, playlists, playlist items, and Discord log entries for the current QA round. Opens song submission again.',
         ],
         'voting' => [
             'label' => 'Voting - Current Round',
-            'description' => 'Keeps songs and playlist for the latest QA round, deletes vote data, and opens voting again.',
+            'description' => 'Keeps songs and playlist for the current QA round, deletes vote data, and opens voting again.',
         ],
         'voting_previous' => [
             'label' => 'Voting - Previous Round',
-            'description' => 'Moves the previous QA round back to voting and destructively clears the latest QA round data so the app behaves as if it is back in the previous round.',
+            'description' => 'Moves the previous QA round back to voting and destructively clears the current QA round data so the app behaves as if it is back in the previous round.',
         ],
     ];
 }
@@ -359,6 +526,7 @@ function mlQaRollbackLatestRoundToStage(PDO $pdo, string $targetStage): array
         'QA_ML_RoundPlaylists',
         'QA_ML_RoundPlaylistItems',
         'QA_ML_DiscordEventLog',
+        'QA_ML_Settings',
     ];
 
     foreach ($requiredTables as $tableName) {
@@ -367,16 +535,16 @@ function mlQaRollbackLatestRoundToStage(PDO $pdo, string $targetStage): array
         }
     }
 
-    $latestRound = mlQaGetLatestRound($pdo);
-    if (!$latestRound) {
+    $currentRound = mlQaGetCurrentRound($pdo);
+    if (!$currentRound) {
         throw new RuntimeException('No QA round data was found to roll back.');
     }
 
-    $targetRound = $latestRound;
+    $targetRound = $currentRound;
     $latestRoundTouched = false;
 
     if ($targetStage === 'voting_previous') {
-        $previousRound = mlQaGetPreviousRound($pdo, $latestRound);
+        $previousRound = mlQaGetPreviousRound($pdo, $currentRound);
         if (!$previousRound) {
             throw new RuntimeException('No previous QA round was found to move back to voting.');
         }
@@ -443,8 +611,8 @@ function mlQaRollbackLatestRoundToStage(PDO $pdo, string $targetStage): array
             $updateRoundStmt->execute([$seasonRoundId]);
 
             if ($targetStage === 'voting_previous') {
-                $latestSeasonRoundId = (int)$latestRound['SeasonRoundID'];
-                $deleted = mlQaAddCounts($deleted, mlQaDeleteRoundData($pdo, $latestSeasonRoundId, [
+                $currentSeasonRoundId = (int)$currentRound['SeasonRoundID'];
+                $deleted = mlQaAddCounts($deleted, mlQaDeleteRoundData($pdo, $currentSeasonRoundId, [
                     'playlist_items',
                     'votes',
                     'vote_submissions',
@@ -453,20 +621,21 @@ function mlQaRollbackLatestRoundToStage(PDO $pdo, string $targetStage): array
                     'songs',
                 ]));
 
-                $resetLatestStmt = $pdo->prepare("
+                $resetCurrentStmt = $pdo->prepare("
                     UPDATE QA_ML_SeasonRounds
                     SET RoundState = 'submission',
                         SongsDue = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 14 DAY),
                         VotesDue = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 21 DAY)
                     WHERE SeasonRoundID = ?
                 ");
-                $resetLatestStmt->execute([$latestSeasonRoundId]);
+                $resetCurrentStmt->execute([$currentSeasonRoundId]);
             }
         }
 
         $pdo->exec('UPDATE QA_ML_Seasons SET IsActive = 0');
         $activateSeasonStmt = $pdo->prepare('UPDATE QA_ML_Seasons SET IsActive = 1 WHERE SeasonID = ?');
         $activateSeasonStmt->execute([$seasonId]);
+        mlQaSetCurrentSeasonRoundId($pdo, $seasonRoundId);
 
         $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
         $pdo->commit();
@@ -499,28 +668,27 @@ function mlQaRollbackLatestRoundToStage(PDO $pdo, string $targetStage): array
         throw $e;
     }
 }
-
-function mlQaPushLatestRoundForwardToStage(PDO $pdo, string $targetStage): array
+function mlQaPushCurrentRoundForwardToStage(PDO $pdo, string $targetStage): array
 {
     $stages = mlQaGetPushForwardStages();
     if (!isset($stages[$targetStage])) {
         throw new RuntimeException('Invalid QA push-forward stage.');
     }
 
-    $latestRound = mlQaGetLatestRound($pdo);
-    if (!$latestRound) {
+    $currentRound = mlQaGetCurrentRound($pdo);
+    if (!$currentRound) {
         throw new RuntimeException('No QA round data was found to push forward.');
     }
 
-    $liveRound = mlQaGetMatchingLiveRound($pdo, $latestRound);
+    $liveRound = mlQaGetMatchingLiveRound($pdo, $currentRound);
     if (!$liveRound) {
-        throw new RuntimeException('No matching live round was found for ' . $latestRound['SeasonName'] . ' / Round ' . (int)$latestRound['RoundNumber'] . '.');
+        throw new RuntimeException('No matching live round was found for ' . $currentRound['SeasonName'] . ' / Round ' . (int)$currentRound['RoundNumber'] . '.');
     }
 
-    mlQaAssertMatchingRoundIds($latestRound, $liveRound);
+    mlQaAssertMatchingRoundIds($currentRound, $liveRound);
 
-    $seasonRoundId = (int)$latestRound['SeasonRoundID'];
-    $seasonId = (int)$latestRound['SeasonID'];
+    $seasonRoundId = (int)$currentRound['SeasonRoundID'];
+    $seasonId = (int)$currentRound['SeasonID'];
 
     $deleted = [
         'songs' => 0,
@@ -609,14 +777,16 @@ function mlQaPushLatestRoundForwardToStage(PDO $pdo, string $targetStage): array
         $activateSeasonStmt = $pdo->prepare('UPDATE QA_ML_Seasons SET IsActive = 1 WHERE SeasonID = ?');
         $activateSeasonStmt->execute([$seasonId]);
 
+        mlQaSetCurrentSeasonRoundId($pdo, $seasonRoundId);
+
         $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
         $pdo->commit();
 
-        $latestRound['TargetStage'] = $targetStage;
-        $latestRound['TargetStageLabel'] = $stages[$targetStage]['label'];
+        $currentRound['TargetStage'] = $targetStage;
+        $currentRound['TargetStageLabel'] = $stages[$targetStage]['label'];
 
         return [
-            'round' => $latestRound,
+            'round' => $currentRound,
             'target_stage' => $targetStage,
             'target_stage_label' => $stages[$targetStage]['label'],
             'copied_songs' => $copied['songs'],
@@ -655,13 +825,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         if ($action === 'push_live_to_qa') {
             mlQaPushLiveToQa($livePdo, $mlQaTables);
-            $message = 'Live data was copied into all QA_ML_* tables.';
+            $message = 'Live data was copied into all QA_ML_* tables. QA-specific Discord settings were preserved.';
         } elseif ($action === 'rollback_latest_round') {
             if (!mlIsQaMode()) {
                 throw new RuntimeException('Open QA Tools in QA mode before running a QA rollback.');
             }
 
-            $targetStage = isset($_POST['target_stage']) ? trim((string)$_POST['target_stage']) : 'submission';
+            $targetStage = isset($_POST['rollback_stage']) ? trim((string)$_POST['rollback_stage']) : 'submission';
             $rollbackResult = mlQaRollbackLatestRoundToStage($livePdo, $targetStage);
             $round = $rollbackResult['round'];
             $message = 'QA rollback complete for ' . $round['SeasonName'] . ' / Round ' . (int)$round['RoundNumber'] . ' - ' . $round['Title'] . ' to ' . $rollbackResult['target_stage_label'] . '.';
@@ -676,8 +846,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Open QA Tools in QA mode before pushing QA forward.');
             }
 
-            $targetStage = isset($_POST['target_stage']) ? trim((string)$_POST['target_stage']) : 'voting';
-            $pushResult = mlQaPushLatestRoundForwardToStage($livePdo, $targetStage);
+            $targetStage = isset($_POST['push_forward_stage']) ? trim((string)$_POST['push_forward_stage']) : 'voting';
+            $pushResult = mlQaPushCurrentRoundForwardToStage($livePdo, $targetStage);
             $round = $pushResult['round'];
             $message = 'QA push-forward complete for ' . $round['SeasonName'] . ' / Round ' . (int)$round['RoundNumber'] . ' - ' . $round['Title'] . ' to ' . $pushResult['target_stage_label'] . '.';
             $info = 'Copied ' . (int)$pushResult['copied_songs'] . ' songs, '
@@ -705,8 +875,10 @@ foreach ($mlQaTables as $liveTable) {
 
 $qaRollbackStages = mlQaGetRollbackStages();
 $qaPushForwardStages = mlQaGetPushForwardStages();
+$currentQaRound = mlQaGetCurrentRound($livePdo);
+$qaCurrentSeasonRoundId = mlQaGetCurrentSeasonRoundId($livePdo);
 $latestQaRound = mlQaGetLatestRound($livePdo);
-$previousQaRound = $latestQaRound ? mlQaGetPreviousRound($livePdo, $latestQaRound) : null;
+$previousQaRound = $currentQaRound ? mlQaGetPreviousRound($livePdo, $currentQaRound) : null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -755,15 +927,25 @@ $previousQaRound = $latestQaRound ? mlQaGetPreviousRound($livePdo, $latestQaRoun
 
         <div class="card" style="margin:0 0 24px;padding:18px;">
             <h2 style="margin-top:0;">QA Round Stage Controls</h2>
-            <?php if ($latestQaRound): ?>
+            <?php if ($currentQaRound): ?>
                 <p style="margin:8px 0 8px;opacity:.9;">
-                    Latest QA round: <strong><?= htmlspecialchars((string)$latestQaRound['SeasonName']) ?></strong>
-                    / Round <strong><?= (int)$latestQaRound['RoundNumber'] ?></strong>
-                    - <?= htmlspecialchars((string)$latestQaRound['Title']) ?>
-                    <?php if (!empty($latestQaRound['RoundState'])): ?>
-                        <span style="opacity:.75;">(stored state: <?= htmlspecialchars((string)$latestQaRound['RoundState']) ?>)</span>
+                    Current QA round: <strong><?= htmlspecialchars((string)$currentQaRound['SeasonName']) ?></strong>
+                    / Round <strong><?= (int)$currentQaRound['RoundNumber'] ?></strong>
+                    - <?= htmlspecialchars((string)$currentQaRound['Title']) ?>
+                    <?php if (!empty($currentQaRound['RoundState'])): ?>
+                        <span style="opacity:.75;">(stored state: <?= htmlspecialchars((string)$currentQaRound['RoundState']) ?>)</span>
+                    <?php endif; ?>
+                    <?php if ($qaCurrentSeasonRoundId > 0): ?>
+                        <span style="opacity:.65;">(QA override pinned)</span>
                     <?php endif; ?>
                 </p>
+                <?php if ($latestQaRound && (int)$latestQaRound['SeasonRoundID'] !== (int)$currentQaRound['SeasonRoundID']): ?>
+                    <p style="margin:0 0 8px;opacity:.72;">
+                        Latest created QA round: <strong><?= htmlspecialchars((string)$latestQaRound['SeasonName']) ?></strong>
+                        / Round <strong><?= (int)$latestQaRound['RoundNumber'] ?></strong>
+                        - <?= htmlspecialchars((string)$latestQaRound['Title']) ?>
+                    </p>
+                <?php endif; ?>
                 <?php if ($previousQaRound): ?>
                     <p style="margin:0 0 14px;opacity:.72;">
                         Previous QA round: <strong><?= htmlspecialchars((string)$previousQaRound['SeasonName']) ?></strong>
@@ -781,14 +963,14 @@ $previousQaRound = $latestQaRound ? mlQaGetPreviousRound($livePdo, $latestQaRoun
 
             <?php if (!mlIsQaMode()): ?>
                 <div class="status-banner" style="margin:0;">Open this page with <code>?testing=qa</code> before using QA stage controls.</div>
-            <?php elseif ($latestQaRound): ?>
+            <?php elseif ($currentQaRound): ?>
                 <div class="admin-grid" style="align-items:start;">
                     <form method="post" action="<?= htmlspecialchars(mlUrl('qa_tools.php?testing=qa')) ?>" class="admin-form-stack" style="margin:0;">
                         <input type="hidden" name="qa_action" value="rollback_latest_round">
 
                         <div>
-                            <label class="admin-label" for="target_stage">Rollback target</label>
-                            <select name="target_stage" id="target_stage" class="admin-input">
+                            <label class="admin-label" for="rollback_stage">Rollback target</label>
+                            <select name="rollback_stage" id="rollback_stage" class="admin-input">
                                 <?php foreach ($qaRollbackStages as $stageKey => $stage): ?>
                                     <option value="<?= htmlspecialchars($stageKey) ?>"><?= htmlspecialchars($stage['label']) ?></option>
                                 <?php endforeach; ?>
@@ -798,7 +980,7 @@ $previousQaRound = $latestQaRound ? mlQaGetPreviousRound($livePdo, $latestQaRoun
                         <div class="note" style="margin:0;">
                             <strong>Song Submission - Current Round:</strong> deletes songs and all downstream QA data.<br>
                             <strong>Voting - Current Round:</strong> keeps songs and playlist, deletes vote data.<br>
-                            <strong>Voting - Previous Round:</strong> targets the previous QA round and clears latest-round QA data.
+                            <strong>Voting - Previous Round:</strong> targets the previous QA round and clears current-round QA data.
                         </div>
 
                         <button type="submit" class="button-secondary" onclick="return confirm('Rollback QA to the selected stage? This may delete QA_ML_* data for the affected round.');">Rollback QA Stage</button>
@@ -809,7 +991,7 @@ $previousQaRound = $latestQaRound ? mlQaGetPreviousRound($livePdo, $latestQaRoun
 
                         <div>
                             <label class="admin-label" for="push_target_stage">Push-forward target</label>
-                            <select name="target_stage" id="push_target_stage" class="admin-input">
+                            <select name="push_forward_stage" id="push_target_stage" class="admin-input">
                                 <?php foreach ($qaPushForwardStages as $stageKey => $stage): ?>
                                     <option value="<?= htmlspecialchars($stageKey) ?>"><?= htmlspecialchars($stage['label']) ?></option>
                                 <?php endforeach; ?>

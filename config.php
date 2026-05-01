@@ -205,6 +205,16 @@ function mlGetIntSetting(PDO $pdo, string $settingKey, int $default = 0): int {
 }
 
 
+function mlGetQaCurrentSeasonRoundId(PDO $pdo): int
+{
+    if (!mlIsQaMode()) {
+        return 0;
+    }
+
+    $value = mlGetIntSetting($pdo, 'qa_current_season_round_id', 0);
+    return $value > 0 ? $value : 0;
+}
+
 function mlIsDevMode(PDO $pdo): bool
 {
     static $isDevMode = null;

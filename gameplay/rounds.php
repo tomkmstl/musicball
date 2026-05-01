@@ -132,6 +132,7 @@ function mlComputeRoundPresentation(PDO $pdo, array $rounds, int $currentUserId)
     }
 
     $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+    $qaCurrentSeasonRoundId = (function_exists('mlGetQaCurrentSeasonRoundId') ? mlGetQaCurrentSeasonRoundId($pdo) : 0);
     $resolved = [];
     $previousVotesDue = null;
     $expectedPlayers = mlGetExpectedPlayerCount($pdo);
@@ -157,7 +158,11 @@ function mlComputeRoundPresentation(PDO $pdo, array $rounds, int $currentUserId)
             $roundState = 'closed';
         } else {
             $roundState = $hasPlaylist ? 'voting' : 'submission';
-            if ($currentRoundIndex === null) {
+            if ($qaCurrentSeasonRoundId > 0) {
+                if ($seasonRoundId === $qaCurrentSeasonRoundId) {
+                    $currentRoundIndex = $index;
+                }
+            } elseif ($currentRoundIndex === null) {
                 $currentRoundIndex = $index;
             }
         }
