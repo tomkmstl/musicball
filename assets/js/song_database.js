@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
+            .replace(/\"/g, '&quot;')
             .replace(/'/g, '&#039;');
     }
 
@@ -36,6 +36,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var roundNumber = usage.round_number ? 'r' + usage.round_number : 'round';
         var roundTitle = usage.round || 'Unknown round';
         var playlistOrder = usage.playlist_order ? '#' + usage.playlist_order : 'Not playlisted';
+        var hasFinish = usage.finish_label && usage.total_votes !== null && typeof usage.total_votes !== 'undefined';
+        var voteLabel = Number(usage.total_votes) === 1 ? 'vote' : 'votes';
 
         return '' +
             '<div class="song-database-usage-row">' +
@@ -46,6 +48,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<div class="song-database-usage-context">' +
                     '<span>' + escapeHtml(seasonLabel) + ' by ' + escapeHtml(playerLabel) + '</span>' +
                     '<span>' + escapeHtml(playlistOrder) + ' on ' + escapeHtml(roundTitle) + ' (' + escapeHtml(roundNumber) + ')</span>' +
+                    (hasFinish ? '<span>finished ' + escapeHtml(usage.finish_label) + ' with ' + escapeHtml(usage.total_votes) + ' ' + escapeHtml(voteLabel) + '</span>' : '') +
                 '</div>' +
             '</div>';
     }
