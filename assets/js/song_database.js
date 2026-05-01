@@ -1,8 +1,107 @@
 document.addEventListener('DOMContentLoaded', function () {
+    function attachSearchClearButton(input, options) {
+        options = options || {};
+
+        if (!input || input.dataset.searchClearAttached === '1') {
+            return null;
+        }
+
+        input.dataset.searchClearAttached = '1';
+
+        if (!document.getElementById('musicball-search-clear-styles')) {
+            var style = document.createElement('style');
+            style.id = 'musicball-search-clear-styles';
+            style.textContent = '' +
+                '.musicball-clearable-input-wrap{' +
+                    'position:relative;' +
+                    'width:100%;' +
+                '}' +
+                '.musicball-clearable-input-wrap>.admin-input{' +
+                    'padding-right:44px;' +
+                '}' +
+                '.musicball-search-clear{' +
+                    'position:absolute;' +
+                    'right:8px;' +
+                    'top:50%;' +
+                    'width:30px;' +
+                    'height:30px;' +
+                    'display:none;' +
+                    'align-items:center;' +
+                    'justify-content:center;' +
+                    'padding:0;' +
+                    'border:1px solid transparent;' +
+                    'border-radius:999px;' +
+                    'background:transparent;' +
+                    'color:var(--muted);' +
+                    'font-size:1.35rem;' +
+                    'font-weight:700;' +
+                    'line-height:1;' +
+                    'cursor:pointer;' +
+                    'transform:translateY(-50%);' +
+                    'transition:background-color .15s ease,border-color .15s ease,color .15s ease;' +
+                    '-webkit-tap-highlight-color:transparent;' +
+                '}' +
+                '.musicball-search-clear:hover,' +
+                '.musicball-search-clear:focus-visible{' +
+                    'background:var(--surface-3);' +
+                    'border-color:var(--line-strong);' +
+                    'color:var(--text);' +
+                    'outline:none;' +
+                '}' +
+                '.musicball-search-clear.is-visible{' +
+                    'display:inline-flex;' +
+                '}';
+            document.head.appendChild(style);
+        }
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'musicball-clearable-input-wrap';
+
+        input.parentNode.insertBefore(wrapper, input);
+        wrapper.appendChild(input);
+
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'musicball-search-clear';
+        button.setAttribute('aria-label', options.label || 'Clear search');
+        button.textContent = '×';
+        wrapper.appendChild(button);
+
+        function updateVisibility() {
+            button.classList.toggle('is-visible', input.value.length > 0 && !input.disabled);
+        }
+
+        button.addEventListener('click', function () {
+            input.value = '';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.focus();
+            updateVisibility();
+        });
+
+        input.addEventListener('input', updateVisibility);
+        input.addEventListener('change', updateVisibility);
+
+        updateVisibility();
+
+        return {
+            wrapper: wrapper,
+            button: button,
+            updateVisibility: updateVisibility
+        };
+    }
+
     var searchInput = document.getElementById('league_song_database_query');
     var resultsWrap = document.getElementById('league_song_database_results');
     var detailsWrap = document.getElementById('league_song_database_details');
     var statusWrap = document.getElementById('league_song_database_status');
+
+    attachSearchClearButton(document.getElementById('song_query'), {
+        label: 'Clear Spotify search'
+    });
+
+    attachSearchClearButton(searchInput, {
+        label: 'Clear league song database search'
+    });
 
     if (!searchInput || !resultsWrap || !detailsWrap || !statusWrap) {
         return;
