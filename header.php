@@ -18,6 +18,7 @@ if ($headerScriptName === 'season.php') {
 $headerUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : (isset($_SESSION['ml_user_id']) ? (int)$_SESSION['ml_user_id'] : 0);
 $isAdminUser = mlIsAdminUserId($pdo, $headerUserId);
 $mlIsQaMode = function_exists('mlIsQaMode') && mlIsQaMode();
+$showAdminToolsBanner = !$mlIsQaMode && $headerScriptName === 'admin.php';
 $nextSeasonImageSrc = 'images/next_season.png';
 $nextSeasonImagePath = __DIR__ . '/images/next_season.png';
 $hasNextSeasonImage = is_file($nextSeasonImagePath);
@@ -58,6 +59,11 @@ if ($headerNextSeason) {
 <?php if ($mlIsQaMode): ?>
     <div class="ml-qa-banner" style="background:#7a0019;color:#fff;padding:10px 14px;text-align:center;font-weight:700;letter-spacing:.02em;">
         QA MODE ACTIVE &nbsp;|&nbsp; <a href="<?= htmlspecialchars(mlUrl('admin.php?testing=live')) ?>" style="color:#fff;text-decoration:underline;">Return to live</a>
+    </div>
+<?php endif; ?>
+<?php if ($showAdminToolsBanner): ?>
+    <div class="ml-admin-tools-banner" style="background:#12324f;color:#fff;padding:10px 14px;text-align:center;font-weight:700;letter-spacing:.02em;">
+        ADMIN TOOLS &nbsp;|&nbsp; <a href="<?= htmlspecialchars(mlUrl('season.php?testing=live')) ?>" style="color:#fff;text-decoration:underline;">Return Home</a>
     </div>
 <?php endif; ?>
 <header class="mb-header">
