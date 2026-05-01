@@ -3302,8 +3302,13 @@ html[data-theme="dark"] .discord-toggle-warning {
     vertical-align: middle;
 }
 
-.standings-round-breakdown-table th:first-child,
-.standings-round-breakdown-table td:first-child {
+.standings-round-number-heading,
+.standings-round-number-cell {
+    display: none;
+}
+
+.standings-round-breakdown-table .standings-round-label-heading,
+.standings-round-breakdown-table .standings-round-label-cell {
     text-align: left;
     min-width: 220px;
     position: sticky;
@@ -3389,8 +3394,10 @@ html[data-theme="dark"] .discord-toggle-warning {
         min-width: 10ch;
     }
 }
-body.theme-light .standings-round-breakdown-table th:first-child,
-body.theme-light .standings-round-breakdown-table td:first-child {
+body.theme-light .standings-round-breakdown-table .standings-round-label-heading,
+body.theme-light .standings-round-breakdown-table .standings-round-label-cell,
+body.theme-light .standings-round-breakdown-table .standings-round-number-heading,
+body.theme-light .standings-round-breakdown-table .standings-round-number-cell {
     background: #ffffff;
 }
 
@@ -3409,9 +3416,41 @@ body.theme-light .standings-round-breakdown-table td.is-round-winner.is-current-
 }
 
 @media (max-width: 700px) {
-    .standings-round-breakdown-table th:first-child,
-    .standings-round-breakdown-table td:first-child {
-        min-width: 180px;
+    .standings-round-breakdown-table .standings-round-number-heading,
+    .standings-round-breakdown-table .standings-round-number-cell {
+        display: table-cell;
+        min-width: 46px;
+        width: 46px;
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: var(--surface);
+        text-align: center;
+        font-weight: 800;
+        box-shadow: 1px 0 0 var(--line);
+    }
+	
+
+	th.standings-round-number-heading {
+		font-size: 8px;
+		padding-top: 55px;
+	}
+
+    .standings-round-breakdown-table .standings-round-label-heading,
+    .standings-round-breakdown-table .standings-round-label-cell {
+        min-width: 132px;
+        position: static;
+        left: auto;
+        z-index: auto;
+        box-shadow: none;
+    }
+
+    .standings-round-breakdown-table .standings-round-label-cell .standings-round-label {
+        display: none;
+    }
+
+    .standings-round-breakdown-table .standings-round-title {
+        margin-top: 0;
     }
 
     .standings-breakdown-heading {
