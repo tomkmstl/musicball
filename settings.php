@@ -6,7 +6,6 @@ $currentPage = 'settings';
 $message = '';
 $error = '';
 $hasProfileImageColumn = mlUsersHasProfileImageColumn($pdo);
-$isAdminUser = mlUserIsAdmin($currentUser);
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -125,10 +124,6 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
             <div class="status-banner error"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
 
-        <?php if ($isAdminUser): ?>
-            <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="settings-admin-link">Open Admin Settings</a>
-        <?php endif; ?>
-
         <div class="settings-stack">
             <form method="post" action="settings.php" class="settings-form" enctype="multipart/form-data">
                 <input type="hidden" name="settings_action" value="profile">
@@ -190,11 +185,6 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
                     </div>
                 </div>
             </form>
-
-
-
-
-            <a href="logout.php" class="button-secondary settings-logout-link">Logout</a>
         </div>
     </div>
 </div>

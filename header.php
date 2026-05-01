@@ -15,7 +15,7 @@ if ($headerScriptName === 'season.php') {
 } elseif ($headerScriptName === 'standings.php') {
     $headerActivePrimaryPage = 'standings';
 }
-$headerUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : 0;
+$headerUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : (isset($_SESSION['ml_user_id']) ? (int)$_SESSION['ml_user_id'] : 0);
 $isAdminUser = mlIsAdminUserId($pdo, $headerUserId);
 $mlIsQaMode = function_exists('mlIsQaMode') && mlIsQaMode();
 $nextSeasonImageSrc = 'images/next_season.png';
@@ -61,6 +61,90 @@ if ($headerNextSeason) {
     </div>
 <?php endif; ?>
 <header class="mb-header">
+    <style>
+        .mb-account-menu {
+            position: relative;
+        }
+
+        .mb-account-menu summary {
+            list-style: none;
+        }
+
+        .mb-account-menu summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .mb-menu-toggle {
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--line-strong);
+            border-radius: 10px;
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .mb-menu-toggle:hover,
+        .mb-account-menu[open] .mb-menu-toggle {
+            background: var(--surface-3);
+            border-color: var(--brand);
+        }
+
+        .mb-menu-icon {
+            width: 18px;
+            display: grid;
+            gap: 4px;
+        }
+
+        .mb-menu-icon span {
+            display: block;
+            height: 2px;
+            border-radius: 999px;
+            background: currentColor;
+        }
+
+        .mb-account-menu-panel {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            width: min(240px, calc(100vw - 32px));
+            padding: 8px;
+            border: 1px solid var(--line-strong);
+            border-radius: 12px;
+            background: var(--surface);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+            z-index: 1200;
+        }
+
+        .mb-account-menu-link {
+            display: flex;
+            align-items: center;
+            min-height: 42px;
+            padding: 10px 12px;
+            border-radius: 9px;
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 700;
+            transition: background-color 0.15s ease, color 0.15s ease;
+        }
+
+        .mb-account-menu-link:hover,
+        .mb-account-menu-link.is-active {
+            background: var(--surface-3);
+            color: var(--text);
+        }
+
+        .mb-account-menu-divider {
+            height: 1px;
+            margin: 8px 4px;
+            background: var(--line);
+        }
+    </style>
     <div class="mb-header-inner">
         <img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo.png')) ?>" alt="<?= htmlspecialchars(mlGetLeagueName($pdo)) ?>" class="mb-brand-logo">
 
@@ -84,10 +168,21 @@ if ($headerNextSeason) {
                 </a>
             <?php endif; ?>
 
-            <?php $settingsHref = ($currentPage === 'settings') ? mlUrl('season.php') : mlUrl('settings.php'); ?>
-            <a href="<?= htmlspecialchars($settingsHref) ?>" class="mb-settings-link<?= $currentPage === 'settings' ? ' is-active' : '' ?>" aria-label="<?= $currentPage === 'settings' ? 'Close settings' : 'Open settings' ?>">
-                <span class="mb-settings-gear" aria-hidden="true">⚙</span>
-            </a>
+            <details class="mb-account-menu">
+                <summary class="mb-menu-toggle" aria-label="Open menu">
+                    <span class="mb-menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+                </summary>
+                <nav class="mb-account-menu-panel" aria-label="Account menu">
+                    <a href="<?= htmlspecialchars(mlUrl('playlists.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'playlists' ? ' is-active' : '' ?>">Playlists</a>
+                    <a href="<?= htmlspecialchars(mlUrl('league-database.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'league-database' ? ' is-active' : '' ?>">League Database</a>
+                    <?php if ($isAdminUser): ?>
+                        <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'admin' ? ' is-active' : '' ?>">Admin Tools</a>
+                    <?php endif; ?>
+                    <a href="<?= htmlspecialchars(mlUrl('settings.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'settings' ? ' is-active' : '' ?>">Settings</a>
+                    <div class="mb-account-menu-divider" aria-hidden="true"></div>
+                    <a href="<?= htmlspecialchars(mlUrl('logout.php')) ?>" class="mb-account-menu-link">Logout</a>
+                </nav>
+            </details>
         </div>
     </div>
 
@@ -110,7 +205,8 @@ if ($headerNextSeason) {
 document.addEventListener('DOMContentLoaded', function () {
     var subnav = document.querySelector('.mb-subnav');
     var subnavLinks = Array.prototype.slice.call(document.querySelectorAll('.mb-subnav-card'));
-    var pageTransitionLinks = Array.prototype.slice.call(document.querySelectorAll('.game-round-action-link[href*="song.php"], .game-round-action-link[href*="vote.php"], .game-round-action-link[href*="results.php"], .mb-settings-link[href], .mb-next-season-link[href]'));
+    var pageTransitionLinks = Array.prototype.slice.call(document.querySelectorAll('.game-round-action-link[href*="song.php"], .game-round-action-link[href*="vote.php"], .game-round-action-link[href*="results.php"], .mb-next-season-link[href], .mb-account-menu-link[href]'));
+    var accountMenu = document.querySelector('.mb-account-menu');
     var lightbox = document.getElementById('mb-image-lightbox');
     var lightboxImage = document.getElementById('mb-image-lightbox-image');
     var lightboxClose = document.getElementById('mb-image-lightbox-close');
@@ -215,6 +311,10 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.addEventListener('click', function (e) {
+        if (accountMenu && accountMenu.open && !accountMenu.contains(e.target)) {
+            accountMenu.open = false;
+        }
+
         var profileImage = e.target.closest('img.profile-avatar');
         if (!profileImage) {
             return;
@@ -244,6 +344,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
+            if (accountMenu && accountMenu.open) {
+                accountMenu.open = false;
+            }
             closeLightbox();
         }
     });
