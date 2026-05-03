@@ -61,7 +61,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
 <header class="marketing-nav">
     <div class="marketing-nav-inner">
         <a href="home.php" class="marketing-brand" aria-label="Musicball home">
-            <img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo.png')) ?>" alt="Musicball">
+            <img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo_home.png')) ?>" alt="Musicball">
         </a>
         <nav class="marketing-links" aria-label="Marketing navigation">
             <a href="#how-it-works">How It Works</a>
@@ -76,7 +76,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
     <section class="hero-section section-dark" id="home-hero">
         <div class="hero-copy">
             <div class="hero-brand-mark" aria-label="Musicball">
-                <img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo.png')) ?>" alt="Musicball">
+                <img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo_home.png')) ?>" alt="Musicball">
             </div>
             <h1>Built for music fans.<br>Designed for friends.</h1>
             <p>Serious competition. Personalized leagues. Songs you'll love.</p>
