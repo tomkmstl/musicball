@@ -49,8 +49,8 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
 <main>
     <section class="hero-section section-dark">
         <div class="hero-copy">
-            <h1>Build playlists<br>with your friends.</h1>
-            <p>Compete, vote, and discover music together — then keep what you create.</p>
+            <h1>Built for music fans.<br>Designed for friends.</h1>
+            <p>Serious competition. Personalized leagues. Songs you'll love.</p>
             <div class="hero-actions">
                 <a href="#start" class="btn btn-primary">Start a league</a>
                 <a href="#how-it-works" class="btn btn-secondary">See how it works</a>
@@ -185,19 +185,6 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                 <svg><use href="#mb-icon-music"></use></svg>
             </div>
         </div>
-    </section>
-
-    <section class="login-showcase section-dark">
-        <form method="post" action="index.php" class="marketing-login-card">
-            <a href="home.php" class="login-logo-text">MUSICBALL.</a>
-            <h2>Welcome back</h2>
-            <p>Log in to your account to continue.</p>
-            <label>Email Address<input type="email" name="email" placeholder="you@example.com" autocomplete="username"></label>
-            <label>4-digit code<input type="password" name="passcode" maxlength="4" placeholder="••••" autocomplete="current-password"></label>
-            <button type="submit" class="btn btn-primary btn-wide">Log In</button>
-            <p>Your passcode is the last four digits of your phone number.</p>
-            <p class="new-user">New to Musicball? <a href="index.php">Start a league</a></p>
-        </form>
     </section>
 </main>
 </body>
