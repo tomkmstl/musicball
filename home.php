@@ -19,7 +19,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
     <?php require_once 'pwa_head.php'; ?>
 </head>
 <body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?> marketing-page home-page">
-<svg class="mb-symbols" aria-hidden="true" focusable="false">
+<svg class="mb-symbols" style="display:none" aria-hidden="true" focusable="false">
 <symbol id="mb-icon-submit" viewBox="0 0 48 48"
   stroke="currentColor" fill="none"
   stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
