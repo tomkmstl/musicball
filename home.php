@@ -181,7 +181,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                 <article><svg><use href="#mb-icon-shield"></use></svg><div><h3>Commissioner Tools</h3><p>Powerful tools to run your league your way.</p></div></article>
             </div>
             <div class="built-banner">
-                <div><h2>Built for music fans. Designed for friends.</h2><p>Serious competition. Personalized leagues. Songs you'll love.</p></div>
+                <div><h2>Build playlists with your friends.</h2><p>Compete, vote, and discover music together — then keep what you create.</p></div>
                 <svg><use href="#mb-icon-music"></use></svg>
             </div>
         </div>
