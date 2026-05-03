@@ -19,7 +19,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
     <?php require_once 'pwa_head.php'; ?>
 </head>
 <body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?> marketing-page home-page">
-<svg class="mb-symbols" style="display:none" aria-hidden="true" focusable="false">
+<svg class="mb-symbols" aria-hidden="true" focusable="false">
 <symbol id="mb-icon-submit" viewBox="0 0 48 48"
   stroke="currentColor" fill="none"
   stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
@@ -82,35 +82,88 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
             <p>Serious competition. Personalized leagues. Songs you'll love.</p>
             <div class="hero-actions">
                 <a href="#start" class="btn btn-primary">Start a league</a>
-                <a href="#how-it-works" class="btn btn-secondary">See how it works</a>
+                <a href="#product-preview" class="btn btn-secondary">See the app</a>
             </div>
             <div class="hero-notes">
                 <span>Works with Spotify</span>
                 <span>Takes under a minute to start</span>
             </div>
         </div>
-        <div class="hero-preview" aria-label="Musicball product preview">
-            <article class="round-preview card-glass">
-                <div class="eyebrow">ROUND 1</div>
-                <h2>My Current Jam <span>s5</span></h2>
-                <p>submit by 5/8/26, 12:00 PM · vote by 5/13/26, 11:00 PM</p>
-                <div class="avatar-row-wrap"><span>submitted:</span><div class="avatar-row"><?php for ($i = 1; $i <= 6; $i++): ?><i class="avatar avatar-<?= $i ?>"></i><?php endfor; ?></div></div>
-                <div class="avatar-row-wrap"><span>still<br>researching:</span><div class="avatar-row"><?php for ($i = 7; $i <= 12; $i++): ?><i class="avatar avatar-<?= $i ?>"></i><?php endfor; ?></div></div>
-                <div class="round-actions-mini">
-                    <div><svg><use href="#mb-icon-submit"></use></svg><span>Choose Song</span></div>
-                    <div class="muted"><svg><use href="#mb-icon-vote"></use></svg><span>Vote</span></div>
-                </div>
-            </article>
-            <article class="standings-preview card-glass">
-                <h3>Season Standings</h3>
-                <table>
-                    <thead><tr><th></th><th>Player</th><th>Total<br>Points</th><th>Best<br>Song</th></tr></thead>
-                    <tbody>
-                        <tr><td>1</td><td><i></i> Manic Arch Tour</td><td>144</td><td>36</td></tr>
-                        <tr><td>2</td><td><i></i> Fashion Forward Fuckboi</td><td>143</td><td>34</td></tr>
-                    </tbody>
-                </table>
-            </article>
+    </section>
+
+    <section id="product-preview" class="product-preview-section marketing-section section-dark">
+        <div class="marketing-container">
+            <div class="section-heading centered product-preview-heading">
+                <h2>Real league tools, built around the game</h2>
+                <p>Submit songs, vote, follow standings, and keep the playlists your league builds together.</p>
+            </div>
+            <div class="hero-preview product-preview-grid" aria-label="Musicball product preview">
+                <article class="round-preview card-glass product-preview-card product-preview-card-large">
+                    <div class="eyebrow">ROUND 1</div>
+                    <h2>My Current Jam <span>s5</span></h2>
+                    <p>submit by 5/8/26, 12:00 PM · vote by 5/13/26, 11:00 PM</p>
+                    <div class="avatar-row-wrap"><span>submitted:</span><div class="avatar-row"><?php for ($i = 1; $i <= 6; $i++): ?><i class="avatar avatar-<?= $i ?>"></i><?php endfor; ?></div></div>
+                    <div class="avatar-row-wrap"><span>still<br>researching:</span><div class="avatar-row"><?php for ($i = 7; $i <= 12; $i++): ?><i class="avatar avatar-<?= $i ?>"></i><?php endfor; ?></div></div>
+                    <div class="round-actions-mini">
+                        <div><svg><use href="#mb-icon-submit"></use></svg><span>Choose Song</span></div>
+                        <div class="muted"><svg><use href="#mb-icon-vote"></use></svg><span>Vote</span></div>
+                    </div>
+                </article>
+
+                <article class="song-preview card-glass product-preview-card">
+                    <div class="eyebrow">CHOOSE YOUR SONG</div>
+                    <h2>Current Jam</h2>
+                    <p class="preview-schedule">submit 5/8/26 · vote by 5/13/26</p>
+                    <div class="song-selected-card-preview">
+                        <div class="song-artwork-preview"></div>
+                        <div>
+                            <div class="song-card-title-preview">Pink Pony Club</div>
+                            <div class="song-card-meta-preview">Chappell Roan · The Rise and Fall of a Midwest Princess</div>
+                            <div class="song-card-note-preview">Chosen 0 times in past rounds.</div>
+                        </div>
+                    </div>
+                    <div class="song-search-preview">
+                        <span>Search Spotify</span>
+                        <strong>Save Song</strong>
+                    </div>
+                </article>
+
+                <article class="vote-preview card-glass product-preview-card product-preview-card-wide">
+                    <div class="vote-preview-header">
+                        <div>
+                            <div class="eyebrow">ROUND VOTING</div>
+                            <h2>Current Jam</h2>
+                        </div>
+                        <div class="counter-value-preview">8 / 12</div>
+                    </div>
+                    <div class="vote-song-list-preview">
+                        <section class="vote-ballot-item-preview">
+                            <div class="vote-ballot-songline-preview"><div class="vote-art-preview art-one"></div><div><strong>Sweet Disposition</strong><span>The Temper Trap</span></div></div>
+                            <div class="points-control-preview"><button>−</button><span>5</span><button>+</button></div>
+                        </section>
+                        <section class="vote-ballot-item-preview">
+                            <div class="vote-ballot-songline-preview"><div class="vote-art-preview art-two"></div><div><strong>Dreams</strong><span>Fleetwood Mac</span></div></div>
+                            <div class="points-control-preview"><button>−</button><span>3</span><button>+</button></div>
+                        </section>
+                        <section class="vote-ballot-item-preview vote-ballot-item-own-preview">
+                            <div class="vote-ballot-songline-preview"><div class="vote-art-preview art-three"></div><div><strong>Pink Pony Club</strong><span>your song</span></div></div>
+                            <div class="points-control-static-preview">—</div>
+                        </section>
+                    </div>
+                </article>
+
+                <article class="standings-preview card-glass product-preview-card">
+                    <h3>Season Standings</h3>
+                    <table>
+                        <thead><tr><th></th><th>Player</th><th>Total<br>Points</th><th>Best<br>Song</th></tr></thead>
+                        <tbody>
+                            <tr><td>1</td><td><i></i> Manic Arch Tour</td><td>144</td><td>36</td></tr>
+                            <tr><td>2</td><td><i></i> Fashion Forward Fuckboi</td><td>143</td><td>34</td></tr>
+                            <tr><td>3</td><td><i></i> The Curator Jester</td><td>131</td><td>31</td></tr>
+                        </tbody>
+                    </table>
+                </article>
+            </div>
         </div>
     </section>
 
