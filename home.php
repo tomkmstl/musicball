@@ -22,11 +22,10 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
 <svg class="mb-symbols" aria-hidden="true" focusable="false">
 <symbol id="mb-icon-submit" viewBox="0 0 48 48"
   stroke="currentColor" fill="none"
-  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M30 10v20"/>
-  <path d="M30 14l10-2v18"/>
-  <circle cx="22" cy="34" r="4"/>
-  <circle cx="34" cy="32" r="4"/>
+  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M18 33.5V11"/>
+  <path d="M18 11l20-4v7l-20 4"/>
+  <ellipse cx="11.5" cy="34" rx="6.5" ry="4.8"/>
 </symbol>
 
 <symbol id="mb-icon-vote" viewBox="0 0 48 48"
