@@ -89,28 +89,33 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                 <span>Takes under a minute to start</span>
             </div>
         </div>
-        <div class="hero-preview" aria-label="Musicball product preview">
-            <article class="round-preview card-glass">
-                <div class="eyebrow">ROUND 1</div>
-                <h2>My Current Jam <span>s5</span></h2>
-                <p>submit by 5/8/26, 12:00 PM · vote by 5/13/26, 11:00 PM</p>
-                <div class="avatar-row-wrap"><span>submitted:</span><div class="avatar-row"><?php for ($i = 1; $i <= 6; $i++): ?><i class="avatar avatar-<?= $i ?>"></i><?php endfor; ?></div></div>
-                <div class="avatar-row-wrap"><span>still<br>researching:</span><div class="avatar-row"><?php for ($i = 7; $i <= 12; $i++): ?><i class="avatar avatar-<?= $i ?>"></i><?php endfor; ?></div></div>
-                <div class="round-actions-mini">
-                    <div><svg><use href="#mb-icon-submit"></use></svg><span>Choose Song</span></div>
-                    <div class="muted"><svg><use href="#mb-icon-vote"></use></svg><span>Vote</span></div>
-                </div>
-            </article>
-            <article class="standings-preview card-glass">
-                <h3>Season Standings</h3>
-                <table>
-                    <thead><tr><th></th><th>Player</th><th>Total<br>Points</th><th>Best<br>Song</th></tr></thead>
-                    <tbody>
-                        <tr><td>1</td><td><i></i> Manic Arch Tour</td><td>144</td><td>36</td></tr>
-                        <tr><td>2</td><td><i></i> Fashion Forward Fuckboi</td><td>143</td><td>34</td></tr>
-                    </tbody>
-                </table>
-            </article>
+    </section>
+
+    <section class="marketing-section section-dark">
+        <div class="marketing-container">
+            <div class="hero-preview" aria-label="Musicball product preview">
+                <article class="round-preview card-glass">
+                    <div class="eyebrow">ROUND 1</div>
+                    <h2>My Current Jam <span>s5</span></h2>
+                    <p>submit by 5/8/26, 12:00 PM · vote by 5/13/26, 11:00 PM</p>
+                    <div class="avatar-row-wrap"><span>submitted:</span><div class="avatar-row"><?php for ($i = 1; $i <= 6; $i++): ?><i class="avatar avatar-<?= $i ?>"></i><?php endfor; ?></div></div>
+                    <div class="avatar-row-wrap"><span>still<br>researching:</span><div class="avatar-row"><?php for ($i = 7; $i <= 12; $i++): ?><i class="avatar avatar-<?= $i ?>"></i><?php endfor; ?></div></div>
+                    <div class="round-actions-mini">
+                        <div><svg><use href="#mb-icon-submit"></use></svg><span>Choose Song</span></div>
+                        <div class="muted"><svg><use href="#mb-icon-vote"></use></svg><span>Vote</span></div>
+                    </div>
+                </article>
+                <article class="standings-preview card-glass">
+                    <h3>Season Standings</h3>
+                    <table>
+                        <thead><tr><th></th><th>Player</th><th>Total<br>Points</th><th>Best<br>Song</th></tr></thead>
+                        <tbody>
+                            <tr><td>1</td><td><i></i> Manic Arch Tour</td><td>144</td><td>36</td></tr>
+                            <tr><td>2</td><td><i></i> Fashion Forward Fuckboi</td><td>143</td><td>34</td></tr>
+                        </tbody>
+                    </table>
+                </article>
+            </div>
         </div>
     </section>
 
