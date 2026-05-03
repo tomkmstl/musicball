@@ -13,7 +13,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Musicball | Build playlists with your friends</title>
-    <meta name="description" content="Musicball is a weekly music competition where friends submit songs, vote, compete, and build shared playlists together.">
+    <meta name="description" content="Musicball is a social music competition where friends submit songs, vote, compete, and build shared playlists together over time.">
     <link rel="stylesheet" href="<?= htmlspecialchars(mlAssetUrl('styles.css')) ?>">
     <link rel="stylesheet" href="<?= htmlspecialchars(mlAssetUrl('assets/css/marketing.css')) ?>">
     <?php require_once 'pwa_head.php'; ?>
@@ -28,9 +28,9 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
         </a>
 
         <nav class="marketing-links" aria-label="Marketing navigation">
-            <a href="how-it-works.php">How It Works</a>
-            <a href="features.php">Features</a>
-            <a href="start-a-league.php">Start a League</a>
+            <a href="#how-it-works">How It Works</a>
+            <a href="#features">Features</a>
+            <a href="#start-a-league">Start a League</a>
             <a href="index.php" class="marketing-login-link">Log In</a>
         </nav>
     </div>
@@ -44,14 +44,14 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                 <p class="marketing-subhead">Compete, vote, and discover music together—then keep what you create.</p>
 
                 <div class="marketing-cta-row">
-                    <a href="start-a-league.php" class="marketing-btn marketing-btn-primary">Start a league</a>
-                    <a href="how-it-works.php" class="marketing-btn marketing-btn-secondary">See how it works</a>
+                    <a href="#start-a-league" class="marketing-btn marketing-btn-primary">Start a league</a>
+                    <a href="#how-it-works" class="marketing-btn marketing-btn-secondary">See how it works</a>
                 </div>
 
                 <div class="marketing-proof-row">
                     <span>Works with Spotify</span>
                     <span>Built for Discord groups</span>
-                    <span>Start in under a minute</span>
+                    <span>Start in 5 minutes</span>
                 </div>
             </div>
 
@@ -91,7 +91,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
         </div>
     </section>
 
-    <section class="marketing-section marketing-section-light">
+    <section class="marketing-section marketing-section-light marketing-build-section">
         <div class="marketing-container marketing-centered">
             <h2>A game that builds something real</h2>
 
@@ -119,16 +119,83 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
         </div>
     </section>
 
-    <section class="marketing-section marketing-video-section">
-        <div class="marketing-container marketing-video-grid">
-            <div>
-                <h2>This is what Musicball feels like</h2>
-                <p>It starts as a game. It turns into something more.</p>
-                <a href="how-it-works.php" class="marketing-btn marketing-btn-primary">Watch video</a>
+    <section id="how-it-works" class="marketing-section marketing-section-light marketing-how-section">
+        <div class="marketing-container marketing-centered marketing-section-heading">
+            <h2>How Musicball works</h2>
+            <p>Musicball is a weekly music competition with your friends. Everyone submits songs, everyone votes, and every round builds a shared playlist.</p>
+        </div>
+
+        <div class="marketing-container">
+            <div class="marketing-process-grid">
+                <article>
+                    <div class="marketing-process-icon">♪</div>
+                    <h3>1. Submit</h3>
+                    <p>Pick a song that fits the round theme and submit before the deadline.</p>
+                </article>
+                <article>
+                    <div class="marketing-process-icon">▣</div>
+                    <h3>2. Vote</h3>
+                    <p>Rank your favorite songs. Points are awarded automatically.</p>
+                </article>
+                <article>
+                    <div class="marketing-process-icon">▤</div>
+                    <h3>3. Results</h3>
+                    <p>Standings update and the playlist grows. On to the next round.</p>
+                </article>
             </div>
 
-            <div class="marketing-video-placeholder">
-                <div class="marketing-play-button">▶</div>
+            <div class="marketing-info-card marketing-season-card">
+                <div>
+                    <div class="marketing-info-icon">▦</div>
+                    <h3>Seasons</h3>
+                    <p>A season is a series of rounds with different themes—eras, madlibs, custom prompts, and more. You decide.</p>
+                </div>
+                <ul>
+                    <li>Weekly rounds keep it fresh</li>
+                    <li>Compete across the whole season</li>
+                    <li>History and stats for every league</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="marketing-section marketing-discord-section">
+        <div class="marketing-container marketing-discord-grid">
+            <div>
+                <div class="marketing-kicker">Discord integration</div>
+                <h2>One login. Total integration.</h2>
+                <p>Musicball is built for friend groups, and Discord is where your league already talks. One login keeps the game connected without adding another account system to remember.</p>
+
+                <div class="marketing-discord-list">
+                    <div><strong>One sign-on</strong><span>Log in securely with Discord. No extra passwords to remember.</span></div>
+                    <div><strong>Built for groups</strong><span>Connect league activity to the Discord server your friends already use.</span></div>
+                    <div><strong>Real-time updates</strong><span>Send round reminders, voting windows, results, and announcements.</span></div>
+                    <div><strong>Stay in the loop</strong><span>No one misses a deadline or result because the game meets them where they already are.</span></div>
+                </div>
+            </div>
+
+            <div class="marketing-discord-card">
+                <div class="marketing-discord-channel"># musicball</div>
+                <div class="marketing-discord-message">
+                    <strong>Musicball</strong>
+                    <span>Round 1: My Current Jam s5 is live!</span>
+                    <button type="button">View Round</button>
+                </div>
+                <div class="marketing-discord-message">
+                    <strong>Musicball</strong>
+                    <span>Results are in. Check out the new standings.</span>
+                    <button type="button">View Standings</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="marketing-container">
+            <div class="marketing-info-card marketing-discord-note">
+                <div class="marketing-info-icon">☁</div>
+                <div>
+                    <h3>Less friction. More music.</h3>
+                    <p>Discord keeps your league connected—so you can focus on discovering new music together.</p>
+                </div>
             </div>
         </div>
     </section>
@@ -168,42 +235,48 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
         </div>
     </section>
 
-    <section class="marketing-section marketing-discord-section">
-        <div class="marketing-container marketing-discord-grid">
-            <div>
-                <div class="marketing-kicker">Discord integration</div>
-                <h2>One login. Total league connection.</h2>
-                <p>Musicball only requires Discord for login because Musicball is built for friend groups, and Discord is where many leagues already live.</p>
+    <section id="start-a-league" class="marketing-section marketing-start-section">
+        <div class="marketing-container marketing-start-grid">
+            <div class="marketing-start-copy">
+                <h2>Start a league in 5 minutes.</h2>
+                <p>Invite your friends, pick your first theme, and let the games begin.</p>
 
-                <div class="marketing-discord-list">
-                    <div><strong>One sign-on</strong><span>Log in securely with Discord. No extra Musicball password to remember.</span></div>
-                    <div><strong>Built for groups</strong><span>Connect your league to the Discord server your friends already use.</span></div>
-                    <div><strong>Round updates</strong><span>Submit reminders, voting windows, results, and announcements can flow into your server.</span></div>
-                    <div><strong>Less friction</strong><span>Your league stays connected, and players spend more time discovering music.</span></div>
+                <div class="marketing-start-steps">
+                    <article>
+                        <span>1</span>
+                        <div>
+                            <h3>Create your league</h3>
+                            <p>Name your league and set the basics.</p>
+                        </div>
+                    </article>
+                    <article>
+                        <span>2</span>
+                        <div>
+                            <h3>Invite your friends</h3>
+                            <p>Send invites and build your roster.</p>
+                        </div>
+                    </article>
+                    <article>
+                        <span>3</span>
+                        <div>
+                            <h3>Pick your first round</h3>
+                            <p>Choose from ready-made themes or create your own.</p>
+                        </div>
+                    </article>
                 </div>
             </div>
 
-            <div class="marketing-discord-card">
-                <div class="marketing-discord-channel"># musicball</div>
-                <div class="marketing-discord-message">
-                    <strong>Musicball</strong>
-                    <span>Round 1: My Current Jam s5 is live!</span>
-                    <button type="button">View Round</button>
-                </div>
-                <div class="marketing-discord-message">
-                    <strong>Musicball</strong>
-                    <span>Results are in. Check out the new standings.</span>
-                    <button type="button">View Standings</button>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="marketing-section marketing-final-cta">
-        <div class="marketing-container marketing-centered">
-            <h2>Start your first league</h2>
-            <p>Invite your friends. Pick your first theme. See what happens.</p>
-            <a href="start-a-league.php" class="marketing-btn marketing-btn-primary">Start a league</a>
+            <aside class="marketing-commissioner-card">
+                <div class="marketing-crown">♛</div>
+                <h3>Commissioner control</h3>
+                <ul>
+                    <li>Customize rounds and themes</li>
+                    <li>Set deadlines and voting windows</li>
+                    <li>Choose formats and scoring</li>
+                    <li>Manage seasons without chaos</li>
+                </ul>
+                <a href="index.php" class="marketing-btn marketing-btn-primary">Start your league</a>
+            </aside>
         </div>
     </section>
 </main>
