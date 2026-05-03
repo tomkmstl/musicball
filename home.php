@@ -20,9 +20,9 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
 </head>
 <body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?> marketing-page">
 <svg class="mb-symbols" aria-hidden="true" focusable="false">
-    <symbol id="mb-icon-submit" viewBox="0 0 48 48"><path stroke-width="3" d="M24 32V12"/><path stroke-width="3" d="M16 20l8-8 8 8"/><path stroke-width="3" d="M12 34c4 2 20 2 24 0"/></symbol>
-    <symbol id="mb-icon-vote" viewBox="0 0 48 48"><path stroke-width="3" d="M12 30h8"/><path stroke-width="3" d="M12 24h12"/><path stroke-width="3" d="M12 18h16"/><path stroke-width="3" d="M32 16l2 4 4.5.7-3.3 3.2.8 4.6-4-2.2-4 2.2.8-4.6-3.3-3.2 4.5-.7z"/></symbol>
-    <symbol id="mb-icon-build" viewBox="0 0 48 48"><rect stroke-width="3" x="10" y="12" width="28" height="22" rx="5"/><path stroke-width="3" d="M16 20h16"/><path stroke-width="3" d="M16 26h12"/><circle stroke-width="3" cx="32" cy="26" r="2.5"/></symbol>
+    <symbol id="mb-icon-submit" viewBox="0 0 48 48"><path d="M30 8v24.5"/><path d="M38 6v24.5"/><path d="M30 13l8-2"/><ellipse cx="24" cy="33" rx="6" ry="4.5"/><ellipse cx="32" cy="31" rx="6" ry="4.5"/></symbol>
+    <symbol id="mb-icon-vote" viewBox="0 0 48 48"><path d="M11 24h26l4 14H7l4-14Z"/><path d="M17 24v-6h14v6"/><path d="M20 16l4 4 7-8"/><path d="M18 32h12"/></symbol>
+    <symbol id="mb-icon-build" viewBox="0 0 48 48"><rect x="9" y="9" width="24" height="28" rx="4"/><path d="M15 17h12"/><path d="M15 24h8"/><rect x="27" y="24" width="12" height="12" rx="3"/><path d="m30 30 3 3 5-6"/></symbol>
     <symbol id="mb-icon-music" viewBox="0 0 48 48"><path d="M30 8v24.4a7.2 7.2 0 1 1-4-6.4V13.7l16-3.2v17.9a7.2 7.2 0 1 1-4-6.4V6.5L30 8Z"/></symbol>
     <symbol id="mb-icon-results" viewBox="0 0 48 48"><path d="M10 7h22l6 6v27H10V7Zm19 3v7h7M16 18h13M16 25h18M16 32h10"/><path d="m31 30 4 4 7-8"/></symbol>
     <symbol id="mb-icon-calendar" viewBox="0 0 48 48"><path d="M10 11h28v29H10V11Zm0 10h28M17 7v8M31 7v8M17 27h5M26 27h5M17 34h5M26 34h5"/></symbol>
