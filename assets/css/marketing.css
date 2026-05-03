@@ -13,9 +13,13 @@ body.marketing-page a {
   color: inherit;
   text-decoration: none;
 }
-/* only real icons render as block */
+
 body.marketing-page svg:not(.mb-symbols) {
   display: block;
+}
+
+body.marketing-page svg.mb-symbols {
+  display: none;
 }
 
 /* ICON SYSTEM: scoped SVG styling so global rules do not distort icons */
