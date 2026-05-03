@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>Submit song</title>
+  <g fill="none" stroke="#2f8cff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M26 42V14l24-5v28"/>
+    <path d="M26 20l24-5"/>
+    <ellipse cx="18" cy="46" rx="10" ry="7"/>
+    <ellipse cx="42" cy="41" rx="10" ry="7"/>
+  </g>
+</svg>
