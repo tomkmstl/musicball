@@ -314,6 +314,28 @@ $nextSeasonDefaultName = 's' . $nextSeasonId;
 </head>
 <body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?>">
 <?php $currentPage = 'admin'; include 'header.php'; ?>
+
+<?php
+$adminEnvName = defined('MUSICBALL_ENV') ? MUSICBALL_ENV : 'unknown';
+$adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName === 'prod') ? 'musicball' : 'unknown');
+?>
+<div style="
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    z-index: 9999;
+    padding: 5px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(0,0,0,0.55);
+    color: rgba(255,255,255,0.78);
+    font-size: 11px;
+    line-height: 1;
+    backdrop-filter: blur(6px);
+">
+    <?= htmlspecialchars(strtoupper($adminEnvName)) ?> · <?= htmlspecialchars($adminDbName) ?>
+</div>
+
 <div class="wrapper">
     <div class="card admin-card">
         <div class="admin-page-topline admin-page-topline-compact">

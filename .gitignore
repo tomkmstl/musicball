@@ -1,5 +1,6 @@
 config/spotify_config.php
 config/connections/
+config/local_env.php
 _sessions/
 *.log
 .env
