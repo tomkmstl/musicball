@@ -18,7 +18,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
     <link rel="stylesheet" href="<?= htmlspecialchars(mlAssetUrl('assets/css/marketing.css')) ?>">
     <?php require_once 'pwa_head.php'; ?>
 </head>
-<body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?> marketing-page">
+<body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?> marketing-page home-page">
 <svg class="mb-symbols" aria-hidden="true" focusable="false">
 <symbol id="mb-icon-submit" viewBox="0 0 48 48"
   stroke="currentColor" fill="none"
@@ -73,8 +73,11 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
 </header>
 
 <main>
-    <section class="hero-section section-dark">
+    <section class="hero-section section-dark" id="home-hero">
         <div class="hero-copy">
+            <div class="hero-brand-mark" aria-label="Musicball">
+                <img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo.png')) ?>" alt="Musicball">
+            </div>
             <h1>Built for music fans.<br>Designed for friends.</h1>
             <p>Serious competition. Personalized leagues. Songs you'll love.</p>
             <div class="hero-actions">
@@ -213,5 +216,22 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
         </div>
     </section>
 </main>
+<script>
+(function () {
+    var hero = document.getElementById('home-hero');
+    if (!hero) {
+        return;
+    }
+
+    function updateHeaderLogo() {
+        var heroBottom = hero.getBoundingClientRect().bottom;
+        document.body.classList.toggle('hero-passed', heroBottom <= 24);
+    }
+
+    updateHeaderLogo();
+    window.addEventListener('scroll', updateHeaderLogo, { passive: true });
+    window.addEventListener('resize', updateHeaderLogo);
+})();
+</script>
 </body>
 </html>
