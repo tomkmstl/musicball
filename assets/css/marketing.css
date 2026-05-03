@@ -412,8 +412,8 @@ body.marketing-page p {
 }
 
 .marketing-discord-message {
-    display: grid;
-    gap: 8px;
+    display: flex;
+    gap: 12px;
     margin-top: 14px;
     padding: 14px;
     border-radius: 12px;
@@ -582,6 +582,58 @@ body.marketing-page p {
     line-height: 1;
     color: #f4c46a;
     margin-bottom: 10px;
+}
+
+.marketing-icon img,
+.marketing-process-icon img,
+.marketing-info-icon img {
+    width: 48px;
+    height: 48px;
+    display: block;
+    margin: 0 auto;
+}
+
+/* Discord visual polish */
+.marketing-discord-topbar {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 800;
+    color: #b9bbbe;
+    margin-bottom: 10px;
+}
+
+.marketing-discord-hash {
+    color: #72767d;
+}
+
+.marketing-discord-dots {
+    opacity: 0.6;
+}
+
+.marketing-discord-bot-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: #5865f2;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+}
+
+.marketing-discord-message-head {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.marketing-discord-message-head span {
+    font-size: 0.7rem;
+    background: #5865f2;
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 
 @media (max-width: 900px) {
