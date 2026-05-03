@@ -20,8 +20,10 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
 </head>
 <body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?> marketing-page">
 <svg class="mb-symbols" aria-hidden="true" focusable="false">
+    <symbol id="mb-icon-submit" viewBox="0 0 48 48"><path stroke-width="2.5" d="M24 30V10"/><path stroke-width="2.5" d="M16 18l8-8 8 8"/><rect stroke-width="2.5" x="10" y="30" width="28" height="10" rx="4"/></symbol>
+    <symbol id="mb-icon-vote" viewBox="0 0 48 48"><path stroke-width="2.5" d="M10 30h6"/><path stroke-width="2.5" d="M10 24h10"/><path stroke-width="2.5" d="M10 18h14"/><path stroke-width="2.5" d="M30 14l2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8z"/></symbol>
+    <symbol id="mb-icon-build" viewBox="0 0 48 48"><rect stroke-width="2.5" x="10" y="12" width="28" height="24" rx="4"/><path stroke-width="2.5" d="M16 20h16"/><path stroke-width="2.5" d="M16 26h10"/><circle stroke-width="2.5" cx="32" cy="26" r="2"/></symbol>
     <symbol id="mb-icon-music" viewBox="0 0 48 48"><path d="M30 8v24.4a7.2 7.2 0 1 1-4-6.4V13.7l16-3.2v17.9a7.2 7.2 0 1 1-4-6.4V6.5L30 8Z"/></symbol>
-    <symbol id="mb-icon-vote" viewBox="0 0 48 48"><path d="M14 20h20l-4 9H18l-4-9Zm3-5 7-7 7 7-3 3-4-4-4 4-3-3ZM9 29h30l4 12H5l4-12Zm6 5v3h18v-3H15Z"/></symbol>
     <symbol id="mb-icon-results" viewBox="0 0 48 48"><path d="M10 7h22l6 6v27H10V7Zm19 3v7h7M16 18h13M16 25h18M16 32h10"/><path d="m31 30 4 4 7-8"/></symbol>
     <symbol id="mb-icon-calendar" viewBox="0 0 48 48"><path d="M10 11h28v29H10V11Zm0 10h28M17 7v8M31 7v8M17 27h5M26 27h5M17 34h5M26 34h5"/></symbol>
     <symbol id="mb-icon-users" viewBox="0 0 48 48"><path d="M18 23a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm-12 17c1.5-8 5.5-12 12-12s10.5 4 12 12H6Zm27-16a6 6 0 1 0 0-12m-1 16c5.4.5 8.8 4.5 10 12h-8"/></symbol>
@@ -70,7 +72,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                 <div class="avatar-row-wrap"><span>submitted:</span><div class="avatar-row"><?php for ($i = 1; $i <= 6; $i++): ?><i class="avatar avatar-<?= $i ?>"></i><?php endfor; ?></div></div>
                 <div class="avatar-row-wrap"><span>still<br>researching:</span><div class="avatar-row"><?php for ($i = 7; $i <= 12; $i++): ?><i class="avatar avatar-<?= $i ?>"></i><?php endfor; ?></div></div>
                 <div class="round-actions-mini">
-                    <div><svg><use href="#mb-icon-music"></use></svg><span>Choose Song</span></div>
+                    <div><svg><use href="#mb-icon-submit"></use></svg><span>Choose Song</span></div>
                     <div class="muted"><svg><use href="#mb-icon-vote"></use></svg><span>Vote</span></div>
                 </div>
             </article>
@@ -90,9 +92,9 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
     <section class="build-section marketing-section">
         <h2>A game that builds something real</h2>
         <div class="three-step-strip">
-            <div><svg><use href="#mb-icon-music"></use></svg><strong>Submit</strong><p>Everyone brings a song<br>to the round.</p></div>
+            <div><svg><use href="#mb-icon-submit"></use></svg><strong>Submit</strong><p>Everyone brings a song<br>to the round.</p></div>
             <div><svg><use href="#mb-icon-vote"></use></svg><strong>Vote</strong><p>Rank your favorites<br>each week.</p></div>
-            <div><svg><use href="#mb-icon-results"></use></svg><strong>Build</strong><p>Every round adds to<br>your shared playlist.</p></div>
+            <div><svg><use href="#mb-icon-build"></use></svg><strong>Build</strong><p>Every round adds to<br>your shared playlist.</p></div>
         </div>
         <p class="section-tagline">At the end, you don't just have winners — you have a playlist that's yours.</p>
     </section>
@@ -130,9 +132,9 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                 <p>Musicball is a weekly music competition with your friends.<br>Everyone submits songs, everyone votes, and every round<br>builds a shared playlist.</p>
             </div>
             <div class="how-steps">
-                <article><svg><use href="#mb-icon-music"></use></svg><h3>1. Submit</h3><p>Pick a song that fits the round theme and submit before the deadline.</p></article>
+                <article><svg><use href="#mb-icon-submit"></use></svg><h3>1. Submit</h3><p>Pick a song that fits the round theme and submit before the deadline.</p></article>
                 <article><svg><use href="#mb-icon-vote"></use></svg><h3>2. Vote</h3><p>Rank your favorite songs. Points are awarded automatically.</p></article>
-                <article><svg><use href="#mb-icon-results"></use></svg><h3>3. Results</h3><p>Standings update and the playlist grows. On to the next round!</p></article>
+                <article><svg><use href="#mb-icon-build"></use></svg><h3>3. Build</h3><p>Standings update and the playlist grows. On to the next round!</p></article>
             </div>
             <div class="info-card split-card">
                 <div class="info-title"><svg><use href="#mb-icon-calendar"></use></svg><div><h3>Seasons</h3><p>A season is a series of rounds with different themes — eras, madlibs, custom prompts, and more. You decide.</p></div></div>
@@ -179,7 +181,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                 <article><svg><use href="#mb-icon-bars"></use></svg><div><h3>League Standings</h3><p>Track wins, podiums, points, and season history.</p></div></article>
                 <article><svg><use href="#mb-icon-vote"></use></svg><div><h3>Voting & Scoring</h3><p>Rank songs, earn points, climb the standings.</p></div></article>
                 <article><svg><use href="#mb-icon-listen"></use></svg><div><h3>Playlist History</h3><p>Every round lives on in your league playlist.</p></div></article>
-                <article><svg><use href="#mb-icon-results"></use></svg><div><h3>Round Themes</h3><p>Eras, madlibs, custom prompts, and more.</p></div></article>
+                <article><svg><use href="#mb-icon-build"></use></svg><div><h3>Round Themes</h3><p>Eras, madlibs, custom prompts, and more.</p></div></article>
                 <article><svg><use href="#mb-icon-shield"></use></svg><div><h3>Commissioner Tools</h3><p>Powerful tools to run your league your way.</p></div></article>
             </div>
             <div class="built-banner">
