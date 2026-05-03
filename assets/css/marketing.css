@@ -18,11 +18,6 @@ body.marketing-page svg:not(.mb-symbols) {
   display: block;
 }
 
-/* sprite is ALWAYS hidden */
-body.marketing-page svg.mb-symbols {
-  display: none;
-}
-
 /* ICON SYSTEM: scoped SVG styling so global rules do not distort icons */
 .three-step-strip svg,
 .how-steps svg,
@@ -683,7 +678,7 @@ body.marketing-page svg.mb-symbols {
 }
 
 /* ========================================
-   HOMEPAGE HERO BRAND + NAV BEHAVIOR
+   HOMEPAGE HERO BRAND + NAV BEHAVIORbody.marketing-page svg {
    ======================================== */
 
 body.home-page .marketing-brand {
