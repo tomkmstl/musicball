@@ -36,7 +36,9 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
 
 <header class="marketing-nav">
     <div class="marketing-nav-inner">
-        <a href="home.php" class="marketing-brand" aria-label="Musicball home">MUSICBALL.</a>
+        <a href="home.php" class="marketing-brand" aria-label="Musicball home">
+            <img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo.png')) ?>" alt="Musicball">
+        </a>
         <nav class="marketing-links" aria-label="Marketing navigation">
             <a href="#how-it-works">How It Works</a>
             <a href="#features">Features</a>
