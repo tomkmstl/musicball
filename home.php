@@ -20,42 +20,109 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
 </head>
 <body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?> marketing-page home-page">
 <svg class="mb-symbols" style="display:none" aria-hidden="true" focusable="false">
-<symbol id="mb-icon-submit" viewBox="0 0 48 48"
-  stroke="currentColor" fill="none"
-  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M18 33.5V11"/>
-  <path d="M18 11l20-4v7l-20 4"/>
-  <ellipse cx="11.5" cy="34" rx="6.5" ry="4.8"/>
-</symbol>
+    <symbol id="mb-icon-submit" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M14 3v4a1 1 0 0 0 1 1h4"/>
+        <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v4"/>
+        <path d="M16 19h6"/>
+        <path d="M19 16v6"/>
+    </symbol>
 
-<symbol id="mb-icon-vote" viewBox="0 0 48 48"
-  stroke="currentColor" fill="none"
-  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <rect x="10" y="22" width="28" height="14" rx="3"/>
-  <path d="M18 22v-6h12v6"/>
-  <path d="M22 14l4 4 6-6"/>
-</symbol>
+    <symbol id="mb-icon-vote" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M9 11l3 3l8 -8"/>
+        <path d="M20 12v6a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h9"/>
+    </symbol>
 
-<symbol id="mb-icon-build" viewBox="0 0 48 48"
-  stroke="currentColor" fill="none"
-  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <rect x="10" y="10" width="22" height="26" rx="4"/>
-  <path d="M15 18h12"/>
-  <path d="M15 24h9"/>
-  <circle cx="34" cy="30" r="6"/>
-  <path d="M31 30l2 2 4-5"/>
-</symbol>
-    <symbol id="mb-icon-music" viewBox="0 0 48 48"><path d="M30 8v24.4a7.2 7.2 0 1 1-4-6.4V13.7l16-3.2v17.9a7.2 7.2 0 1 1-4-6.4V6.5L30 8Z"/></symbol>
-    <symbol id="mb-icon-results" viewBox="0 0 48 48"><path d="M10 7h22l6 6v27H10V7Zm19 3v7h7M16 18h13M16 25h18M16 32h10"/><path d="m31 30 4 4 7-8"/></symbol>
-    <symbol id="mb-icon-calendar" viewBox="0 0 48 48"><path d="M10 11h28v29H10V11Zm0 10h28M17 7v8M31 7v8M17 27h5M26 27h5M17 34h5M26 34h5"/></symbol>
-    <symbol id="mb-icon-users" viewBox="0 0 48 48"><path d="M18 23a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm-12 17c1.5-8 5.5-12 12-12s10.5 4 12 12H6Zm27-16a6 6 0 1 0 0-12m-1 16c5.4.5 8.8 4.5 10 12h-8"/></symbol>
-    <symbol id="mb-icon-person" viewBox="0 0 48 48"><path d="M24 24a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-15 17c1.8-8.7 6.8-13 15-13s13.2 4.3 15 13H9Z"/></symbol>
-    <symbol id="mb-icon-phone" viewBox="0 0 48 48"><path d="M17 5h14a4 4 0 0 1 4 4v30a4 4 0 0 1-4 4H17a4 4 0 0 1-4-4V9a4 4 0 0 1 4-4Zm3 6h8M21 36h6"/><path d="m24 22 5 5 9-11"/></symbol>
-    <symbol id="mb-icon-bars" viewBox="0 0 48 48"><path d="M10 38h6V22h-6v16Zm11 0h6V10h-6v28Zm11 0h6V17h-6v21Z"/></symbol>
-    <symbol id="mb-icon-listen" viewBox="0 0 48 48"><path d="M16 34a6 6 0 1 1-4-5.7V10l22-4v24a6 6 0 1 1-4-5.7V13.5l-14 2.6V34Z"/></symbol>
-    <symbol id="mb-icon-shield" viewBox="0 0 48 48"><path d="M24 5 39 11v10c0 10-5.3 17.2-15 22C14.3 38.2 9 31 9 21V11l15-6Zm-6 19 4 4 9-10"/></symbol>
-    <symbol id="mb-icon-star" viewBox="0 0 48 48"><path d="m24 5 5.6 11.3L42 18.1l-9 8.7 2.1 12.3L24 33.3l-11.1 5.8L15 26.8 6 18.1l12.4-1.8L24 5Z"/></symbol>
-    <symbol id="mb-icon-play" viewBox="0 0 64 64"><path d="M26 20v24l20-12-20-12Z"/></symbol>
+    <symbol id="mb-icon-build" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M9 6h11"/>
+        <path d="M9 12h11"/>
+        <path d="M9 18h11"/>
+        <path d="M5 6v.01"/>
+        <path d="M5 12v.01"/>
+        <path d="M5 18v.01"/>
+    </symbol>
+
+    <symbol id="mb-icon-music" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M3 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
+        <path d="M9 17v-13h10v9"/>
+        <path d="M9 8h10"/>
+        <path d="M17 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
+    </symbol>
+
+    <symbol id="mb-icon-results" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"/>
+        <path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z"/>
+        <path d="M9 17v-5"/>
+        <path d="M12 17v-1"/>
+        <path d="M15 17v-3"/>
+    </symbol>
+
+    <symbol id="mb-icon-calendar" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M4 5m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z"/>
+        <path d="M16 3l0 4"/>
+        <path d="M8 3l0 4"/>
+        <path d="M4 11l16 0"/>
+        <path d="M8 15h2v2h-2z"/>
+    </symbol>
+
+    <symbol id="mb-icon-users" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M10 13a4 4 0 1 0 -8 0a4 4 0 0 0 8 0"/>
+        <path d="M16 13a4 4 0 1 0 -8 0a4 4 0 0 0 8 0"/>
+        <path d="M22 13a4 4 0 1 0 -8 0a4 4 0 0 0 8 0"/>
+        <path d="M6 17v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2v-1"/>
+    </symbol>
+
+    <symbol id="mb-icon-person" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/>
+        <path d="M16 19h6"/>
+        <path d="M19 16v6"/>
+        <path d="M6 21v-2a4 4 0 0 1 4 -4h4"/>
+    </symbol>
+
+    <symbol id="mb-icon-phone" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M6 4m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z"/>
+        <path d="M11 17h2"/>
+        <path d="M9 11l2 2l4 -4"/>
+    </symbol>
+
+    <symbol id="mb-icon-bars" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M3 12m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/>
+        <path d="M9 8m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/>
+        <path d="M15 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/>
+        <path d="M4 20l14 0"/>
+    </symbol>
+
+    <symbol id="mb-icon-listen" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M4 13m0 2a2 2 0 0 1 2 -2h1v6h-1a2 2 0 0 1 -2 -2z"/>
+        <path d="M17 13h1a2 2 0 0 1 2 2v2a2 2 0 0 1 -2 2h-1z"/>
+        <path d="M4 15v-3a8 8 0 0 1 16 0v3"/>
+    </symbol>
+
+    <symbol id="mb-icon-shield" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M12 3l8 4v5c0 5 -3.5 9 -8 9s-8 -4 -8 -9v-5z"/>
+        <path d="M9 12l2 2l4 -4"/>
+    </symbol>
+
+    <symbol id="mb-icon-star" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1.002l3.086 -6.253l3.086 6.253l6.9 1.002l-5 4.867l1.179 6.873z"/>
+    </symbol>
+
+    <symbol id="mb-icon-play" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+        <path d="M7 4v16l13 -8z"/>
+    </symbol>
 </svg>
 
 <header class="marketing-nav">
