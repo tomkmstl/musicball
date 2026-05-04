@@ -947,3 +947,81 @@ body.home-page.hero-passed .marketing-brand {
     opacity: 0.8;
     margin-top: 8px;
 }
+
+.playlist-preview h2 {
+  color: #fff;
+  font-size: 2.4rem;
+  line-height: 1;
+  margin: 0 0 12px;
+}
+
+.playlist-overview-preview,
+.playlist-player-card-preview {
+  border: 1px solid #2a4058;
+  border-radius: 16px;
+  background: rgba(8, 17, 28, 0.42);
+}
+
+.playlist-overview-preview {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: center;
+  padding: 18px;
+}
+
+.playlist-overview-preview h3,
+.playlist-player-card-preview strong {
+  color: #fff;
+}
+
+.playlist-overview-preview svg,
+.playlist-player-card-preview svg {
+  width: 42px;
+  height: 42px;
+  color: #3dacec;
+}
+
+.playlist-player-heading {
+  color: #fff;
+  margin: 24px 0 14px;
+}
+
+.playlist-player-grid-preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.playlist-player-card-preview {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+}
+
+.playlist-player-card-preview p {
+  margin: 4px 0 0;
+  color: #a9bbd0;
+  font-weight: 800;
+}
+
+.playlist-avatar-preview {
+  width: 42px;
+  height: 42px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #3dacec, #f4c46a);
+}
+
+.playlist-avatar-preview.avatar-two {
+  background: linear-gradient(135deg, #0f172a, #94a3b8);
+}
+
+.playlist-avatar-preview.avatar-three {
+  background: linear-gradient(135deg, #f472b6, #fbbf24);
+}
+
+.playlist-avatar-preview.avatar-four {
+  background: linear-gradient(135deg, #64748b, #e2e8f0);
+}

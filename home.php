@@ -239,40 +239,47 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                     </div>
                 </article>
 				<article class="playlist-preview card-glass">
-					<div class="eyebrow">YOUR PLAYLISTS</div>
-					<h2>Season Collections</h2>
-					<p>Every round builds something you keep.</p>
+					<div class="eyebrow">PLAYLISTS</div>
+					<h2>Scone Ghetto</h2>
 
-					<div class="playlist-list-preview">
-						<div class="playlist-row">
-							<div class="playlist-thumb"></div>
-							<div class="playlist-meta">
-								<div class="playlist-title">Hank’s Songs</div>
-								<div class="playlist-sub">Season 5 · 12 songs</div>
-							</div>
+					<section class="playlist-overview-preview">
+						<div>
+							<div class="eyebrow">ALL-TIME LEAGUE PLAYLIST</div>
+							<h3>Scone Ghetto</h3>
+							<strong>719 songs</strong>
+							<p>Every song from every generated round playlist, in league order from the first eligible round to the latest eligible round.</p>
+						</div>
+						<svg><use href="#mb-icon-music"></use></svg>
+					</section>
+
+					<h3 class="playlist-player-heading">Player Playlists</h3>
+
+					<div class="playlist-player-grid-preview">
+						<div class="playlist-player-card-preview">
+							<span class="playlist-avatar-preview"></span>
+							<div><strong>Das Bot's Songs</strong><p>60 songs</p></div>
+							<svg><use href="#mb-icon-music"></use></svg>
 						</div>
 
-						<div class="playlist-row">
-							<div class="playlist-thumb"></div>
-							<div class="playlist-meta">
-								<div class="playlist-title">Fashion Forward Fuckboi</div>
-								<div class="playlist-sub">Season 5 · 12 songs</div>
-							</div>
+						<div class="playlist-player-card-preview">
+							<span class="playlist-avatar-preview avatar-two"></span>
+							<div><strong>Ham's Songs</strong><p>60 songs</p></div>
+							<svg><use href="#mb-icon-music"></use></svg>
 						</div>
 
-						<div class="playlist-row">
-							<div class="playlist-thumb"></div>
-							<div class="playlist-meta">
-								<div class="playlist-title">League Playlist</div>
-								<div class="playlist-sub">All players · 60 songs</div>
-							</div>
+						<div class="playlist-player-card-preview">
+							<span class="playlist-avatar-preview avatar-three"></span>
+							<div><strong>Fashion Forward's Songs</strong><p>60 songs</p></div>
+							<svg><use href="#mb-icon-music"></use></svg>
+						</div>
+
+						<div class="playlist-player-card-preview">
+							<span class="playlist-avatar-preview avatar-four"></span>
+							<div><strong>Manic Arch Tour's Songs</strong><p>60 songs</p></div>
+							<svg><use href="#mb-icon-music"></use></svg>
 						</div>
 					</div>
-
-					<div class="playlist-preview-footer">
-						<span>Built automatically from every round</span>
-						<strong>Listen on Spotify</strong>
-					</div>
+				</article>
 				</article>
             </div>
         </div>
