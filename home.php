@@ -16,145 +16,6 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
     <meta name="description" content="Musicball is a weekly music competition with your friends. Submit songs, vote, track standings, and build shared playlists together.">
     <link rel="stylesheet" href="<?= htmlspecialchars(mlAssetUrl('styles.css')) ?>">
     <link rel="stylesheet" href="<?= htmlspecialchars(mlAssetUrl('assets/css/marketing.css')) ?>">
-    <style>
-        .song-confirm-preview {
-            color: #e7edf5;
-        }
-
-        .song-confirm-panel,
-        .song-current-panel,
-        .song-search-panel {
-            border: 1px solid #2a4058;
-            border-radius: 16px;
-            background: rgba(8, 17, 28, 0.4);
-            padding: 18px;
-        }
-
-        .song-confirm-panel {
-            margin-top: 10px;
-        }
-
-        .song-confirm-card-inner {
-            display: grid;
-            justify-items: center;
-            gap: 14px;
-            text-align: center;
-            padding: 10px 0 12px;
-        }
-
-        .song-confirm-artwork {
-            width: 104px;
-            height: 104px;
-            border-radius: 14px;
-            object-fit: cover;
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-        }
-
-        .song-confirm-title {
-            color: #fff;
-            font-size: 1.25rem;
-            line-height: 1.05;
-            font-weight: 900;
-            letter-spacing: -0.02em;
-            text-transform: uppercase;
-            margin-top: 4px;
-        }
-
-        .song-confirm-meta,
-        .song-confirm-note,
-        .song-current-panel p,
-        .song-search-panel p {
-            color: #a9bbd0;
-            margin: 0;
-        }
-
-        .song-confirm-meta {
-            font-size: 1.02rem;
-        }
-
-        .song-confirm-note {
-            font-size: 0.94rem;
-        }
-
-        .song-confirm-actions {
-            display: grid;
-            gap: 0;
-            margin-top: 2px;
-        }
-
-        .song-confirm-primary,
-        .song-confirm-secondary {
-            min-height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
-            font-weight: 900;
-        }
-
-        .song-confirm-primary {
-            background: #3dacec;
-            color: #07131e;
-        }
-
-        .song-confirm-secondary {
-            border: 1px solid #2a4058;
-            color: #e7edf5;
-            margin-top: 8px;
-        }
-
-        .song-preview-stack {
-            display: grid;
-            gap: 16px;
-            margin-top: 16px;
-        }
-
-        .song-preview-comment {
-            min-height: 92px;
-            border: 1px solid #2a4058;
-            border-radius: 10px;
-            padding: 14px;
-            color: #fff;
-            background: rgba(255, 255, 255, 0.03);
-            margin: 14px 0 10px;
-        }
-
-        .song-search-title {
-            color: #fff;
-            font-size: 1.28rem;
-            font-weight: 900;
-            margin: 0 0 10px;
-        }
-
-        .song-search-row-preview {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 12px;
-            margin: 14px 0 12px;
-        }
-
-        .song-search-input-preview {
-            min-height: 44px;
-            border: 1px solid #2a4058;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            padding: 0 14px;
-            color: #8fa4bc;
-            background: rgba(255, 255, 255, 0.03);
-        }
-
-        .song-search-button-preview {
-            min-height: 44px;
-            border-radius: 12px;
-            padding: 0 22px;
-            background: #3dacec;
-            color: #07131e;
-            display: flex;
-            align-items: center;
-            font-weight: 900;
-        }
-    </style>
     <?php require_once 'pwa_head.php'; ?>
 </head>
 <body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?> marketing-page home-page">
@@ -377,6 +238,42 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                         </div>
                     </div>
                 </article>
+				<article class="playlist-preview card-glass">
+					<div class="eyebrow">YOUR PLAYLISTS</div>
+					<h2>Season Collections</h2>
+					<p>Every round builds something you keep.</p>
+
+					<div class="playlist-list-preview">
+						<div class="playlist-row">
+							<div class="playlist-thumb"></div>
+							<div class="playlist-meta">
+								<div class="playlist-title">Hank’s Songs</div>
+								<div class="playlist-sub">Season 5 · 12 songs</div>
+							</div>
+						</div>
+
+						<div class="playlist-row">
+							<div class="playlist-thumb"></div>
+							<div class="playlist-meta">
+								<div class="playlist-title">Fashion Forward Fuckboi</div>
+								<div class="playlist-sub">Season 5 · 12 songs</div>
+							</div>
+						</div>
+
+						<div class="playlist-row">
+							<div class="playlist-thumb"></div>
+							<div class="playlist-meta">
+								<div class="playlist-title">League Playlist</div>
+								<div class="playlist-sub">All players · 60 songs</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="playlist-preview-footer">
+						<span>Built automatically from every round</span>
+						<strong>Listen on Spotify</strong>
+					</div>
+				</article>
             </div>
         </div>
     </section>
