@@ -162,7 +162,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                 <img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo_home.png')) ?>" alt="Musicball">
             </div>
             <h1>Built for music fans.<br>Designed for friends.</h1>
-            <p>Serious competition. Personalized leagues. Songs you'll love.</p>
+            <p>Compete, discover, and build playlists made by real people.</p>
             <div class="hero-actions">
                 <a href="#start" class="btn btn-primary">Start a league</a>
                 <a href="#how-it-works" class="btn btn-secondary">See how it works</a>
@@ -194,7 +194,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                         <thead><tr><th></th><th>Player</th><th>Total<br>Points</th><th>Best<br>Song</th></tr></thead>
                         <tbody>
                             <tr><td>1</td><td><i></i> Manic Arch Tour</td><td>144</td><td>36</td></tr>
-                            <tr><td>2</td><td><i></i> Fashion Forward Fuckboi</td><td>143</td><td>34</td></tr>
+                            <tr><td>2</td><td><i></i> Fashion Forward</td><td>143</td><td>34</td></tr>
                         </tbody>
                     </table>
                 </article>
