@@ -16,6 +16,145 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
     <meta name="description" content="Musicball is a weekly music competition with your friends. Submit songs, vote, track standings, and build shared playlists together.">
     <link rel="stylesheet" href="<?= htmlspecialchars(mlAssetUrl('styles.css')) ?>">
     <link rel="stylesheet" href="<?= htmlspecialchars(mlAssetUrl('assets/css/marketing.css')) ?>">
+    <style>
+        .song-confirm-preview {
+            color: #e7edf5;
+        }
+
+        .song-confirm-panel,
+        .song-current-panel,
+        .song-search-panel {
+            border: 1px solid #2a4058;
+            border-radius: 16px;
+            background: rgba(8, 17, 28, 0.4);
+            padding: 18px;
+        }
+
+        .song-confirm-panel {
+            margin-top: 10px;
+        }
+
+        .song-confirm-card-inner {
+            display: grid;
+            justify-items: center;
+            gap: 14px;
+            text-align: center;
+            padding: 10px 0 12px;
+        }
+
+        .song-confirm-artwork {
+            width: 104px;
+            height: 104px;
+            border-radius: 14px;
+            object-fit: cover;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+        }
+
+        .song-confirm-title {
+            color: #fff;
+            font-size: 1.25rem;
+            line-height: 1.05;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        .song-confirm-meta,
+        .song-confirm-note,
+        .song-current-panel p,
+        .song-search-panel p {
+            color: #a9bbd0;
+            margin: 0;
+        }
+
+        .song-confirm-meta {
+            font-size: 1.02rem;
+        }
+
+        .song-confirm-note {
+            font-size: 0.94rem;
+        }
+
+        .song-confirm-actions {
+            display: grid;
+            gap: 0;
+            margin-top: 2px;
+        }
+
+        .song-confirm-primary,
+        .song-confirm-secondary {
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-weight: 900;
+        }
+
+        .song-confirm-primary {
+            background: #3dacec;
+            color: #07131e;
+        }
+
+        .song-confirm-secondary {
+            border: 1px solid #2a4058;
+            color: #e7edf5;
+            margin-top: 8px;
+        }
+
+        .song-preview-stack {
+            display: grid;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .song-preview-comment {
+            min-height: 92px;
+            border: 1px solid #2a4058;
+            border-radius: 10px;
+            padding: 14px;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.03);
+            margin: 14px 0 10px;
+        }
+
+        .song-search-title {
+            color: #fff;
+            font-size: 1.28rem;
+            font-weight: 900;
+            margin: 0 0 10px;
+        }
+
+        .song-search-row-preview {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            margin: 14px 0 12px;
+        }
+
+        .song-search-input-preview {
+            min-height: 44px;
+            border: 1px solid #2a4058;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            padding: 0 14px;
+            color: #8fa4bc;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .song-search-button-preview {
+            min-height: 44px;
+            border-radius: 12px;
+            padding: 0 22px;
+            background: #3dacec;
+            color: #07131e;
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+        }
+    </style>
     <?php require_once 'pwa_head.php'; ?>
 </head>
 <body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?> marketing-page home-page">
@@ -188,15 +327,55 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                         <div class="muted"><svg><use href="#mb-icon-vote"></use></svg><span>Vote</span></div>
                     </div>
                 </article>
+
                 <article class="standings-preview card-glass">
                     <h3>Season Standings</h3>
                     <table>
                         <thead><tr><th></th><th>Player</th><th>Total<br>Points</th><th>Best<br>Song</th></tr></thead>
                         <tbody>
                             <tr><td>1</td><td><i></i> Manic Arch Tour</td><td>144</td><td>36</td></tr>
-                            <tr><td>2</td><td><i></i> Fashion Forward</td><td>143</td><td>34</td></tr>
+                            <tr><td>2</td><td><i></i> Fashion Forward Fuckboi</td><td>143</td><td>34</td></tr>
                         </tbody>
                     </table>
+                </article>
+
+                <article class="song-confirm-preview card-glass">
+                    <div class="eyebrow">CONFIRM YOUR SONG</div>
+                    <div class="song-confirm-panel">
+                        <div class="song-confirm-card-inner">
+                            <img class="song-confirm-artwork" src="https://i.scdn.co/image/ab67616d0000b273dc52a67943ab8838fc661a94" alt="LWA IN THE TRAILER PARK album art">
+                            <div>
+                                <div class="song-confirm-title">LWA IN THE TRAILER PARK</div>
+                                <div class="song-confirm-meta">Benjamin Booker · LOWER</div>
+                                <p class="song-confirm-note">Benjamin Booker has been chosen 0 times in past rounds.</p>
+                                <p class="song-confirm-note">Your song is not saved yet. Confirm below to lock in this pick.</p>
+                            </div>
+                        </div>
+                        <div class="song-confirm-actions">
+                            <div class="song-confirm-primary">Confirm Song</div>
+                            <div class="song-confirm-secondary">Cancel</div>
+                        </div>
+                    </div>
+
+                    <div class="song-preview-stack">
+                        <div class="song-current-panel">
+                            <div class="eyebrow">YOUR CURRENT PICK</div>
+                            <p>No song chosen yet.</p>
+                            <div class="song-preview-comment">Wow, this hit me like a ton of bricks.</div>
+                            <p>This comment will save with your song when you pick one.</p>
+                        </div>
+
+                        <div class="song-search-panel">
+                            <div class="eyebrow">SPOTIFY SEARCH</div>
+                            <div class="song-search-title">Find a song</div>
+                            <p>Start typing a title, artist, album, Spotify track URL, or Spotify track URI.</p>
+                            <div class="song-search-row-preview">
+                                <div class="song-search-input-preview">Search Spotify or paste a Spotify track link</div>
+                                <div class="song-search-button-preview">Search</div>
+                            </div>
+                            <p>Start typing to search Spotify.</p>
+                        </div>
+                    </div>
                 </article>
             </div>
         </div>
@@ -271,7 +450,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                 <h2>Start a league in<br>under a minute</h2>
                 <p>Invite your friends, pick your first theme,<br>and let the games begin.</p>
                 <div class="start-card steps-card">
-                    <article><svg><use href="#mb-icon-create"></use></svg><div><h3>1. Create your league</h3><p>Name your league and set the basics.</p></div></article>
+                    <article><svg><use href="#mb-icon-person"></use></svg><div><h3>1. Create your league</h3><p>Name your league and set the basics.</p></div></article>
                     <article><svg><use href="#mb-icon-users"></use></svg><div><h3>2. Invite your friends</h3><p>Send invites and build your roster.</p></div></article>
                     <article><svg><use href="#mb-icon-phone"></use></svg><div><h3>3. Pick your first round</h3><p>Choose from ready-made themes or create your own.</p></div></article>
                 </div>
