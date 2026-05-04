@@ -280,7 +280,83 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
 						</div>
 					</div>
 				</article>
+				
+				<article class="results-preview card-glass">
+					<div class="eyebrow">ROUND RESULTS</div>
+					<h2>100M+ Listens</h2>
+					<p>A song with more than 100 million listens</p>
+
+					<!-- PODIUM -->
+					<div class="results-podium">
+						<div>
+							<span>1ST</span>
+							<div class="avatar avatar-1"></div>
+							<strong>Lake</strong>
+							<p>22 pts</p>
+						</div>
+						<div>
+							<span>2ND</span>
+							<div class="avatar avatar-2"></div>
+							<strong>Das Bot</strong>
+							<p>15 pts</p>
+						</div>
+						<div>
+							<span>3RD</span>
+							<div class="avatar avatar-3"></div>
+							<strong>Marty McFly</strong>
+							<p>12 pts</p>
+						</div>
+					</div>
+
+					<!-- WINNING SONG -->
+					<div class="results-song">
+						<img src="https://i.scdn.co/image/ab67616d0000b273dc52a67943ab8838fc661a94" alt="">
+						<div>
+							<div class="results-song-title">#1 · Chum</div>
+							<div class="results-song-meta">Earl Sweatshirt · Doris</div>
+						</div>
+						<div class="results-score">
+							<strong>22</strong>
+							<span>10 voters</span>
+						</div>
+					</div>
+
+					<div class="results-submitted">
+						<div class="avatar avatar-1"></div>
+						<span>Submitted by Lake</span>
+					</div>
+
+					<!-- COMMENTS -->
+					<div class="results-comments">
+						<div class="results-comment">
+							<div class="avatar avatar-4"></div>
+							<div>
+								<strong>Fashion Forward</strong>
+								<p>I’ve probably heard this song before, but I obviously never really listened to it. I love everything about this song...</p>
+							</div>
+							<span class="results-points">3</span>
+						</div>
+
+						<div class="results-comment">
+							<div class="avatar avatar-5"></div>
+							<div>
+								<strong>Ham</strong>
+								<p>Incredible.</p>
+							</div>
+							<span class="results-points">3</span>
+						</div>
+
+						<div class="results-comment">
+							<div class="avatar avatar-6"></div>
+							<div>
+								<strong>Manic Arch Tour</strong>
+								<p>I listened to this so many times, really liked the throw back feel...</p>
+							</div>
+							<span class="results-points">3</span>
+						</div>
+					</div>
 				</article>
+
             </div>
         </div>
     </section>

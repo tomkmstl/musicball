@@ -1025,3 +1025,122 @@ body.home-page.hero-passed .marketing-brand {
 .playlist-avatar-preview.avatar-four {
   background: linear-gradient(135deg, #64748b, #e2e8f0);
 }
+
+/* RESULTS PREVIEW */
+
+.results-preview h2 {
+    font-size: 2.6rem;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+.results-podium {
+    display: flex;
+    justify-content: space-around;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.results-podium span {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.results-podium .avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    margin: 6px auto;
+    background: linear-gradient(135deg, #3dacec, #f4c46a);
+}
+
+.results-podium strong {
+    display: block;
+    color: #fff;
+}
+
+.results-podium p {
+    margin: 0;
+    opacity: 0.7;
+}
+
+.results-song {
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.results-song img {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+}
+
+.results-song-title {
+    color: #fff;
+    font-weight: 700;
+}
+
+.results-song-meta {
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+.results-score {
+    text-align: right;
+}
+
+.results-score strong {
+    font-size: 28px;
+    color: #3dacec;
+}
+
+.results-score span {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.results-submitted {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0;
+    opacity: 0.8;
+}
+
+.results-comments {
+    border-top: 1px solid #2a4058;
+    margin-top: 10px;
+}
+
+.results-comment {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid #2a4058;
+}
+
+.results-comment .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #444, #222);
+}
+
+.results-comment strong {
+    color: #fff;
+}
+
+.results-comment p {
+    margin: 4px 0 0;
+    font-size: 14px;
+    opacity: 0.85;
+}
+
+.results-points {
+    color: #3dacec;
+    font-weight: 700;
+}
