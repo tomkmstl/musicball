@@ -709,3 +709,48 @@ body.home-page.hero-passed .marketing-brand {
 .hero-copy h1 {
   margin-top: 0;
 }
+
+/* SONG PREVIEW */
+
+.song-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.song-selected-card-preview {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+}
+
+.song-artwork-preview {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #444, #222);
+    flex-shrink: 0;
+}
+
+.song-meta-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.song-card-title-preview {
+    font-weight: 600;
+}
+
+.song-card-meta-preview {
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+.song-preview-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    opacity: 0.8;
+}
