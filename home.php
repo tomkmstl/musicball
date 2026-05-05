@@ -128,6 +128,11 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
         <path d="M7 4v16l13 -8z" />
       </symbol>
+	  <symbol id="mb-icon-spotify" viewBox="0 0 24 24">
+		  <path d="M17.9 10.9c-3.4-2-9-2.2-12.2-1.2-.5.2-1.1-.1-1.3-.6-.2-.5.1-1.1.6-1.3 3.6-1.1 9.6-.9 13.6 1.4.5.3.7.9.4 1.4-.3.5-.9.7-1.4.3z"/>
+		  <path d="M17.7 14c-2.8-1.7-7.1-2.2-10.4-1.2-.4.1-.9-.1-1-.5-.1-.4.1-.9.5-1 3.6-1.1 8.4-.6 11.8 1.4.4.2.5.8.3 1.2-.2.4-.8.5-1.2.3z"/>
+		  <path d="M17.5 17c-2.3-1.4-5.3-1.7-8.8-.9-.4.1-.8-.1-.9-.5-.1-.4.1-.8.5-.9 3.8-.9 7.2-.5 9.8 1 .4.2.5.7.3 1.1-.2.4-.7.5-1.1.3z"/>
+		</symbol>
     </svg>
     <header class="marketing-nav">
       <div class="marketing-nav-inner">
@@ -687,55 +692,50 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
           </div>
         </div>
       </section>
-      <section id="start" class="start-section marketing-section">
-        <div class="start-layout">
-          <div>
-            <h2>Start a league in <br>under a minute </h2>
-            <p>Invite your friends, pick your first theme, <br>and let the games begin. </p>
-            <div class="start-card steps-card">
-              <article>
-                <svg>
-                  <use href="#mb-icon-person"></use>
-                </svg>
-                <div>
-                  <h3>1. Create your league</h3>
-                  <p>Name your league and set the basics.</p>
-                </div>
-              </article>
-              <article>
-                <svg>
-                  <use href="#mb-icon-users"></use>
-                </svg>
-                <div>
-                  <h3>2. Invite your friends</h3>
-                  <p>Send invites and build your roster.</p>
-                </div>
-              </article>
-              <article>
-                <svg>
-                  <use href="#mb-icon-phone"></use>
-                </svg>
-                <div>
-                  <h3>3. Pick your first round</h3>
-                  <p>Choose from ready-made themes or create your own.</p>
-                </div>
-              </article>
-            </div>
-            <div class="start-card commissioner-card">
-              <h3>
-                <span>♛</span> Commissioner control
-              </h3>
-              <ul>
-                <li>Customize rounds and themes</li>
-                <li>Set deadlines and voting windows</li>
-                <li>Choose formats and scoring</li>
-                <li>Many options. Total flexibility.</li>
-              </ul>
-            </div>
-            <a href="index.php" class="btn btn-primary btn-wide">Start your league</a>
-          </div>
+      <section class="start-section marketing-section" id="start">
+  <div class="start-shell">
+    <div class="start-copy">
+      <div class="eyebrow">START A LEAGUE</div>
+      <h2>Bring your group into the game.</h2>
+      <p>Set up a league, invite your friends, and start turning weekly song picks into competition, conversation, and playlists.</p>
+
+    </div>
+
+    <div class="start-panel">
+      <article>
+        <svg><use href="#mb-icon-create"></use></svg>
+        <div>
+          <h3>Create the league</h3>
+          <p>Name it, set the basics, and get your group ready to play.</p>
         </div>
-      </section>
+      </article>
+
+      <article>
+        <svg><use href="#mb-icon-users"></use></svg>
+        <div>
+          <h3>Invite your friends</h3>
+          <p>Musicball works best when everyone has a song to defend.</p>
+        </div>
+      </article>
+
+      <article>
+        <svg><use href="#mb-icon-calendar"></use></svg>
+        <div>
+          <h3>Play round by round</h3>
+          <p>Each round gives your league a theme, a deadline, and a winner.</p>
+        </div>
+      </article>
+
+      <div class="start-commissioner-note">
+        <svg><use href="#mb-icon-shield"></use></svg>
+        <div>
+          <strong>Built for commissioners</strong>
+          <span>Simple setup now. Deeper league controls when you need them.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
       <section id="features" class="features-section marketing-section">
         <div class="marketing-container">
           <div class="section-heading centered">
@@ -743,7 +743,10 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
           </div>
           <div class="feature-grid">
             <article>
-              <span class="spotify-dot">●</span>
+<img
+  class="spotify-logo"
+  src="<?= htmlspecialchars(mlAssetUrl('images/spotify-logo.svg')) ?>"
+  alt="Spotify">
               <div>
                 <h3>Spotify Integration</h3>
                 <p>Add songs, listen, and build playlists with one click.</p>

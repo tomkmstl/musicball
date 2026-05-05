@@ -618,61 +618,144 @@ article.vote-preview.card-glass {
   gap: 18px;
   text-align: center;
 }
+/* START SECTION */
+
 .start-section {
-  padding: 76px max(40px, calc((100vw - 1180px) / 2));
+  background:
+    radial-gradient(circle at 16% 18%, rgba(61, 172, 236, 0.16), transparent 34%),
+    linear-gradient(180deg, #0b1624 0%, #101f31 100%);
+  color: #e7edf5;
+  padding: 88px max(40px, calc((100vw - 1180px) / 2));
+  border-top: 1px solid rgba(61, 172, 236, 0.16);
+  border-bottom: 1px solid rgba(61, 172, 236, 0.16);
 }
-.start-layout {
-  width: min(960px, 100%);
+
+.start-shell {
+  width: min(1040px, 100%);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(280px, 0.78fr) minmax(360px, 1.22fr);
-  gap: 28px;
-  align-items: start;
+  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+  gap: 36px;
+  align-items: center;
 }
-.start-layout > div {
-  display: contents;
+
+.start-copy h2 {
+  color: #fff;
+  font-size: clamp(2.3rem, 5vw, 4rem);
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  margin: 0 0 18px;
 }
-.start-layout h2,
-.start-layout > div > p {
-  grid-column: 1;
-}
-.start-layout .steps-card {
-  grid-column: 2;
-  grid-row: 1 / span 3;
+
+.start-copy p {
+  max-width: 520px;
+  color: #b8c7d8;
+  font-size: 1.08rem;
   margin: 0;
 }
-.start-layout .commissioner-card {
-  grid-column: 1;
-  margin-top: 18px;
+
+.start-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
 }
-.start-layout .btn-wide {
-  grid-column: 2;
-  width: 100%;
-  margin-top: 16px;
+
+.start-panel {
+  background: rgba(8, 17, 28, 0.58);
+  border: 1px solid rgba(61, 172, 236, 0.24);
+  border-radius: 22px;
+  padding: 20px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.26);
 }
-.start-card {
-  background: #fff;
-  border: 1px solid #d7e5f5;
-  border-radius: 16px;
-  padding: 18px;
-  margin: 16px 0;
-  text-align: left;
-}
-.start-card article {
+
+.start-panel article {
   display: grid;
   grid-template-columns: 52px 1fr;
   gap: 14px;
-  padding: 14px 0;
-  border-bottom: 1px solid #d7e5f5;
+  align-items: start;
+  padding: 18px 0;
+  border-bottom: 1px solid rgba(215, 229, 245, 0.12);
 }
-.start-card article:last-child {
+
+.start-panel article:first-child {
+  padding-top: 4px;
+}
+
+.start-panel article:last-of-type {
   border-bottom: 0;
 }
-.commissioner-card {
-  background: #fffaf0;
+
+.start-panel svg,
+.start-commissioner-note svg {
+  width: 42px;
+  height: 42px;
+  color: #3dacec;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.commissioner-card h3 span {
-  color: #f4b43d;
+
+.start-panel h3 {
+  color: #fff;
+  margin: 0 0 4px;
+  font-size: 1.08rem;
+  line-height: 1.15;
+}
+
+.start-panel p {
+  color: #92a7bd;
+  margin: 0;
+  font-size: 0.96rem;
+}
+
+.start-commissioner-note {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(244, 196, 106, 0.1);
+  border: 1px solid rgba(244, 196, 106, 0.22);
+}
+
+.start-commissioner-note strong {
+  display: block;
+  color: #f4c46a;
+  margin-bottom: 3px;
+}
+
+.start-commissioner-note span {
+  display: block;
+  color: #c9d8ea;
+  font-size: 0.94rem;
+}
+
+@media (max-width: 900px) {
+  .start-shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .start-section {
+    padding: 60px 20px;
+  }
+
+  .start-actions {
+    flex-direction: column;
+  }
+
+  .start-actions .btn {
+    width: 100%;
+  }
+
+  .start-panel {
+    padding: 18px;
+  }
 }
 .features-section {
   text-align: center;
@@ -1711,4 +1794,10 @@ body.home-page.hero-passed .marketing-brand {
 	  border: 1px solid #2a4058;
 	  border-radius: 10px;
 	}
+}
+
+.feature-grid .spotify-logo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
 }
