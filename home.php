@@ -178,8 +178,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
 
         
 
-            <div class="hero-gameplay-showcase" aria-label="Musicball gameplay preview">
-    <div class="hero-showcase-label">Play a round → climb the standings</div>
+<div class="hero-gameplay-showcase" aria-label="Musicball gameplay preview">
 
     <!-- BACK CARD: STANDINGS -->
     <div class="hero-snapshot hero-snapshot-round">
@@ -264,11 +263,45 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
 </div>
         </div>
     </section>
+	
+	    <section id="how-it-works" class="how-section marketing-section">
+        <div class="marketing-container">
+            <div class="section-heading centered">
+                <h2>How Musicball works</h2>
+            </div>
+            <div class="how-steps">
+                <article><svg><use href="#mb-icon-submit"></use></svg><h3>1. Submit</h3><p>Pick a song that fits the round theme and submit before the deadline.</p></article>
+                <article><svg><use href="#mb-icon-vote"></use></svg><h3>2. Vote</h3><p>Rank your favorite songs. Points are awarded automatically.</p></article>
+                <article><svg><use href="#mb-icon-build"></use></svg><h3>3. Build</h3><p>Standings update and the playlist grows. On to the next round!</p></article>
+            </div>
+            <div class="info-card what-card">
+                <div class="section-heading centered">
+					<h2 style="font-size:40px;">What you get</h2>
+				</div>
+                <div class="what-grid">
+                    <div><svg><use href="#mb-icon-listen"></use></svg><strong>Shared playlist</strong><p>Every round, in order.</p></div>
+                    <div><svg><use href="#mb-icon-music"></use></svg><strong>Personal playlists</strong><p>Your picks, all season.</p></div>
+                    <div><svg><use href="#mb-icon-bars"></use></svg><strong>Season standings</strong><p>Track your progress.</p></div>
+                    <div><svg><use href="#mb-icon-star"></use></svg><strong>Lasting memories</strong><p>The songs stick around.</p></div>
+                </div>
+            </div>
+        </div>
+    </section>
+	
+	    <section class="feel-section marketing-section section-soft">
+        <div class="feel-copy">
+            <h2>This is what<br>Musicball feels like</h2>
+            <p>It starts as a game.<br>It turns into something more.</p>
+            <a href="#" class="btn btn-primary btn-small">Watch video</a>
+        </div>
+        <div class="video-card" role="img" aria-label="Friends gathered at a table talking about music">
+            <div class="play-button"><svg><use href="#mb-icon-play"></use></svg></div>
+        </div>
+    </section>
 
 <section class="marketing-section section-dark product-story-section">
     <div class="marketing-container">
         <div class="product-story-intro">
-            <div class="eyebrow">SEE THE GAME</div>
             <h2>A weekly music competition that turns into a shared playlist.</h2>
             <p>Musicball gives your friend group a reason to keep sharing songs, arguing over favorites, and building something together over time.</p>
         </div>
@@ -543,68 +576,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
     </div>
 </section>
 
-    <section class="build-section marketing-section">
-        <h2>A game that builds something real</h2>
-        <div class="three-step-strip">
-            <div><svg><use href="#mb-icon-submit"></use></svg><strong>Submit</strong><p>Everyone brings a song<br>to the round.</p></div>
-            <div><svg><use href="#mb-icon-vote"></use></svg><strong>Vote</strong><p>Rank your favorites<br>each week.</p></div>
-            <div><svg><use href="#mb-icon-build"></use></svg><strong>Build</strong><p>Every round adds to<br>your shared playlist.</p></div>
-        </div>
-        <p class="section-tagline">At the end, you don't just have winners — you have a playlist that's yours.</p>
-    </section>
 
-    <section class="feel-section marketing-section section-soft">
-        <div class="feel-copy">
-            <h2>This is what<br>Musicball feels like</h2>
-            <p>It starts as a game.<br>It turns into something more.</p>
-            <a href="#" class="btn btn-primary btn-small">Watch video</a>
-        </div>
-        <div class="video-card" role="img" aria-label="Friends gathered at a table talking about music">
-            <div class="play-button"><svg><use href="#mb-icon-play"></use></svg></div>
-        </div>
-    </section>
-
-    <section class="action-section marketing-section">
-        <div class="marketing-container">
-            <div class="section-heading centered">
-                <h2>See Musicball in action</h2>
-                <p>Everything you need for the ultimate music competition.</p>
-            </div>
-            <div class="action-grid">
-                <article><div class="screen-card screen-round"><span>ROUND 1</span><strong>My Current Jam s5</strong><div class="mini-avatars"></div></div><h3>Active Rounds</h3><p>See who's in, who's working on it, and what's next.</p></article>
-                <article><div class="screen-card screen-standings"><strong>Standings</strong><ol><li>Manic Arch Tour</li><li>Fashion Forward Fuckboi</li><li>Echo Loops</li></ol></div><h3>Standings</h3><p>Track points, wins, and bragging rights.</p></article>
-                <article><div class="screen-card screen-playlists"><strong>Playlists</strong><p>Hank's Songs</p><p>Fashion Forward Fuckboi's Songs</p><p>The Curator Jester's Songs</p></div><h3>Playlists</h3><p>Every round becomes part of something you keep.</p></article>
-                <article><div class="screen-card screen-builder"><strong>Musicball.</strong><p>Era rounds</p><p>Madlibs</p><p>Custom prompts</p></div><h3>Season Builder</h3><p>Customize rounds, themes, eras, and formats.</p></article>
-            </div>
-        </div>
-    </section>
-
-    <section id="how-it-works" class="how-section marketing-section">
-        <div class="marketing-container">
-            <div class="section-heading centered">
-                <h2>How Musicball works</h2>
-                <p>Musicball is a weekly music competition with your friends.<br>Everyone submits songs, everyone votes, and every round<br>builds a shared playlist.</p>
-            </div>
-            <div class="how-steps">
-                <article><svg><use href="#mb-icon-submit"></use></svg><h3>1. Submit</h3><p>Pick a song that fits the round theme and submit before the deadline.</p></article>
-                <article><svg><use href="#mb-icon-vote"></use></svg><h3>2. Vote</h3><p>Rank your favorite songs. Points are awarded automatically.</p></article>
-                <article><svg><use href="#mb-icon-build"></use></svg><h3>3. Build</h3><p>Standings update and the playlist grows. On to the next round!</p></article>
-            </div>
-            <div class="info-card split-card">
-                <div class="info-title"><svg><use href="#mb-icon-calendar"></use></svg><div><h3>Seasons</h3><p>A season is a series of rounds with different themes — eras, madlibs, custom prompts, and more. You decide.</p></div></div>
-                <ul><li>Weekly rounds keep it fresh</li><li>Compete across the whole season</li><li>History and stats for every league</li></ul>
-            </div>
-            <div class="info-card what-card">
-                <h3>What you get</h3>
-                <div class="what-grid">
-                    <div><svg><use href="#mb-icon-listen"></use></svg><strong>Shared playlist</strong><p>Every round, in order.</p></div>
-                    <div><svg><use href="#mb-icon-music"></use></svg><strong>Personal playlists</strong><p>Your picks, all season.</p></div>
-                    <div><svg><use href="#mb-icon-bars"></use></svg><strong>Season standings</strong><p>Track your progress.</p></div>
-                    <div><svg><use href="#mb-icon-star"></use></svg><strong>Lasting memories</strong><p>The songs stick around.</p></div>
-                </div>
-            </div>
-        </div>
-    </section>
 
     <section id="start" class="start-section marketing-section">
         <div class="start-layout">
