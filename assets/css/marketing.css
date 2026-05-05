@@ -869,6 +869,115 @@ body.home-page.hero-passed .marketing-brand {
   margin-top: 0;
 }
 
+/* HERO GAMEPLAY SHOWCASE */
+
+.hero-section-product {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-gameplay-showcase {
+  position: relative;
+  min-height: 520px;
+}
+
+.hero-showcase-label {
+  position: absolute;
+  top: 18px;
+  left: 34px;
+  z-index: 5;
+  padding: 8px 12px;
+  border: 1px solid rgba(61, 172, 236, 0.35);
+  border-radius: 999px;
+  background: rgba(8, 17, 28, 0.78);
+  color: #c9d8ea;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.hero-snapshot {
+  position: absolute;
+  overflow: hidden;
+  border: 1px solid #213247;
+  background: rgba(16, 28, 43, 0.96);
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.4);
+}
+
+.hero-snapshot > .card-glass {
+  position: absolute;
+  width: 640px;
+  max-width: none;
+  box-shadow: none;
+  transform-origin: top left;
+}
+
+.hero-snapshot-round {
+  width: 430px;
+  height: 255px;
+  top: 74px;
+  left: 0;
+  opacity: 0.82;
+}
+
+.hero-snapshot-round > .card-glass {
+  top: -2px;
+  left: -4px;
+  transform: scale(0.92);
+}
+
+.hero-snapshot-results {
+  width: 465px;
+  height: 335px;
+  right: 0;
+  top: 170px;
+  z-index: 3;
+  border-color: rgba(61, 172, 236, 0.45);
+}
+
+.hero-snapshot-results > .card-glass {
+  top: 11px;
+  left: 18px;
+  transform: scale(0.95);
+}
+
+@media (max-width: 900px) {
+  .hero-gameplay-showcase {
+    min-height: 500px;
+  }
+
+  .hero-snapshot-round {
+    left: 0;
+    width: 82%;
+  }
+
+  .hero-snapshot-results {
+    right: 0;
+    width: 88%;
+  }
+}
+
+@media (max-width: 600px) {
+  .hero-gameplay-showcase {
+    min-height: 430px;
+  }
+
+  .hero-showcase-label {
+    left: 16px;
+    top: 8px;
+  }
+
+  .hero-snapshot-round {
+    top: 58px;
+    height: 210px;
+  }
+
+  .hero-snapshot-results {
+    top: 190px;
+    height: 245px;
+  }
+}
+
 /* SONG PREVIEW */
 
 .song-preview {

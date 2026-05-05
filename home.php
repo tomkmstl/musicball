@@ -156,21 +156,112 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
 </header>
 
 <main>
-    <section class="hero-section section-dark" id="home-hero">
+    <section class="hero-section section-dark hero-section-product" id="home-hero">
         <div class="hero-copy">
             <div class="hero-brand-mark" aria-label="Musicball">
                 <img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo_home.png')) ?>" alt="Musicball">
             </div>
+
             <h1>Built for music fans.<br>Designed for friends.</h1>
-            <p>Compete, discover, and build playlists made by real people.</p>
+            <p>Submit songs, vote with friends, and turn every round into a playlist your league built together.</p>
+
             <div class="hero-actions">
                 <a href="#start" class="btn btn-primary">Start a league</a>
                 <a href="#how-it-works" class="btn btn-secondary">See how it works</a>
             </div>
+
             <div class="hero-notes">
                 <span>Works with Spotify</span>
                 <span>Takes under a minute to start</span>
             </div>
+        </div>
+
+        
+
+            <div class="hero-gameplay-showcase" aria-label="Musicball gameplay preview">
+    <div class="hero-showcase-label">Play a round → climb the standings</div>
+
+    <!-- BACK CARD: STANDINGS -->
+    <div class="hero-snapshot hero-snapshot-round">
+        <article class="standings-preview card-glass">
+            <h3>Season Standings</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Player</th>
+                        <th>Total<br>Votes</th>
+                        <th>Total<br>Voters</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><i></i> Manic Arch Tour</td>
+                        <td>144</td>
+                        <td>99</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><i></i> Fashion Forward</td>
+                        <td>143</td>
+                        <td>97</td>
+                    </tr>
+					<tr>
+                        <td>3</td>
+                        <td><i></i> Ham</td>
+                        <td>130</td>
+                        <td>95</td>
+                    </tr>
+					<tr>
+                        <td>4</td>
+                        <td><i></i> Lizewanana</td>
+                        <td>130</td>
+                        <td>94</td>
+                    </tr>
+                </tbody>
+            </table>
+        </article>
+    </div>
+
+    <!-- FRONT CARD: ROUND -->
+    <div class="hero-snapshot hero-snapshot-results">
+        <article class="round-preview card-glass">
+            <div class="eyebrow">ROUND 1</div>
+            <h2>My Current Jam <span>s5</span></h2>
+            <p>submit by 5/8/26, 12:00 PM · vote by 5/13/26, 11:00 PM</p>
+
+            <div class="avatar-row-wrap">
+                <span>submitted:</span>
+                <div class="avatar-row">
+                    <?php for ($i = 1; $i <= 6; $i++): ?>
+                        <i class="avatar avatar-<?= $i ?>"></i>
+                    <?php endfor; ?>
+                </div>
+            </div>
+
+            <div class="avatar-row-wrap">
+                <span>still<br>researching:</span>
+                <div class="avatar-row">
+                    <?php for ($i = 7; $i <= 12; $i++): ?>
+                        <i class="avatar avatar-<?= $i ?>"></i>
+                    <?php endfor; ?>
+                </div>
+            </div>
+
+            <div class="round-actions-mini">
+                <div>
+                    <svg><use href="#mb-icon-submit"></use></svg>
+                    <span>Choose Song</span>
+                </div>
+                <div class="muted">
+                    <svg><use href="#mb-icon-vote"></use></svg>
+                    <span>Vote</span>
+                </div>
+            </div>
+        </article>
+    </div>
+</div>
         </div>
     </section>
 
