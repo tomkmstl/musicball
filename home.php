@@ -264,42 +264,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
         </div>
     </section>
 	
-	    <section id="how-it-works" class="how-section marketing-section">
-        <div class="marketing-container">
-            <div class="section-heading centered">
-                <h2>How Musicball works</h2>
-            </div>
-            <div class="how-steps">
-                <article><svg><use href="#mb-icon-submit"></use></svg><h3>1. Submit</h3><p>Pick a song that fits the round theme and submit before the deadline.</p></article>
-                <article><svg><use href="#mb-icon-vote"></use></svg><h3>2. Vote</h3><p>Rank your favorite songs. Points are awarded automatically.</p></article>
-                <article><svg><use href="#mb-icon-build"></use></svg><h3>3. Build</h3><p>Standings update and the playlist grows. On to the next round!</p></article>
-            </div>
-            <div class="info-card what-card">
-                <div class="section-heading centered">
-					<h2 style="font-size:40px;">What you get</h2>
-				</div>
-                <div class="what-grid">
-                    <div><svg><use href="#mb-icon-listen"></use></svg><strong>Shared playlist</strong><p>Every round, in order.</p></div>
-                    <div><svg><use href="#mb-icon-music"></use></svg><strong>Personal playlists</strong><p>Your picks, all season.</p></div>
-                    <div><svg><use href="#mb-icon-bars"></use></svg><strong>Season standings</strong><p>Track your progress.</p></div>
-                    <div><svg><use href="#mb-icon-star"></use></svg><strong>Lasting memories</strong><p>The songs stick around.</p></div>
-                </div>
-            </div>
-        </div>
-    </section>
-	
-	    <section class="feel-section marketing-section section-soft">
-        <div class="feel-copy">
-            <h2>This is what<br>Musicball feels like</h2>
-            <p>It starts as a game.<br>It turns into something more.</p>
-            <a href="#" class="btn btn-primary btn-small">Watch video</a>
-        </div>
-        <div class="video-card" role="img" aria-label="Friends gathered at a table talking about music">
-            <div class="play-button"><svg><use href="#mb-icon-play"></use></svg></div>
-        </div>
-    </section>
-
-<section class="marketing-section section-dark product-story-section">
+	<section class="marketing-section product-story-section section-light">
     <div class="marketing-container">
         <div class="product-story-intro">
             <h2>A weekly music competition that turns into a shared playlist.</h2>
@@ -575,6 +540,43 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
         </div>
     </div>
 </section>
+	
+	    <section id="how-it-works" class="how-section marketing-section">
+        <div class="marketing-container">
+            <div class="section-heading centered">
+                <h2>How Musicball works</h2>
+            </div>
+            <div class="how-steps">
+                <article><svg><use href="#mb-icon-submit"></use></svg><h3>1. Submit</h3><p>Pick a song that fits the round theme and submit before the deadline.</p></article>
+                <article><svg><use href="#mb-icon-vote"></use></svg><h3>2. Vote</h3><p>Rank your favorite songs. Points are awarded automatically.</p></article>
+                <article><svg><use href="#mb-icon-build"></use></svg><h3>3. Build</h3><p>Standings update and the playlist grows. On to the next round!</p></article>
+            </div>
+            <div class="info-card what-card">
+                <div class="section-heading centered">
+					<h2 style="font-size:40px;">What you get</h2>
+				</div>
+                <div class="what-grid">
+                    <div><svg><use href="#mb-icon-listen"></use></svg><strong>Shared playlist</strong><p>Every round, in order.</p></div>
+                    <div><svg><use href="#mb-icon-music"></use></svg><strong>Personal playlists</strong><p>Your picks, all season.</p></div>
+                    <div><svg><use href="#mb-icon-bars"></use></svg><strong>Season standings</strong><p>Track your progress.</p></div>
+                    <div><svg><use href="#mb-icon-star"></use></svg><strong>Lasting memories</strong><p>The songs stick around.</p></div>
+                </div>
+            </div>
+        </div>
+    </section>
+	
+	    <section class="feel-section marketing-section section-soft">
+        <div class="feel-copy">
+            <h2>This is what<br>Musicball feels like</h2>
+            <p>It starts as a game.<br>It turns into something more.</p>
+            <a href="#" class="btn btn-primary btn-small">Watch video</a>
+        </div>
+        <div class="video-card" role="img" aria-label="Friends gathered at a table talking about music">
+            <div class="play-button"><svg><use href="#mb-icon-play"></use></svg></div>
+        </div>
+    </section>
+
+
 
 
 
@@ -632,6 +634,23 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
     updateHeaderLogo();
     window.addEventListener('scroll', updateHeaderLogo, { passive: true });
     window.addEventListener('resize', updateHeaderLogo);
+})();
+
+(function () {
+    var hero = document.getElementById('home-hero');
+
+    if (!hero) {
+        return;
+    }
+
+    function updateMobileNav() {
+        var heroBottom = hero.getBoundingClientRect().bottom;
+        document.body.classList.toggle('hero-passed', heroBottom <= 20);
+    }
+
+    updateMobileNav();
+    window.addEventListener('scroll', updateMobileNav, { passive: true });
+    window.addEventListener('resize', updateMobileNav);
 })();
 </script>
 </body>
