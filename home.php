@@ -19,8 +19,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
     <link rel="stylesheet" href="
 							<?= htmlspecialchars(mlAssetUrl('assets/css/marketing.css')) ?>"> <?php require_once 'pwa_head.php'; ?>
   </head>
-  <body class="
-							<?= htmlspecialchars(mlGetThemeBodyClass()) ?> marketing-page home-page">
+  <body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?> marketing-page home-page">
     <svg class="mb-symbols" style="display:none" aria-hidden="true" focusable="false">
       <symbol id="mb-icon-submit" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
