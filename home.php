@@ -143,7 +143,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
           <a href="#how-it-works">How It Works</a>
           <a href="#features">Features</a>
           <a href="#start">Start a League</a>
-          <a href="index.php" class="marketing-login-link">Log in with Discord</a>
+          <a href="login.php" class="marketing-login-link">Log in with Discord</a>
         </nav>
       </div>
     </header>
@@ -157,7 +157,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
           <h1>Built for music fans. <br>Designed for friends. </h1>
           <p>Submit songs, vote with friends, and turn every round into a playlist your league built together.</p>
           <div class="hero-actions">
-            <a href="index.php" class="btn btn-primary">Start with Discord</a>
+            <a href="login.php" class="btn btn-primary">Start with Discord</a>
             <a href="#how-it-works" class="btn btn-secondary">See how it works</a>
           </div>
           <div class="hero-notes">
