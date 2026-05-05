@@ -1,6 +1,5 @@
 <?php
 // integrations/discord/callback.php
-// Completes Discord OAuth and creates the Musicball session.
 
 require_once __DIR__ . '/../../session_boot.php';
 require_once __DIR__ . '/../../config.php';
@@ -71,8 +70,8 @@ if (!mlDiscordConfigIsReady()) {
     mlDiscordFail('Discord login is not configured yet.');
 }
 
-$expectedState = isset($_SESSION['discord_oauth_state']) ? (string)$_SESSION['discord_oauth_state'] : '';
-$actualState = isset($_GET['state']) ? (string)$_GET['state'] : '';
+$expectedState = (string)($_SESSION['discord_oauth_state'] ?? '');
+$actualState = (string)($_GET['state'] ?? '');
 unset($_SESSION['discord_oauth_state']);
 
 if ($expectedState === '' || $actualState === '' || !hash_equals($expectedState, $actualState)) {
@@ -83,7 +82,7 @@ if (isset($_GET['error'])) {
     mlDiscordFail('Discord login was canceled.');
 }
 
-$code = isset($_GET['code']) ? trim((string)$_GET['code']) : '';
+$code = trim((string)($_GET['code'] ?? ''));
 if ($code === '') {
     mlDiscordFail('Discord did not return a login code.');
 }
@@ -97,17 +96,17 @@ try {
         'redirect_uri' => mlDiscordRedirectUri(),
     ]);
 
-    $accessToken = isset($token['access_token']) ? (string)$token['access_token'] : '';
+    $accessToken = (string)($token['access_token'] ?? '');
     if ($accessToken === '') {
         throw new RuntimeException('Discord did not return an access token.');
     }
 
     $discordUser = mlDiscordGet('https://discord.com/api/users/@me', $accessToken);
 
-    $discordUserId = isset($discordUser['id']) ? (string)$discordUser['id'] : '';
-    $discordUsername = isset($discordUser['username']) ? (string)$discordUser['username'] : '';
-    $discordGlobalName = isset($discordUser['global_name']) ? (string)$discordUser['global_name'] : '';
-    $discordEmail = isset($discordUser['email']) ? trim((string)$discordUser['email']) : '';
+    $discordUserId = (string)($discordUser['id'] ?? '');
+    $discordUsername = (string)($discordUser['username'] ?? '');
+    $discordGlobalName = (string)($discordUser['global_name'] ?? '');
+    $discordEmail = trim((string)($discordUser['email'] ?? ''));
     $discordAvatarHash = isset($discordUser['avatar']) ? (string)$discordUser['avatar'] : null;
 
     if ($discordUserId === '') {
@@ -120,32 +119,64 @@ try {
         $isMember = false;
 
         foreach ($guilds as $guild) {
-            if (is_array($guild) && isset($guild['id']) && (string)$guild['id'] === $allowedGuildId) {
+            if (is_array($guild) && (string)($guild['id'] ?? '') === $allowedGuildId) {
                 $isMember = true;
                 break;
             }
         }
 
         if (!$isMember) {
-            mlDiscordFail('That Discord account is not a member of the Musicball Discord server.');
+            mlDiscordFail('That Discord account is not allowed for this Musicball league.');
         }
     }
 
-    $stmt = $pdo->prepare("\n        SELECT UserID, UserName, Email\n        FROM ML_Users\n        WHERE DiscordUserID = ?\n        LIMIT 1\n    ");
+    // 1. Best match: already linked Discord user id.
+    $stmt = $pdo->prepare("
+        SELECT UserID, UserName, Email
+        FROM ML_Users
+        WHERE DiscordUserID = ?
+        LIMIT 1
+    ");
     $stmt->execute([$discordUserId]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    // 2. Convenient first-time match: verified Discord email matches Musicball email.
     if (!$user && $discordEmail !== '') {
-        $stmt = $pdo->prepare("\n            SELECT UserID, UserName, Email\n            FROM ML_Users\n            WHERE Email = ?\n            LIMIT 1\n        ");
+        $stmt = $pdo->prepare("
+            SELECT UserID, UserName, Email
+            FROM ML_Users
+            WHERE Email = ?
+            LIMIT 1
+        ");
         $stmt->execute([$discordEmail]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    // 3. No match: do NOT create a duplicate user. Show simple linking info.
     if (!$user) {
-        mlDiscordFail('This Discord account is not linked to a Musicball player yet. Ask the commissioner to add your email address to Musicball first.');
+        $_SESSION['pending_discord_link'] = [
+            'discord_user_id' => $discordUserId,
+            'discord_username' => $discordUsername,
+            'discord_global_name' => $discordGlobalName,
+            'discord_email' => $discordEmail,
+            'discord_avatar_hash' => $discordAvatarHash,
+        ];
+
+        header('Location: ' . mlUrl('integrations/discord/not-linked.php'));
+        exit;
     }
 
-    $update = $pdo->prepare("\n        UPDATE ML_Users\n        SET DiscordUserID = ?,\n            DiscordUsername = ?,\n            DiscordGlobalName = ?,\n            DiscordAvatarHash = ?,\n            DiscordLinkedAt = COALESCE(DiscordLinkedAt, NOW()),\n            LastLoginAt = NOW()\n        WHERE UserID = ?\n    ");
+    // Link/update Discord details on the existing Musicball user.
+    $update = $pdo->prepare("
+        UPDATE ML_Users
+        SET DiscordUserID = ?,
+            DiscordUsername = ?,
+            DiscordGlobalName = ?,
+            DiscordAvatarHash = ?,
+            DiscordLinkedAt = COALESCE(DiscordLinkedAt, NOW()),
+            LastLoginAt = NOW()
+        WHERE UserID = ?
+    ");
     $update->execute([
         $discordUserId,
         $discordUsername,
@@ -162,6 +193,7 @@ try {
 
     unset(
         $_SESSION['ml_user_id'],
+        $_SESSION['pending_discord_link'],
         $_SESSION['SpotifyAccessToken'],
         $_SESSION['SpotifyRefreshToken'],
         $_SESSION['PendingSpotifyID'],

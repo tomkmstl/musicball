@@ -2,13 +2,21 @@
 // config/discord_sso_config.php
 // Discord SSO settings for Musicball.
 //
-// Required environment variables:
-//   DISCORD_CLIENT_ID
-//   DISCORD_CLIENT_SECRET
+// Preferred local secrets file:
+//   config/discord_sso_secrets.php
 //
-// Optional environment variables:
-//   DISCORD_REDIRECT_URI  Example: https://mb-future.musicball.net/integrations/discord/callback.php
-//   DISCORD_ALLOWED_GUILD_ID  Optional Discord server/guild restriction.
+// Supported constants in that file:
+//   DISCORD_CLIENT_ID_LOCAL
+//   DISCORD_CLIENT_SECRET_LOCAL
+//   DISCORD_REDIRECT_URI_LOCAL
+//   DISCORD_ALLOWED_GUILD_ID_LOCAL
+//
+// Environment variables still work as fallback.
+
+$discordSecretsFile = __DIR__ . '/discord_sso_secrets.php';
+if (file_exists($discordSecretsFile)) {
+    require_once $discordSecretsFile;
+}
 
 function mlDiscordEnv(string $key, string $default = ''): string
 {
@@ -22,21 +30,37 @@ function mlDiscordEnv(string $key, string $default = ''): string
 
 function mlDiscordClientId(): string
 {
+    if (defined('DISCORD_CLIENT_ID_LOCAL')) {
+        return trim((string) DISCORD_CLIENT_ID_LOCAL);
+    }
+
     return mlDiscordEnv('DISCORD_CLIENT_ID');
 }
 
 function mlDiscordClientSecret(): string
 {
+    if (defined('DISCORD_CLIENT_SECRET_LOCAL')) {
+        return trim((string) DISCORD_CLIENT_SECRET_LOCAL);
+    }
+
     return mlDiscordEnv('DISCORD_CLIENT_SECRET');
 }
 
 function mlDiscordAllowedGuildId(): string
 {
+    if (defined('DISCORD_ALLOWED_GUILD_ID_LOCAL')) {
+        return trim((string) DISCORD_ALLOWED_GUILD_ID_LOCAL);
+    }
+
     return mlDiscordEnv('DISCORD_ALLOWED_GUILD_ID');
 }
 
 function mlDiscordRedirectUri(): string
 {
+    if (defined('DISCORD_REDIRECT_URI_LOCAL')) {
+        return trim((string) DISCORD_REDIRECT_URI_LOCAL);
+    }
+
     $configured = mlDiscordEnv('DISCORD_REDIRECT_URI');
     if ($configured !== '') {
         return $configured;
@@ -65,5 +89,12 @@ function mlDiscordAvatarUrl(string $discordUserId, ?string $avatarHash): ?string
     }
 
     $extension = str_starts_with($avatarHash, 'a_') ? 'gif' : 'png';
-    return 'https://cdn.discordapp.com/avatars/' . rawurlencode($discordUserId) . '/' . rawurlencode($avatarHash) . '.' . $extension . '?size=128';
+
+    return 'https://cdn.discordapp.com/avatars/'
+        . rawurlencode($discordUserId)
+        . '/'
+        . rawurlencode($avatarHash)
+        . '.'
+        . $extension
+        . '?size=128';
 }
