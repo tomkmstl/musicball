@@ -1801,3 +1801,17 @@ body.home-page.hero-passed .marketing-brand {
   height: 44px;
   object-fit: contain;
 }
+
+#how-it-works,
+#features,
+#start {
+  scroll-margin-top: 90px;
+}
+
+@media (max-width: 600px) {
+  #how-it-works,
+  #features,
+  #start {
+    scroll-margin-top: 64px;
+  }
+}

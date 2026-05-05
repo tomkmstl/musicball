@@ -255,7 +255,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
         </div>
         </div>
       </section>
-      <section class="marketing-section product-story-section section-light">
+      <section id="how-it-works" class="marketing-section product-story-section section-light">
         <div class="marketing-container">
           <div class="product-story-intro">
             <h2>A weekly music competition that turns into a shared playlist.</h2>
@@ -627,7 +627,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
           </div>
         </div>
       </section>
-      <section id="how-it-works" class="how-section marketing-section">
+      <section class="how-section marketing-section">
         <div class="marketing-container">
           <div class="section-heading centered">
             <h2>How Musicball works</h2>
