@@ -290,11 +290,9 @@ body.marketing-page svg.mb-symbols {
   height: 330px;
   overflow: hidden;
   position: relative;
-  border-radius: 0;
-  border: none;
+  border-radius: 12px;
   border: 1px solid #213247;
-  /*background: #08111c;*/
-  background: rgba(16, 28, 43, 0.95)
+  background: rgba(16, 28, 43, 0.95);
 }
 
 .product-feature-caption {
