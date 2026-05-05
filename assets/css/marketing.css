@@ -102,6 +102,7 @@ body.marketing-page svg.mb-symbols {
 }
 .marketing-section p {
   color: #526984;
+  margin: 12px 0 0;
 }
 .marketing-centered,
 .centered {
@@ -246,7 +247,7 @@ body.marketing-page svg.mb-symbols {
 
 .product-feature-card {
   min-width: 0;
-  padding: 22px;
+  padding: 22px 44px;
   border: 1px solid #213247;
   border-radius: 20px;
   background: rgba(12, 23, 36, 0.9);
@@ -265,6 +266,7 @@ body.marketing-page svg.mb-symbols {
   line-height: 0.95;
   letter-spacing: -0.04em;
   padding: 10px 0;
+  text-align: center;
 }
 
 .product-feature-preview {
@@ -300,19 +302,19 @@ body.marketing-page svg.mb-symbols {
 
 .preview-round > .card-glass {
   top: -2px;
-  left: 0;
+  left: 19px;
   transform: scale(1);
 }
 
 .preview-standings > .card-glass {
   top: -5px;
-  left: -4px;
-  transform: scale(.92);
+  left: -12px;
+  transform: scale(.89);
 }
 
 .preview-song > .card-glass {
     top: -40px;
-    left: 65px;
+    left: 53px;
     transform: scale(0.6);
 }
 
@@ -334,20 +336,20 @@ article.vote-preview.card-glass {
 }
 
 .preview-vote > .card-glass {
-  top: -134px;
-  left: 42px;
+  top: -125px;
+  left: 21px;
   transform: scale(.7);
 }
 
 .preview-results > .card-glass {
-  top: -77px;
-  left: 40px;
-  transform: scale(.7);
+  top: -86px;
+  left: 20px;
+  transform: scale(.71);
 }
 
 .preview-playlist > .card-glass {
   top: -75px;
-  left: 43px;
+  left: 27px;
   transform: scale(.68);
 }
 
