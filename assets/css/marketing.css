@@ -1144,3 +1144,110 @@ body.home-page.hero-passed .marketing-brand {
     color: #3dacec;
     font-weight: 700;
 }
+
+/* VOTE PREVIEW */
+
+.vote-preview h2 {
+    color: #fff;
+    font-size: 2rem;
+    line-height: 1.05;
+    margin: 0 0 18px;
+}
+
+.vote-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+}
+
+.vote-preview-header strong {
+    color: #fff;
+    font-size: 1.1rem;
+}
+
+.vote-preview-header span {
+    color: #7ed3ff;
+    font-size: 1.8rem;
+    font-weight: 900;
+}
+
+.vote-preview-max {
+    color: #9fcfff;
+    margin-bottom: 14px;
+}
+
+.vote-preview-list {
+    display: grid;
+    gap: 0;
+}
+
+.vote-preview-item {
+    padding: 18px 0 24px;
+    border-bottom: 1px solid #213247;
+}
+
+.vote-preview-main {
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    gap: 14px;
+    align-items: center;
+}
+
+.vote-preview-main img {
+    width: 72px;
+    height: 72px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.vote-preview-main strong {
+    display: block;
+    color: #fff;
+    font-size: 1.05rem;
+    line-height: 1.15;
+}
+
+.vote-preview-main span {
+    display: block;
+    color: #9fcfff;
+    margin-top: 4px;
+    font-size: 0.95rem;
+}
+
+.vote-preview-controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.vote-preview-controls button {
+    width: 40px;
+    height: 40px;
+    border: 1px solid #2a4058;
+    border-radius: 8px;
+    background: #0d1724;
+    color: #fff;
+    font-size: 1.1rem;
+}
+
+.vote-preview-controls b {
+    color: #fff;
+    font-size: 1.25rem;
+}
+
+.vote-preview-item label {
+    display: block;
+    margin: 14px 0 8px;
+    color: #9fcfff;
+}
+
+.vote-preview-comment {
+    min-height: 74px;
+    padding: 13px;
+    border: 1px solid #6f7275;
+    background: #3d3d3d;
+    color: #fff;
+    border-radius: 2px;
+    font-weight: 700;
+}

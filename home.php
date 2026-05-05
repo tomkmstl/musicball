@@ -356,7 +356,58 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
 						</div>
 					</div>
 				</article>
+				<article class="vote-preview card-glass">
+					<div class="eyebrow">ROUND VOTING</div>
+					<h2>Songs to Hear while Leaving this World</h2>
 
+					<div class="vote-preview-header">
+						<strong>total votes given</strong>
+						<span>5 / 10</span>
+					</div>
+
+					<p class="vote-preview-max">Max per song: 4</p>
+
+					<div class="vote-preview-list">
+						<section class="vote-preview-item">
+							<div class="vote-preview-main">
+								<img src="https://i.scdn.co/image/ab67616d0000b273201a9af6d3296d20a205adb5" alt="">
+								<div>
+									<strong>Song To The Siren - Remastered</strong>
+									<span>This Mortal Coil · It'll End In Tears (Remastered)</span>
+								</div>
+								<div class="vote-preview-controls"><button>−</button><b>3</b><button>+</button></div>
+							</div>
+							<label>Comment</label>
+							<div class="vote-preview-comment">Beautiful.</div>
+						</section>
+
+						<section class="vote-preview-item">
+							<div class="vote-preview-main">
+								<img src="https://i.scdn.co/image/ab67616d0000b273ca69f52416a728ebd0b9103c" alt="">
+								<div>
+									<strong>Do You Realize??</strong>
+									<span>The Flaming Lips · Yoshimi Battles the Pink Robots</span>
+								</div>
+								<div class="vote-preview-controls"><button>−</button><b>1</b><button>+</button></div>
+							</div>
+							<label>Comment</label>
+							<div class="vote-preview-comment">Hasn't gotten old this is a good one.</div>
+						</section>
+
+						<section class="vote-preview-item">
+							<div class="vote-preview-main">
+								<img src="https://i.scdn.co/image/ab67616d0000b27319575a7b324f9c7e3a1d1139" alt="">
+								<div>
+									<strong>Loose Ends</strong>
+									<span>Great Northern · Sleepy Epee</span>
+								</div>
+								<div class="vote-preview-controls"><button>−</button><b>0</b><button>+</button></div>
+							</div>
+							<label>Comment</label>
+							<div class="vote-preview-comment">I get it, it belongs here. Just missed on votes.</div>
+						</section>
+					</div>
+				</article>
             </div>
         </div>
     </section>
