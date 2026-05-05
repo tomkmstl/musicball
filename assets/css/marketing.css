@@ -195,11 +195,168 @@ body.marketing-page svg.mb-symbols {
   display: grid;
   gap: 18px;
 }
+/* PRODUCT STORY INTRO */
+
+.product-story-section {
+  padding-top: 72px;
+}
+
+.product-story-intro {
+  max-width: 820px;
+  margin: 0 auto 30px;
+  text-align: center;
+}
+
+.product-story-intro h2 {
+  color: #fff;
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  margin: 0 0 16px;
+}
+
+.product-story-intro p {
+  max-width: 720px;
+  margin: 0 auto;
+  color: #a9bbd0;
+  font-size: 1.08rem;
+}
+
+@media (max-width: 900px) {
+  .product-story-steps {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .product-story-steps {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* PRODUCT FEATURE GRID (2x3 layout) */
+
+.product-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+/* FEATURE CARD */
+
+.product-feature-card {
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid #213247;
+  border-radius: 20px;
+  background: rgba(12, 23, 36, 0.9);
+}
+
+.product-feature-copy {
+  margin-bottom: 12px;
+}
+
+.product-feature-copy h3 {
+  margin: 0;
+  color: #fff;
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: clamp(1.7rem, 2.4vw, 2.25rem);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  padding: 10px 0;
+}
+
+.product-feature-preview {
+  height: 330px;
+  overflow: hidden;
+  position: relative;
+  border-radius: 0;
+  border: none;
+  border: 1px solid #213247;
+  /*background: #08111c;*/
+  background: rgba(16, 28, 43, 0.95)
+}
+
+.product-feature-caption {
+  margin: 12px 0 0;
+  color: #a9bbd0;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  max-width: 320px;
+}
+
+.product-feature-preview > .card-glass {
+  position: absolute;
+  width: 640px;
+  max-width: none;
+  box-shadow: none;
+  transform-origin: top left;
+}
+
+/* ========================================
+   PER-CARD SNAPSHOT CONTROL
+   ======================================== */
+
+.preview-round > .card-glass {
+  top: -2px;
+  left: 0;
+  transform: scale(1);
+}
+
+.preview-standings > .card-glass {
+  top: -5px;
+  left: -4px;
+  transform: scale(.92);
+}
+
+.preview-song > .card-glass {
+    top: -40px;
+    left: 65px;
+    transform: scale(0.6);
+}
+
+article.song-confirm-preview.card-glass {
+	background: inherit;
+    border: none;
+}
+
+article.vote-preview.card-glass {
+	border: none;
+}
+
+.song-confirm-panel {
+    border: none;
+}
+
+.product-feature-preview.preview-vote {
+    background: rgba(16, 28, 43, 0.95);
+}
+
+.preview-vote > .card-glass {
+  top: -134px;
+  left: 42px;
+  transform: scale(.7);
+}
+
+.preview-results > .card-glass {
+  top: -77px;
+  left: 40px;
+  transform: scale(.7);
+}
+
+.preview-playlist > .card-glass {
+  top: -75px;
+  left: 43px;
+  transform: scale(.68);
+}
+
 .card-glass,
 .marketing-app-card {
   background: rgba(16, 28, 43, 0.95);
-  border: 1px solid #2a4058;
-  border-radius: 16px;
+  border: none;
+ /* border: 1px solid #2a4058;
+  border-radius: 16px;*/
   padding: 22px;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.35);
 }
@@ -764,7 +921,7 @@ body.home-page.hero-passed .marketing-brand {
 .song-confirm-panel,
 .song-current-panel,
 .song-search-panel {
-	border: 1px solid #2a4058;
+	/*border: 1px solid #2a4058;*/
 	border-radius: 16px;
 	background: rgba(8, 17, 28, 0.4);
 	padding: 18px;

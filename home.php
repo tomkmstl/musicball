@@ -174,243 +174,283 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
         </div>
     </section>
 
-    <section class="marketing-section section-dark">
-        <div class="marketing-container">
-            <div class="hero-preview" aria-label="Musicball product preview">
-                <article class="round-preview card-glass">
-                    <div class="eyebrow">ROUND 1</div>
-                    <h2>My Current Jam <span>s5</span></h2>
-                    <p>submit by 5/8/26, 12:00 PM · vote by 5/13/26, 11:00 PM</p>
-                    <div class="avatar-row-wrap"><span>submitted:</span><div class="avatar-row"><?php for ($i = 1; $i <= 6; $i++): ?><i class="avatar avatar-<?= $i ?>"></i><?php endfor; ?></div></div>
-                    <div class="avatar-row-wrap"><span>still<br>researching:</span><div class="avatar-row"><?php for ($i = 7; $i <= 12; $i++): ?><i class="avatar avatar-<?= $i ?>"></i><?php endfor; ?></div></div>
-                    <div class="round-actions-mini">
-                        <div><svg><use href="#mb-icon-submit"></use></svg><span>Choose Song</span></div>
-                        <div class="muted"><svg><use href="#mb-icon-vote"></use></svg><span>Vote</span></div>
-                    </div>
-                </article>
-
-                <article class="standings-preview card-glass">
-                    <h3>Season Standings</h3>
-                    <table>
-                        <thead><tr><th></th><th>Player</th><th>Total<br>Points</th><th>Best<br>Song</th></tr></thead>
-                        <tbody>
-                            <tr><td>1</td><td><i></i> Manic Arch Tour</td><td>144</td><td>36</td></tr>
-                            <tr><td>2</td><td><i></i> Fashion Forward Fuckboi</td><td>143</td><td>34</td></tr>
-                        </tbody>
-                    </table>
-                </article>
-
-                <article class="song-confirm-preview card-glass">
-                    <div class="eyebrow">CONFIRM YOUR SONG</div>
-                    <div class="song-confirm-panel">
-                        <div class="song-confirm-card-inner">
-                            <img class="song-confirm-artwork" src="https://i.scdn.co/image/ab67616d0000b273dc52a67943ab8838fc661a94" alt="LWA IN THE TRAILER PARK album art">
-                            <div>
-                                <div class="song-confirm-title">LWA IN THE TRAILER PARK</div>
-                                <div class="song-confirm-meta">Benjamin Booker · LOWER</div>
-                                <p class="song-confirm-note">Benjamin Booker has been chosen 0 times in past rounds.</p>
-                                <p class="song-confirm-note">Your song is not saved yet. Confirm below to lock in this pick.</p>
-                            </div>
-                        </div>
-                        <div class="song-confirm-actions">
-                            <div class="song-confirm-primary">Confirm Song</div>
-                            <div class="song-confirm-secondary">Cancel</div>
-                        </div>
-                    </div>
-
-                    <div class="song-preview-stack">
-                        <div class="song-current-panel">
-                            <div class="eyebrow">YOUR CURRENT PICK</div>
-                            <p>No song chosen yet.</p>
-                            <div class="song-preview-comment">Wow, this hit me like a ton of bricks.</div>
-                            <p>This comment will save with your song when you pick one.</p>
-                        </div>
-
-                        <div class="song-search-panel">
-                            <div class="eyebrow">SPOTIFY SEARCH</div>
-                            <div class="song-search-title">Find a song</div>
-                            <p>Start typing a title, artist, album, Spotify track URL, or Spotify track URI.</p>
-                            <div class="song-search-row-preview">
-                                <div class="song-search-input-preview">Search Spotify or paste a Spotify track link</div>
-                                <div class="song-search-button-preview">Search</div>
-                            </div>
-                            <p>Start typing to search Spotify.</p>
-                        </div>
-                    </div>
-                </article>
-				<article class="playlist-preview card-glass">
-					<div class="eyebrow">PLAYLISTS</div>
-					<h2>Scone Ghetto</h2>
-
-					<section class="playlist-overview-preview">
-						<div>
-							<div class="eyebrow">ALL-TIME LEAGUE PLAYLIST</div>
-							<h3>Scone Ghetto</h3>
-							<strong>719 songs</strong>
-							<p>Every song from every generated round playlist, in league order from the first eligible round to the latest eligible round.</p>
-						</div>
-						<svg><use href="#mb-icon-music"></use></svg>
-					</section>
-
-					<h3 class="playlist-player-heading">Player Playlists</h3>
-
-					<div class="playlist-player-grid-preview">
-						<div class="playlist-player-card-preview">
-							<span class="playlist-avatar-preview"></span>
-							<div><strong>Das Bot's Songs</strong><p>60 songs</p></div>
-							<svg><use href="#mb-icon-music"></use></svg>
-						</div>
-
-						<div class="playlist-player-card-preview">
-							<span class="playlist-avatar-preview avatar-two"></span>
-							<div><strong>Ham's Songs</strong><p>60 songs</p></div>
-							<svg><use href="#mb-icon-music"></use></svg>
-						</div>
-
-						<div class="playlist-player-card-preview">
-							<span class="playlist-avatar-preview avatar-three"></span>
-							<div><strong>Fashion Forward's Songs</strong><p>60 songs</p></div>
-							<svg><use href="#mb-icon-music"></use></svg>
-						</div>
-
-						<div class="playlist-player-card-preview">
-							<span class="playlist-avatar-preview avatar-four"></span>
-							<div><strong>Manic Arch Tour's Songs</strong><p>60 songs</p></div>
-							<svg><use href="#mb-icon-music"></use></svg>
-						</div>
-					</div>
-				</article>
-				
-				<article class="results-preview card-glass">
-					<div class="eyebrow">ROUND RESULTS</div>
-					<h2>100M+ Listens</h2>
-					<p>A song with more than 100 million listens</p>
-
-					<!-- PODIUM -->
-					<div class="results-podium">
-						<div>
-							<span>1ST</span>
-							<div class="avatar avatar-1"></div>
-							<strong>Lake</strong>
-							<p>22 pts</p>
-						</div>
-						<div>
-							<span>2ND</span>
-							<div class="avatar avatar-2"></div>
-							<strong>Das Bot</strong>
-							<p>15 pts</p>
-						</div>
-						<div>
-							<span>3RD</span>
-							<div class="avatar avatar-3"></div>
-							<strong>Marty McFly</strong>
-							<p>12 pts</p>
-						</div>
-					</div>
-
-					<!-- WINNING SONG -->
-					<div class="results-song">
-						<img src="https://i.scdn.co/image/ab67616d0000b273dc52a67943ab8838fc661a94" alt="">
-						<div>
-							<div class="results-song-title">#1 · Chum</div>
-							<div class="results-song-meta">Earl Sweatshirt · Doris</div>
-						</div>
-						<div class="results-score">
-							<strong>22</strong>
-							<span>10 voters</span>
-						</div>
-					</div>
-
-					<div class="results-submitted">
-						<div class="avatar avatar-1"></div>
-						<span>Submitted by Lake</span>
-					</div>
-
-					<!-- COMMENTS -->
-					<div class="results-comments">
-						<div class="results-comment">
-							<div class="avatar avatar-4"></div>
-							<div>
-								<strong>Fashion Forward</strong>
-								<p>I’ve probably heard this song before, but I obviously never really listened to it. I love everything about this song...</p>
-							</div>
-							<span class="results-points">3</span>
-						</div>
-
-						<div class="results-comment">
-							<div class="avatar avatar-5"></div>
-							<div>
-								<strong>Ham</strong>
-								<p>Incredible.</p>
-							</div>
-							<span class="results-points">3</span>
-						</div>
-
-						<div class="results-comment">
-							<div class="avatar avatar-6"></div>
-							<div>
-								<strong>Manic Arch Tour</strong>
-								<p>I listened to this so many times, really liked the throw back feel...</p>
-							</div>
-							<span class="results-points">3</span>
-						</div>
-					</div>
-				</article>
-				<article class="vote-preview card-glass">
-					<div class="eyebrow">ROUND VOTING</div>
-					<h2>Songs to Hear while Leaving this World</h2>
-
-					<div class="vote-preview-header">
-						<strong>total votes given</strong>
-						<span>5 / 10</span>
-					</div>
-
-					<p class="vote-preview-max">Max per song: 4</p>
-
-					<div class="vote-preview-list">
-						<section class="vote-preview-item">
-							<div class="vote-preview-main">
-								<img src="https://i.scdn.co/image/ab67616d0000b273201a9af6d3296d20a205adb5" alt="">
-								<div>
-									<strong>Song To The Siren - Remastered</strong>
-									<span>This Mortal Coil · It'll End In Tears (Remastered)</span>
-								</div>
-								<div class="vote-preview-controls"><button>−</button><b>3</b><button>+</button></div>
-							</div>
-							<label>Comment</label>
-							<div class="vote-preview-comment">Beautiful.</div>
-						</section>
-
-						<section class="vote-preview-item">
-							<div class="vote-preview-main">
-								<img src="https://i.scdn.co/image/ab67616d0000b273ca69f52416a728ebd0b9103c" alt="">
-								<div>
-									<strong>Do You Realize??</strong>
-									<span>The Flaming Lips · Yoshimi Battles the Pink Robots</span>
-								</div>
-								<div class="vote-preview-controls"><button>−</button><b>1</b><button>+</button></div>
-							</div>
-							<label>Comment</label>
-							<div class="vote-preview-comment">Hasn't gotten old this is a good one.</div>
-						</section>
-
-						<section class="vote-preview-item">
-							<div class="vote-preview-main">
-								<img src="https://i.scdn.co/image/ab67616d0000b27319575a7b324f9c7e3a1d1139" alt="">
-								<div>
-									<strong>Loose Ends</strong>
-									<span>Great Northern · Sleepy Epee</span>
-								</div>
-								<div class="vote-preview-controls"><button>−</button><b>0</b><button>+</button></div>
-							</div>
-							<label>Comment</label>
-							<div class="vote-preview-comment">I get it, it belongs here. Just missed on votes.</div>
-						</section>
-					</div>
-				</article>
-            </div>
+<section class="marketing-section section-dark product-story-section">
+    <div class="marketing-container">
+        <div class="product-story-intro">
+            <div class="eyebrow">SEE THE GAME</div>
+            <h2>A weekly music competition that turns into a shared playlist.</h2>
+            <p>Musicball gives your friend group a reason to keep sharing songs, arguing over favorites, and building something together over time.</p>
         </div>
-    </section>
+
+        <div class="product-card-grid">
+
+            <article class="product-feature-card">
+                <div class="product-feature-copy">
+                    <h3>Play The Round</h3>
+                </div>
+
+                <div class="product-feature-preview preview-round">
+                    <article class="round-preview card-glass">
+                        <div class="eyebrow">ROUND 1</div>
+                        <h2>My Current Jam <span>s5</span></h2>
+                        <p>submit by 5/8/26, 12:00 PM · vote by 5/13/26, 11:00 PM</p>
+
+                        <div class="avatar-row-wrap">
+                            <span>submitted:</span>
+                            <div class="avatar-row">
+                                <?php for ($i = 1; $i <= 6; $i++): ?>
+                                    <i class="avatar avatar-<?= $i ?>"></i>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+
+                        <div class="avatar-row-wrap">
+                            <span>still<br>researching:</span>
+                            <div class="avatar-row">
+                                <?php for ($i = 7; $i <= 12; $i++): ?>
+                                    <i class="avatar avatar-<?= $i ?>"></i>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+
+                        <div class="round-actions-mini">
+                            <div><svg><use href="#mb-icon-submit"></use></svg><span>Choose Song</span></div>
+                            <div class="muted"><svg><use href="#mb-icon-vote"></use></svg><span>Vote</span></div>
+                        </div>
+                    </article>
+                </div>
+				<p>Every round gives your league a prompt, a deadline, and a reason to find the perfect song.</p>
+            </article>
+
+            <article class="product-feature-card">
+                <div class="product-feature-copy">
+                    <h3>Submit your pick</h3>
+                </div>
+
+                <div class="product-feature-preview preview-song">
+                    <article class="song-confirm-preview card-glass">
+                        <div class="eyebrow">CONFIRM YOUR SONG</div>
+
+                        <div class="song-confirm-panel">
+                            <div class="song-confirm-card-inner">
+                                <img class="song-confirm-artwork" src="https://i.scdn.co/image/ab67616d0000b273dc52a67943ab8838fc661a94" alt="LWA IN THE TRAILER PARK album art">
+                                <div>
+                                    <div class="song-confirm-title">LWA IN THE TRAILER PARK</div>
+                                    <div class="song-confirm-meta">Benjamin Booker · LOWER</div>
+                                    <p class="song-confirm-note">Benjamin Booker has been chosen 0 times in past rounds.</p>
+                                    <p class="song-confirm-note">Your song is not saved yet. Confirm below to lock in this pick.</p>
+                                </div>
+                            </div>
+
+                            <div class="song-confirm-actions">
+                                <div class="song-confirm-primary">Confirm Song</div>
+                                <div class="song-confirm-secondary">Cancel</div>
+                            </div>
+                        </div>
+
+                        <div class="song-preview-stack">
+                            <div class="song-current-panel">
+                                <div class="eyebrow">YOUR CURRENT PICK</div>
+                                <p>No song chosen yet.</p>
+                                <div class="song-preview-comment">Wow, this hit me like a ton of bricks.</div>
+                                <p>This comment will save with your song when you pick one.</p>
+                            </div>
+
+                            <div class="song-search-panel">
+                                <div class="eyebrow">SPOTIFY SEARCH</div>
+                                <div class="song-search-title">Find a song</div>
+                                <p>Start typing a title, artist, album, Spotify track URL, or Spotify track URI.</p>
+                                <div class="song-search-row-preview">
+                                    <div class="song-search-input-preview">Search Spotify or paste a Spotify track link</div>
+                                    <div class="song-search-button-preview">Search</div>
+                                </div>
+                                <p>Start typing to search Spotify.</p>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+				<p>Players search Spotify, lock in a song, and add the context that makes their choice personal.</p>
+            </article>
+
+            <article class="product-feature-card product-feature-card-highlight">
+                <div class="product-feature-copy">
+                    <h3>Cast Your Votes</h3>
+                </div>
+
+                <div class="product-feature-preview preview-vote">
+                    <article class="vote-preview card-glass">
+                        <div class="eyebrow">ROUND VOTING</div>
+                        <h2>Songs to Hear while Leaving this World</h2>
+
+                        <div class="vote-preview-header">
+                            <strong>total votes given</strong>
+                            <span>5 / 10</span>
+                        </div>
+
+                        <p class="vote-preview-max">Max per song: 4</p>
+
+                        <div class="vote-preview-list">
+                            <section class="vote-preview-item">
+                                <div class="vote-preview-main">
+                                    <img src="https://i.scdn.co/image/ab67616d0000b273201a9af6d3296d20a205adb5" alt="">
+                                    <div>
+                                        <strong>Song To The Siren - Remastered</strong>
+                                        <span>This Mortal Coil · It'll End In Tears (Remastered)</span>
+                                    </div>
+                                    <div class="vote-preview-controls"><button type="button">−</button><b>3</b><button type="button">+</button></div>
+                                </div>
+                                <label>Comment</label>
+                                <div class="vote-preview-comment">Beautiful.</div>
+                            </section>
+
+                            <section class="vote-preview-item">
+                                <div class="vote-preview-main">
+                                    <img src="https://i.scdn.co/image/ab67616d0000b273ca69f52416a728ebd0b9103c" alt="">
+                                    <div>
+                                        <strong>Do You Realize??</strong>
+                                        <span>The Flaming Lips · Yoshimi Battles the Pink Robots</span>
+                                    </div>
+                                    <div class="vote-preview-controls"><button type="button">−</button><b>1</b><button type="button">+</button></div>
+                                </div>
+                                <label>Comment</label>
+                                <div class="vote-preview-comment">Hasn't gotten old this is a good one.</div>
+                            </section>
+
+                            <section class="vote-preview-item">
+                                <div class="vote-preview-main">
+                                    <img src="https://i.scdn.co/image/ab67616d0000b27319575a7b324f9c7e3a1d1139" alt="">
+                                    <div>
+                                        <strong>Loose Ends</strong>
+                                        <span>Great Northern · Sleepy Eepee</span>
+                                    </div>
+                                    <div class="vote-preview-controls"><button type="button">−</button><b>0</b><button type="button">+</button></div>
+                                </div>
+                                <label>Comment</label>
+                                <div class="vote-preview-comment">I get it, it belongs here. Just missed on votes.</div>
+                            </section>
+                        </div>
+                    </article>
+                </div>
+				<p>Distribute your points across the ballot. Every vote changes the round and the standings.</p>
+            </article>
+
+            <article class="product-feature-card">
+                <div class="product-feature-copy">
+                    <h3>Reveal Round Winners</h3>
+                </div>
+
+                <div class="product-feature-preview preview-results">
+                    <article class="results-preview card-glass">
+                        <div class="eyebrow">ROUND RESULTS</div>
+                        <h2>100M+ Listens</h2>
+                        <p>A song with more than 100 million listens</p>
+
+                        <div class="results-podium">
+                            <div><span>1ST</span><div class="avatar avatar-1"></div><strong>Lake</strong><p>22 pts</p></div>
+                            <div><span>2ND</span><div class="avatar avatar-2"></div><strong>Das Bot</strong><p>15 pts</p></div>
+                            <div><span>3RD</span><div class="avatar avatar-3"></div><strong>Marty McFly</strong><p>12 pts</p></div>
+                        </div>
+
+                        <div class="results-song">
+                            <img src="https://i.scdn.co/image/ab67616d0000b273dc52a67943ab8838fc661a94" alt="">
+                            <div>
+                                <div class="results-song-title">#1 · Chum</div>
+                                <div class="results-song-meta">Earl Sweatshirt · Doris</div>
+                            </div>
+                            <div class="results-score"><strong>22</strong><span>10 voters</span></div>
+                        </div>
+
+                        <div class="results-submitted">
+                            <div class="avatar avatar-1"></div>
+                            <span>Submitted by Lake</span>
+                        </div>
+
+                        <div class="results-comments">
+                            <div class="results-comment">
+                                <div class="avatar avatar-4"></div>
+                                <div><strong>Fashion Forward</strong><p>I’ve probably heard this song before, but I obviously never really listened to it. I love everything about this song...</p></div>
+                                <span class="results-points">3</span>
+                            </div>
+
+                            <div class="results-comment">
+                                <div class="avatar avatar-5"></div>
+                                <div><strong>Ham</strong><p>Incredible.</p></div>
+                                <span class="results-points">3</span>
+                            </div>
+
+                            <div class="results-comment">
+                                <div class="avatar avatar-6"></div>
+                                <div><strong>Manic Arch Tour</strong><p>I listened to this so many times, really liked the throw back feel...</p></div>
+                                <span class="results-points">3</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+				<p>See what won, who submitted it, how people voted, and what the league had to say.</p>
+            </article>
+			
+			<article class="product-feature-card">
+                <div class="product-feature-copy">
+                    <h3>Track The Results</h3>
+                </div>
+
+                <div class="product-feature-preview preview-standings">
+                    <article class="standings-preview card-glass">
+                        <h3>Season Standings</h3>
+                        <table>
+                            <thead>
+                                <tr><th></th><th>Player</th><th>Total<br>Votes</th><th>Total<br>Voters</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>1</td><td><i></i> Manic Arch Tour</td><td>144</td><td>99</td></tr>
+                                <tr><td>2</td><td><i></i> Fashion Forward</td><td>143</td><td>97</td></tr>
+								<tr><td>3</td><td><i></i> Ham</td><td>130</td><td>94</td></tr>
+                                <tr><td>4</td><td><i></i> Lizewanana</td><td>130</td><td>90</td></tr>
+								<tr><td>5</td><td><i></i> Lake</td><td>130</td><td>85</td></tr>
+								<tr><td>6</td><td><i></i> Brett</td><td>124</td><td>90</td></tr>
+                            </tbody>
+                        </table>
+                    </article>
+                </div>
+				<p>Points add up. See where everyone stands.</p>
+            </article>
+
+            <article class="product-feature-card">
+                <div class="product-feature-copy">
+                    <h3>Listen Back Anytime</h3>
+                </div>
+
+                <div class="product-feature-preview preview-playlist">
+                    <article class="playlist-preview card-glass">
+                        <div class="eyebrow">PLAYLISTS</div>
+                        <h2>Scone Ghetto</h2>
+
+                        <section class="playlist-overview-preview">
+                            <div>
+                                <div class="eyebrow">ALL-TIME LEAGUE PLAYLIST</div>
+                                <h3>Scone Ghetto</h3>
+                                <strong>719 songs</strong>
+                                <p>Every song from every generated round playlist, in league order from the first eligible round to the latest eligible round.</p>
+                            </div>
+                            <svg><use href="#mb-icon-music"></use></svg>
+                        </section>
+
+                        <h3 class="playlist-player-heading">Player Playlists</h3>
+
+                        <div class="playlist-player-grid-preview">
+                            <div class="playlist-player-card-preview"><span class="playlist-avatar-preview"></span><div><strong>Das Bot's Songs</strong><p>60 songs</p></div><svg><use href="#mb-icon-music"></use></svg></div>
+                            <div class="playlist-player-card-preview"><span class="playlist-avatar-preview avatar-two"></span><div><strong>Ham's Songs</strong><p>60 songs</p></div><svg><use href="#mb-icon-music"></use></svg></div>
+                            <div class="playlist-player-card-preview"><span class="playlist-avatar-preview avatar-three"></span><div><strong>Fashion Forward's Songs</strong><p>60 songs</p></div><svg><use href="#mb-icon-music"></use></svg></div>
+                            <div class="playlist-player-card-preview"><span class="playlist-avatar-preview avatar-four"></span><div><strong>Manic Arch Tour's Songs</strong><p>60 songs</p></div><svg><use href="#mb-icon-music"></use></svg></div>
+                        </div>
+                    </article>
+                </div>
+				<p>Every round builds a playlist you can keep.</p>
+            </article>
+
+        </div>
+    </div>
+</section>
 
     <section class="build-section marketing-section">
         <h2>A game that builds something real</h2>
