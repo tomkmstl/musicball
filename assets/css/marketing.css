@@ -50,6 +50,9 @@ body.marketing-page svg.mb-symbols {
   color: #3dacec;
 }
 .marketing-nav {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   background: #08111c;
   border-bottom: 1px solid #213247;
 }
@@ -191,11 +194,7 @@ body.marketing-page svg.mb-symbols {
   color: #3dacec;
   font-size: 0.6rem;
 }
-.hero-preview,
-.marketing-product-preview {
-  display: grid;
-  gap: 18px;
-}
+
 /* PRODUCT STORY INTRO */
 
 .product-story-section {
@@ -221,18 +220,6 @@ body.marketing-page svg.mb-symbols {
   margin: 0 auto;
   color: #a9bbd0;
   font-size: 1.08rem;
-}
-
-@media (max-width: 900px) {
-  .product-story-steps {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 560px) {
-  .product-story-steps {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* PRODUCT FEATURE GRID (2x3 layout) */
