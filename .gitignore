@@ -1,6 +1,7 @@
 config/spotify_config.php
 config/connections/
 config/local_env.php
+config/discord_sso_secrets.php
 _sessions/
 *.log
 .env
