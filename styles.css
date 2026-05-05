@@ -3778,3 +3778,48 @@ body.playlist-page-loading .playlist-cta-button {
         white-space: normal;
     }
 }
+
+/* =========================
+   DISCORD SSO LOGIN
+========================= */
+
+.login-card-sso {
+    text-align: center;
+}
+
+.login-intro-copy {
+    margin-top: 12px;
+    margin-bottom: 18px;
+}
+
+.login-intro-copy h1 {
+    margin: 0 0 8px;
+    font-size: 1.8rem;
+    line-height: 1.1;
+}
+
+.login-intro-copy p,
+.login-help-text,
+.login-home-link {
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+.login-buttons-sso {
+    justify-content: center;
+}
+
+.discord-login-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 280px;
+    text-decoration: none;
+}
+
+.login-home-link a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}

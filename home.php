@@ -143,7 +143,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
           <a href="#how-it-works">How It Works</a>
           <a href="#features">Features</a>
           <a href="#start">Start a League</a>
-          <a href="index.php" class="marketing-login-link">Log In</a>
+          <a href="index.php" class="marketing-login-link">Log in with Discord</a>
         </nav>
       </div>
     </header>
@@ -157,7 +157,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
           <h1>Built for music fans. <br>Designed for friends. </h1>
           <p>Submit songs, vote with friends, and turn every round into a playlist your league built together.</p>
           <div class="hero-actions">
-            <a href="#start" class="btn btn-primary">Start a league</a>
+            <a href="index.php" class="btn btn-primary">Start with Discord</a>
             <a href="#how-it-works" class="btn btn-secondary">See how it works</a>
           </div>
           <div class="hero-notes">
@@ -442,7 +442,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                     </div>
                   </div>
                   <div class="results-song">
-                    <img src="https://i.scdn.co/image/ab67616d0000b273dc52a67943ab8838fc661a94" alt="">
+                    <img src="https://i.scdn.co/image/ab67616d0000b27346f9bf1154c7205b0e8b1667" alt="">
                     <div>
                       <div class="results-song-title">#1 · Chum</div>
                       <div class="results-song-meta">Earl Sweatshirt · Doris</div>

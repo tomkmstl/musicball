@@ -1,6 +1,7 @@
 <?php
 require_once 'session_boot.php';
 require_once 'config.php';
+require_once __DIR__ . '/config/discord_sso_config.php';
 
 $loginError = isset($_SESSION['login_error']) ? $_SESSION['login_error'] : '';
 unset($_SESSION['login_error']);
@@ -13,13 +14,15 @@ if ($reset) {
     unset(
         $_SESSION['UserID'],
         $_SESSION['UserName'],
+        $_SESSION['DiscordUserID'],
         $_SESSION['ml_user_id'],
         $_SESSION['SpotifyAccessToken'],
         $_SESSION['SpotifyRefreshToken'],
         $_SESSION['PendingSpotifyID'],
         $_SESSION['PendingSpotifyDisplayName'],
         $_SESSION['PendingSpotifyEmail'],
-        $_SESSION['spotify_oauth_state']
+        $_SESSION['spotify_oauth_state'],
+        $_SESSION['discord_oauth_state']
     );
 }
 
@@ -28,58 +31,28 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
     exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = isset($_POST['email']) ? trim((string)$_POST['email']) : '';
-    $passcode = isset($_POST['passcode']) ? trim((string)$_POST['passcode']) : '';
-
-    if ($email === '' || $passcode === '') {
-        $loginError = 'Please enter your email address and passcode.';
-    } else {
-        $stmt = $pdo->prepare("\n            SELECT UserID, UserName, Email, Passcode\n            FROM ML_Users\n            WHERE Email = ?\n            LIMIT 1\n        ");
-        $stmt->execute([$email]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$user) {
-            $loginError = 'We could not find that email address.';
-        } elseif ((string)$user['Passcode'] !== $passcode) {
-            $loginError = 'Incorrect passcode.';
-        } else {
-			session_regenerate_id(true);
-
-			$_SESSION['UserID'] = (int)$user['UserID'];
-			$_SESSION['UserName'] = $user['UserName'];
-
-            unset(
-                $_SESSION['ml_user_id'],
-                $_SESSION['SpotifyAccessToken'],
-                $_SESSION['SpotifyRefreshToken'],
-                $_SESSION['PendingSpotifyID'],
-                $_SESSION['PendingSpotifyDisplayName'],
-                $_SESSION['PendingSpotifyEmail'],
-                $_SESSION['spotify_oauth_state']
-            );
-
-            header('Location: season.php');
-            exit;
-        }
-    }
-}
+$discordReady = mlDiscordConfigIsReady();
 ?>
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Music Ball</title>
+    <title>Log In | Musicball</title>
     <link rel="stylesheet" href="<?= htmlspecialchars(mlAssetUrl('styles.css')) ?>">
     <?php require_once 'pwa_head.php'; ?>
 </head>
 <body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?>">
 <div class="wrapper">
-    <div class="card login-card">
+    <div class="card login-card login-card-sso">
         <div class="login-logo-wrap">
-			<img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo.png')) ?>" alt="<?= htmlspecialchars(mlGetLeagueName($pdo)) ?>" class="login-logo">
-		</div>
+            <img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo.png')) ?>" alt="<?= htmlspecialchars(mlGetLeagueName($pdo)) ?>" class="login-logo">
+        </div>
+
+        <div class="login-intro-copy">
+            <h1>Log in with Discord</h1>
+            <p>Musicball now uses Discord to verify your account and get you into your league.</p>
+        </div>
 
         <?php if (!empty($loginError)): ?>
             <div class="note login-error-note">
@@ -87,39 +60,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         <?php endif; ?>
 
-        <form method="post" action="index.php" class="login-form">
-            <div class="login-field">
-                <label for="email" class="admin-label">Email Address</label>
-                <input
-                    type="email"
-                    name="email"
-                    id="email"
-                    required
-                    autocomplete="username"
-                    class="admin-input"
-                >
+        <?php if ($discordReady): ?>
+            <div class="buttons login-buttons login-buttons-sso">
+                <a href="<?= htmlspecialchars(mlUrl('integrations/discord/login.php')) ?>" class="button-primary discord-login-button">
+                    Continue with Discord
+                </a>
             </div>
-
-            <div class="login-field login-field-last">
-                <label for="passcode" class="admin-label">4-digit code</label>
-                <input
-                    type="password"
-                    name="passcode"
-                    id="passcode"
-                    maxlength="4"
-                    required
-                    autocomplete="current-password"
-                    class="admin-input"
-                >
+        <?php else: ?>
+            <div class="note login-error-note">
+                Discord login is not configured yet. Add <strong>DISCORD_CLIENT_ID</strong> and <strong>DISCORD_CLIENT_SECRET</strong> to the server environment.
             </div>
+        <?php endif; ?>
 
-            <div class="buttons login-buttons">
-                <button type="submit" class="button-primary">Log In</button>
-            </div>
-        </form>
+        <p class="login-help-text">
+            Use the Discord account tied to your Musicball email address. If you get stuck, ask your commissioner to confirm your email in Musicball.
+        </p>
 
-        <p>
-            your passcode is the last four digits of your phone number
+        <p class="login-home-link">
+            <a href="<?= htmlspecialchars(mlUrl('home.php')) ?>">Back to Musicball home</a>
         </p>
     </div>
 </div>
