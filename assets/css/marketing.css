@@ -1815,3 +1815,26 @@ body.home-page.hero-passed .marketing-brand {
     scroll-margin-top: 64px;
   }
 }
+
+@media (max-width: 700px) {
+
+    .marketing-links {
+        gap: 10px;
+    }
+
+    .marketing-links a {
+        font-size: 0.82rem;
+    }
+
+    .marketing-login-link {
+        display: inline-flex !important;
+        align-items: center;
+        white-space: nowrap;
+    }
+
+    .marketing-login-link svg {
+        width: 14px;
+        height: 14px;
+        margin-right: 5px !important;
+    }
+}
