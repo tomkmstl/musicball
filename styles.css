@@ -1817,9 +1817,9 @@ body.theme-light .mb-image-lightbox {
 }
 
 .profile-avatar-progress {
-    width: 44px;
-    height: 44px;
-    border-radius: 999px;
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
 }
 
 .profile-avatar-result {
@@ -1835,6 +1835,7 @@ body.theme-light .mb-image-lightbox {
     min-width: 32px;
     max-width: none;
     flex: 0 0 32px;
+	border-radius: 6px;
 }
 
 .profile-avatar-list {
