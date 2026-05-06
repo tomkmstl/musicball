@@ -132,6 +132,9 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
 		  <path d="M17.7 14c-2.8-1.7-7.1-2.2-10.4-1.2-.4.1-.9-.1-1-.5-.1-.4.1-.9.5-1 3.6-1.1 8.4-.6 11.8 1.4.4.2.5.8.3 1.2-.2.4-.8.5-1.2.3z"/>
 		  <path d="M17.5 17c-2.3-1.4-5.3-1.7-8.8-.9-.4.1-.8-.1-.9-.5-.1-.4.1-.8.5-.9 3.8-.9 7.2-.5 9.8 1 .4.2.5.7.3 1.1-.2.4-.7.5-1.1.3z"/>
 		</symbol>
+      <symbol id="mb-icon-discord" viewBox="0 0 127.14 96.36" fill="currentColor">
+        <path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0 105.89 105.89 0 0 0 19.39 8.09C2.79 32.65-1.71 56.6.54 80.21A105.73 105.73 0 0 0 32.71 96.36a77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15ZM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69Zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69Z"/>
+      </symbol>
     </svg>
     <header class="marketing-nav">
       <div class="marketing-nav-inner">
@@ -143,12 +146,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
           <a href="#how-it-works">How It Works</a>
           <a href="#features">Features</a>
           <a href="#start">Start a League</a>
-          <a href="login.php" class="marketing-login-link marketing-login-link-discord">
-			  <span class="marketing-discord-icon" aria-hidden="true">
-				<img src="<?= htmlspecialchars(mlAssetUrl('images/Discord-Symbol-White.svg')) ?>" alt="">
-			  </span>
-			  <span>Log in</span>
-			</a>
+          <a href="index.php" class="marketing-login-link"><svg aria-hidden="true" focusable="false" width="18" height="18" style="display:inline-block;vertical-align:-3px;margin-right:8px;color:#fff;fill:currentColor"><use href="#mb-icon-discord"></use></svg><span>Login</span></a>
         </nav>
       </div>
     </header>
@@ -162,17 +160,8 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
           <h1>Built for music fans. <br>Designed for friends. </h1>
           <p>Submit songs, vote with friends, and turn every round into a playlist your league built together.</p>
           <div class="hero-actions">
-            <a href="login.php" class="btn btn-primary marketing-discord-btn">
-			  <span class="marketing-discord-icon" aria-hidden="true">
-				<img src="<?= htmlspecialchars(mlAssetUrl('images/Discord-Symbol-White.svg')) ?>" alt="">
-			  </span>
-			  <span>Log in</span>
-			</a>
+            <a href="index.php" class="btn btn-primary"><svg aria-hidden="true" focusable="false" width="18" height="18" style="display:inline-block;vertical-align:-3px;margin-right:8px;color:#fff;fill:currentColor"><use href="#mb-icon-discord"></use></svg><span>Login</span></a>
             <a href="#how-it-works" class="btn btn-secondary">See how it works</a>
-          </div>
-          <div class="hero-notes">
-            <span>Works with Spotify</span>
-            <span>Takes under a minute to start</span>
           </div>
         </div>
         <div class="hero-gameplay-showcase" aria-label="Musicball gameplay preview">
@@ -707,6 +696,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
       <div class="eyebrow">START A LEAGUE</div>
       <h2>Bring your group into the game.</h2>
       <p>Set up a league, invite your friends, and start turning weekly song picks into competition, conversation, and playlists.</p>
+      <a href="index.php" class="btn btn-primary">Continue with Discord</a>
 
     </div>
 
