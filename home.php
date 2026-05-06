@@ -146,7 +146,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
           <a href="#how-it-works">How It Works</a>
           <a href="#features">Features</a>
           <a href="#start">Start a League</a>
-          <a href="index.php" class="marketing-login-link"><svg aria-hidden="true" focusable="false" width="18" height="18" style="display:inline-block;vertical-align:-3px;margin-right:8px;color:#fff;fill:currentColor"><use href="#mb-icon-discord"></use></svg><span>Login</span></a>
+          <a href="<?= htmlspecialchars(mlUrl('integrations/discord/login.php')) ?>" class="marketing-login-link"><svg aria-hidden="true" focusable="false" width="18" height="18" style="display:inline-block;vertical-align:-3px;margin-right:8px;color:#fff;fill:currentColor"><use href="#mb-icon-discord"></use></svg><span>Login</span></a>
         </nav>
       </div>
     </header>
@@ -160,7 +160,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
           <h1>Built for music fans. <br>Designed for friends. </h1>
           <p>Submit songs, vote with friends, and turn every round into a playlist your league built together.</p>
           <div class="hero-actions">
-            <a href="index.php" class="btn btn-primary"><svg aria-hidden="true" focusable="false" width="18" height="18" style="display:inline-block;vertical-align:-3px;margin-right:8px;color:#fff;fill:currentColor"><use href="#mb-icon-discord"></use></svg><span>Login</span></a>
+            <a href="<?= htmlspecialchars(mlUrl('integrations/discord/login.php')) ?>" class="btn btn-primary"><svg aria-hidden="true" focusable="false" width="18" height="18" style="display:inline-block;vertical-align:-3px;margin-right:8px;color:#fff;fill:currentColor"><use href="#mb-icon-discord"></use></svg><span>Login</span></a>
             <a href="#how-it-works" class="btn btn-secondary">See how it works</a>
           </div>
         </div>
@@ -696,7 +696,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
       <div class="eyebrow">START A LEAGUE</div>
       <h2>Bring your group into the game.</h2>
       <p>Set up a league, invite your friends, and start turning weekly song picks into competition, conversation, and playlists.</p>
-      <a href="index.php" class="btn btn-primary">Continue with Discord</a>
+      <a href="<?= htmlspecialchars(mlUrl('integrations/discord/login.php')) ?>" class="btn btn-primary">Continue with Discord</a>
 
     </div>
 
