@@ -1290,8 +1290,10 @@ textarea.admin-input,
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 0;
+    width: 100%;
+    min-width: 0;
     font-size: 0.98rem;
     line-height: 1.35;
     color: var(--text);
@@ -1301,9 +1303,11 @@ textarea.admin-input,
 .game-round-chosen-song-title,
 .game-round-chosen-song-artist {
     min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 	color: var(--muted);
 	font-size: 0.84rem;
 }
