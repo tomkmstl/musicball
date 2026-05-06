@@ -94,6 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $discordEveryUsername = trim((string)($_POST['discord_every_username'] ?? ''));
             $discordQaWebhookUrl = trim((string)($_POST['discord_qa_webhook_url'] ?? ''));
             $discordQaUsername = trim((string)($_POST['discord_qa_username'] ?? ''));
+            $discordSettingsPdo = mlGetLivePdo();
 
             if ($discordWebhookUrl !== '' && !mlDiscordIsWebhookUrlAllowed($discordWebhookUrl)) {
                 throw new RuntimeException('Enter a valid Essential webhook URL that starts with https://discord.com/api/webhooks/.');
@@ -106,8 +107,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($discordQaWebhookUrl !== '' && !mlDiscordIsWebhookUrlAllowed($discordQaWebhookUrl)) {
                 throw new RuntimeException('Enter a valid QA webhook URL that starts with https://discord.com/api/webhooks/.');
             }
-
-            $discordSettingsPdo = function_exists('mlGetLivePdo') ? mlGetLivePdo() : $pdo;
 
             mlSetSettingValue($discordSettingsPdo, 'discord_enabled', $discordEnabled ? '1' : '0');
             mlSetSettingValue($discordSettingsPdo, 'discord_webhook_url', $discordWebhookUrl !== '' ? $discordWebhookUrl : null);
@@ -255,8 +254,7 @@ $voteMaxPerSongSettingRaw = mlGetIntSetting($pdo, 'vote_max_per_song', 0);
 $voteMaxPerSongUnlimited = ($voteMaxPerSongSettingRaw <= 0);
 $voteMaxPerSongSetting = $voteMaxPerSongUnlimited ? $votesPerRoundSetting : min($voteMaxPerSongSettingRaw, $votesPerRoundSetting);
 $devModeEnabled = mlIsDevMode($pdo);
-$discordSettingsPdo = function_exists('mlGetLivePdo') ? mlGetLivePdo() : $pdo;
-$discordStatus = mlDiscordGetConfigStatus($discordSettingsPdo);
+$discordStatus = mlDiscordGetConfigStatus(mlGetLivePdo());
 $discordTestEventOptions = mlDiscordGetTestEventOptions();
 $discordTrackedEvents = mlDiscordGetTrackedEventLabels();
 $discordRecentEvents = mlDiscordGetRecentEventLog($pdo, 20);
@@ -801,6 +799,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                     value="<?= htmlspecialchars($discordStatus['profiles']['qa']['display_name']) ?>"
                                     placeholder="Musicball QA"
                                 >
+                                <p class="note admin-note-top-xs">Leave blank to store a null value and let Discord use the default display name.</p>
                             </div>
 
                             <div>
@@ -815,6 +814,11 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                     inputmode="url"
                                     autocomplete="off"
                                 >
+                                <?php if ($discordStatus['profiles']['qa']['webhook_present']): ?>
+                                    <p>Saved value: <code><?= htmlspecialchars($discordStatus['profiles']['qa']['webhook_masked']) ?></code></p>
+                                <?php else: ?>
+                                    <p>No QA webhook URL has been saved yet.</p>
+                                <?php endif; ?>
                             </div>
                         </div>
 
