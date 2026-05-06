@@ -39,6 +39,12 @@ function mlDiscordGetProfileDefinitions(): array
             'display_name_setting' => 'discord_every_username',
             'webhook_url_setting' => 'discord_every_webhook_url',
         ],
+        'qa' => [
+            'label' => 'QA notifications',
+            'description' => 'All notification events, used only when the app is in QA mode.',
+            'display_name_setting' => 'discord_qa_username',
+            'webhook_url_setting' => 'discord_qa_webhook_url',
+        ],
     ];
 }
 
@@ -48,17 +54,28 @@ function mlDiscordGetProfileDefinition(string $profileKey): array
     return $definitions[$profileKey] ?? $definitions['essential'];
 }
 
+function mlDiscordGetSettingsPdo(PDO $pdo): PDO
+{
+    if (function_exists('mlGetLivePdo')) {
+        return mlGetLivePdo();
+    }
+
+    return $pdo;
+}
+
 function mlDiscordGetWebhookUrl(PDO $pdo, string $profileKey = 'essential'): string
 {
     $definition = mlDiscordGetProfileDefinition($profileKey);
-    $url = mlGetSettingValue($pdo, $definition['webhook_url_setting'], null);
+    $settingsPdo = mlDiscordGetSettingsPdo($pdo);
+    $url = mlGetSettingValue($settingsPdo, $definition['webhook_url_setting'], null);
     return trim((string)($url ?? ''));
 }
 
 function mlDiscordGetRawDisplayName(PDO $pdo, string $profileKey = 'essential'): ?string
 {
     $definition = mlDiscordGetProfileDefinition($profileKey);
-    $name = mlGetSettingValue($pdo, $definition['display_name_setting'], null);
+    $settingsPdo = mlDiscordGetSettingsPdo($pdo);
+    $name = mlGetSettingValue($settingsPdo, $definition['display_name_setting'], null);
     if ($name === null) {
         return null;
     }
@@ -69,7 +86,8 @@ function mlDiscordGetRawDisplayName(PDO $pdo, string $profileKey = 'essential'):
 
 function mlDiscordIsEnabled(PDO $pdo): bool
 {
-    $enabled = trim((string)mlGetSettingValue($pdo, 'discord_enabled', '1'));
+    $settingsPdo = mlDiscordGetSettingsPdo($pdo);
+    $enabled = trim((string)mlGetSettingValue($settingsPdo, 'discord_enabled', '1'));
     if ($enabled === '0') {
         return false;
     }
@@ -102,6 +120,10 @@ function mlDiscordGetEventDeliveryProfiles(string $eventKey): array
         return [];
     }
 
+    if (function_exists('mlIsQaMode') && mlIsQaMode()) {
+        return ['qa'];
+    }
+
     $essentialEvents = ['submission_open', 'voting_open', 'all_votes_in', 'round_closed', 'builder_voting_complete', 'season_started'];
     if (in_array($baseEventKey, $essentialEvents, true)) {
         return ['essential', 'every'];
@@ -126,6 +148,10 @@ function mlDiscordBuildDeliveryScopedEventKey(string $eventKey, string $profileK
         return mlDiscordNormalizeEventKey($eventKey . '_every');
     }
 
+    if ($profileKey === 'qa') {
+        return mlDiscordNormalizeEventKey($eventKey . '_qa');
+    }
+
     return $eventKey;
 }
 
@@ -134,6 +160,10 @@ function mlDiscordExtractDeliveryProfileFromEventKey(string $eventKey): string
     $normalized = mlDiscordNormalizeEventKey($eventKey);
     if ($normalized === '') {
         return 'essential';
+    }
+
+    if (preg_match('/(?:^|_)qa$/', $normalized)) {
+        return 'qa';
     }
 
     if (preg_match('/(?:^|_)every$/', $normalized)) {
@@ -221,7 +251,7 @@ function mlDiscordGetConfigStatus(PDO $pdo): array
 
     return [
         'enabled' => mlDiscordIsEnabled($pdo),
-        'enabled_setting' => trim((string)mlGetSettingValue($pdo, 'discord_enabled', '1')) === '1',
+        'enabled_setting' => trim((string)mlGetSettingValue(mlDiscordGetSettingsPdo($pdo), 'discord_enabled', '1')) === '1',
         'profiles' => $profiles,
         'webhook_url' => $essentialProfile['webhook_url'],
         'webhook_masked' => $essentialProfile['webhook_masked'],
@@ -245,7 +275,8 @@ function mlDiscordSendTestMessage(PDO $pdo, string $eventKey = 'submission_open'
         ];
     }
 
-    $profileKey = 'every';
+    $deliveryProfiles = mlDiscordGetEventDeliveryProfiles($eventKey);
+    $profileKey = $deliveryProfiles[0] ?? 'every';
     $profileResults = [];
     $webhookUrl = mlDiscordGetWebhookUrl($pdo, $profileKey);
 
@@ -261,14 +292,14 @@ function mlDiscordSendTestMessage(PDO $pdo, string $eventKey = 'submission_open'
             'sent' => false,
             'reason' => 'no_webhook_url',
             'status_code' => 0,
-            'error' => 'Save the Every notification webhook URL first.',
+            'error' => 'Save the ' . mlDiscordGetDeliveryProfileLabel($profileKey) . ' webhook URL first.',
             'event_key' => $eventKey,
             'profile_results' => $profileResults
         ];
     }
 
     if (!mlDiscordIsWebhookUrlAllowed($webhookUrl)) {
-        $errorMessage = 'Every notification webhook URL is invalid.';
+        $errorMessage = mlDiscordGetDeliveryProfileLabel($profileKey) . ' webhook URL is invalid.';
         $profileResults[$profileKey] = [
             'sent' => false,
             'reason' => 'invalid_webhook_url',
