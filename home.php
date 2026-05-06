@@ -143,7 +143,12 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
           <a href="#how-it-works">How It Works</a>
           <a href="#features">Features</a>
           <a href="#start">Start a League</a>
-          <a href="login.php" class="marketing-login-link">Log in with Discord</a>
+          <a href="login.php" class="marketing-login-link marketing-login-link-discord">
+			  <span class="marketing-discord-icon" aria-hidden="true">
+				<img src="<?= htmlspecialchars(mlAssetUrl('images/Discord-Symbol-White.svg')) ?>" alt="">
+			  </span>
+			  <span>Log in</span>
+			</a>
         </nav>
       </div>
     </header>
@@ -157,7 +162,12 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
           <h1>Built for music fans. <br>Designed for friends. </h1>
           <p>Submit songs, vote with friends, and turn every round into a playlist your league built together.</p>
           <div class="hero-actions">
-            <a href="login.php" class="btn btn-primary">Start with Discord</a>
+            <a href="login.php" class="btn btn-primary marketing-discord-btn">
+			  <span class="marketing-discord-icon" aria-hidden="true">
+				<img src="<?= htmlspecialchars(mlAssetUrl('images/Discord-Symbol-White.svg')) ?>" alt="">
+			  </span>
+			  <span>Log in</span>
+			</a>
             <a href="#how-it-works" class="btn btn-secondary">See how it works</a>
           </div>
           <div class="hero-notes">

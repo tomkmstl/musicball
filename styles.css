@@ -474,9 +474,10 @@ body.theme-light.mb-page-leaving::before {
     height: 22px;
 }
 
-.discord-sso-icon svg {
+.discord-sso-icon img {
     width: 100%;
     height: 100%;
+    display: block;
 }
 
 .login-home-link {
@@ -3882,4 +3883,28 @@ body.playlist-page-loading .playlist-cta-button {
     color: inherit;
     text-decoration: underline;
     text-underline-offset: 3px;
+}
+
+/* =========================
+   MARKETING DISCORD LOGIN CTAS
+========================= */
+
+.marketing-login-link-discord,
+.marketing-discord-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.marketing-discord-icon {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+}
+
+.marketing-discord-icon img {
+    width: 100%;
+    height: 100%;
+    display: block;
 }
