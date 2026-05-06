@@ -205,14 +205,6 @@ $seasonRevealState = $activeRound
                         <?php endforeach; ?>
                     </div>
                 </div>
-            <!-- ? PLAYLIST LINK ADDED HERE -->
-			<div class="game-round-section">
-				<div class="buttons">
-					<a href="playlists.php" class="button-secondary">
-						View <?= htmlspecialchars(mlGetLeagueName($pdo)) ?> Playlists
-					</a>
-				</div>
-			</div>
             <?php endif; ?>
 
             <?php if (!empty($completedRounds)): ?>
