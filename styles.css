@@ -66,9 +66,10 @@ h1 {
 }
 
 h2 {
-    margin: 0 0 10px;
-    font-size: 1.45rem;
+    margin: 0 0 12px;
+    font-size: 1.32rem;
     line-height: 1.1;
+	font-family: 'IBM Plex Sans', sans-serif;
 }
 
 h3 {
