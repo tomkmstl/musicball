@@ -1228,9 +1228,16 @@ textarea.admin-input,
 }
 
 .game-round-action-link {
-    display: inline-flex;
+    display: inline-grid;
     align-items: center;
-    justify-content: center;
+    justify-items: center;
+    gap: 2px;
+    min-width: 76px;
+    color: var(--accent);
+    font-size: 0.74rem;
+    font-weight: 500;
+    line-height: 1.05;
+    text-align: center;
     text-decoration: none;
     border: 0;
     background: transparent;
@@ -1254,12 +1261,28 @@ textarea.admin-input,
 }
 
 .game-round-action-icon {
-    display: block;
-    width: 60px;
-    height: 60px;
-    object-fit: contain;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    color: var(--brand);
 }
 
+.game-round-action-icon svg {
+    display: block;
+    width: 50px;
+    height: 50px;
+    fill: none;
+    stroke: currentColor;
+}
+
+.game-round-action-label {
+    display: block;
+    max-width: 82px;
+    margin-top: 1px;
+    font-weight: 500;
+}
 
 .game-round-chosen-song {
     margin-top: 14px;
@@ -1842,6 +1865,27 @@ body.theme-light .mb-image-lightbox {
     gap: 10px;
 }
 
+.game-round-progress-status {
+    position: relative;
+    width: 48px;
+    flex: 0 0 48px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    margin-right: 8px;
+
+}
+
+.game-round-progress-status-label {
+    font-size: 0.55rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
 @media (max-width: 700px) {
     .game-round-progress-line-avatar {
         flex-direction: column;
@@ -2221,6 +2265,7 @@ body.theme-light .settings-admin-link {
 
 .game-round-progress-line-avatar {
     align-items: center;
+    gap: 20px;
 }
 
 .game-round-progress-label {
@@ -2228,6 +2273,41 @@ body.theme-light .settings-admin-link {
     margin-right: 0;
     color: var(--muted);
     font-weight: 500;
+}
+
+.game-round-progress-icon {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+}
+
+.game-round-progress-icon svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+    fill: none;
+
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.game-round-progress-icon-complete {
+    color: var(--brand);
+}
+
+.game-round-progress-icon-check {
+    stroke: #56d98c;
+}
+
+.game-round-progress-empty {
+    color: var(--muted);
+    opacity: 0.55;
+    font-weight: 700;
 }
 
 .profile-avatar-list-progress {
@@ -2254,6 +2334,11 @@ body.theme-light .settings-admin-link {
 
     .game-round-progress-label {
         flex-basis: auto;
+    }
+
+    .game-round-progress-line-avatar {
+        flex-direction: row;
+        align-items: center;
     }
 }
 

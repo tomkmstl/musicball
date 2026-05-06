@@ -236,13 +236,13 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
               </div>
               <div class="round-actions-mini">
                 <div>
-                  <svg>
-                    <use href="#mb-icon-submit"></use>
-                  </svg>
+                  <svg class="round-action-mini-icon" aria-hidden="true" focusable="false">
+					  <use href="#mb-icon-submit"></use>
+					</svg>
                   <span>Choose Song</span>
                 </div>
                 <div class="muted">
-                  <svg>
+                  <svg class="round-action-mini-icon" aria-hidden="true" focusable="false">
                     <use href="#mb-icon-vote"></use>
                   </svg>
                   <span>Vote</span>
@@ -284,15 +284,15 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
                   </div>
                   <div class="round-actions-mini">
                     <div>
-                      <svg>
+                      <svg class="round-action-mini-icon" aria-hidden="true" focusable="false">
                         <use href="#mb-icon-submit"></use>
                       </svg>
                       <span>Choose Song</span>
                     </div>
                     <div class="muted">
-                      <svg>
-                        <use href="#mb-icon-vote"></use>
-                      </svg>
+                      <svg class="round-action-mini-icon" aria-hidden="true" focusable="false">
+						  <use href="#mb-icon-vote"></use>
+						</svg>
                       <span>Vote</span>
                     </div>
                   </div>

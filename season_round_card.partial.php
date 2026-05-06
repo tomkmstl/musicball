@@ -46,14 +46,25 @@ $hasChosenSong = !empty($round['song_saved'])
         <?php endif; ?>
         <?php if ($showProgress && (($round['round_state'] ?? '') === 'submission' || ($round['round_state'] ?? '') === 'voting')): ?>
             <?php
-                $progressCompletedLabel = (($round['round_state'] ?? '') === 'submission') ? 'submitted:' : 'voted:';
-                $progressPendingLabel = (($round['round_state'] ?? '') === 'submission') ? 'still researching:' : 'still listening:';
-                $progressCompletedAria = (($round['round_state'] ?? '') === 'submission') ? 'Submitted users' : 'Voted users';
-                $progressPendingAria = (($round['round_state'] ?? '') === 'submission') ? 'Users still researching' : 'Users still listening';
+                $isSubmissionProgress = (($round['round_state'] ?? '') === 'submission');
+                $progressCompletedAria = $isSubmissionProgress ? 'Submitted users' : 'Voted users';
+                $progressPendingAria = $isSubmissionProgress ? 'Users still choosing songs' : 'Users still voting';
+                $progressCompletedTitle = $isSubmissionProgress ? 'Submitted' : 'Voted';
+                $progressPendingTitle = $isSubmissionProgress ? 'Still choosing' : 'Still voting';
+                $progressCompletedIconSvg = file_get_contents(
+					__DIR__ . '/assets/icons/' . ($isSubmissionProgress ? 'chosen-song.svg' : 'vote-complete.svg')
+				);
+
+				$progressPendingIconSvg = file_get_contents(
+					__DIR__ . '/assets/icons/' . ($isSubmissionProgress ? 'searching.svg' : 'vote-pending.svg')
+				);
             ?>
-            <div class="game-round-progress">
+            <div class="game-round-progress" aria-label="Round progress">
                 <div class="game-round-progress-line game-round-progress-line-avatar">
-                    <span class="game-round-progress-label"><?= htmlspecialchars($progressCompletedLabel) ?></span>
+                    <span class="game-round-progress-status">
+						<span class="game-round-progress-icon game-round-progress-icon-complete" aria-label="<?= htmlspecialchars($progressCompletedTitle) ?>" title="<?= htmlspecialchars($progressCompletedTitle) ?>"><?= $progressCompletedIconSvg ?></span>
+						<span class="game-round-progress-status-label">Complete</span>
+					</span>
                     <?php if (!empty($round['progress_completed_users'])): ?>
                         <div class="profile-avatar-list profile-avatar-list-progress" aria-label="<?= htmlspecialchars($progressCompletedAria) ?>">
                             <?php foreach ($round['progress_completed_users'] as $progressUser): ?>
@@ -61,11 +72,14 @@ $hasChosenSong = !empty($round['song_saved'])
                             <?php endforeach; ?>
                         </div>
                     <?php else: ?>
-                        <span>None</span>
+                        <span class="game-round-progress-empty" aria-label="No users yet">—</span>
                     <?php endif; ?>
                 </div>
                 <div class="game-round-progress-line game-round-progress-line-avatar">
-                    <span class="game-round-progress-label"><?= htmlspecialchars($progressPendingLabel) ?></span>
+                    <span class="game-round-progress-status">
+						<span class="game-round-progress-icon game-round-progress-icon-pending" aria-label="<?= htmlspecialchars($progressPendingTitle) ?>" title="<?= htmlspecialchars($progressPendingTitle) ?>"><?= $progressPendingIconSvg ?></span>
+						<span class="game-round-progress-status-label">Waiting</span>
+					</span>
                     <?php if (!empty($round['progress_pending_users'])): ?>
                         <div class="profile-avatar-list profile-avatar-list-progress" aria-label="<?= htmlspecialchars($progressPendingAria) ?>">
                             <?php foreach ($round['progress_pending_users'] as $progressUser): ?>
@@ -73,7 +87,7 @@ $hasChosenSong = !empty($round['song_saved'])
                             <?php endforeach; ?>
                         </div>
                     <?php else: ?>
-                        <span>None</span>
+                        <span class="game-round-progress-empty" aria-label="No users yet">—</span>
                     <?php endif; ?>
                 </div>
             </div>
@@ -95,39 +109,63 @@ $hasChosenSong = !empty($round['song_saved'])
     <div class="game-round-actions">
         <?php if (!empty($round['can_choose_song'])): ?>
             <a href="song.php?season_round_id=<?= (int)$round['SeasonRoundID'] ?>" class="game-round-action-link" aria-label="<?= $hasChosenSong ? 'Chosen Song' : 'Choose Song' ?>">
-                <img src="<?= htmlspecialchars(mlThemeIconPath($hasChosenSong ? 'chosen_song' : 'choose_song')) ?>" alt="<?= $hasChosenSong ? 'Chosen Song' : 'Choose Song' ?>" class="game-round-action-icon">
+                <span class="game-round-action-icon" aria-hidden="true">
+					<?php readfile(__DIR__ . '/assets/icons/' . ($hasChosenSong ? 'chosen-song.svg' : 'submit-song.svg')); ?>
+				</span>
+                <span class="game-round-action-label"><?= $hasChosenSong ? 'Chosen Song' : 'Choose Song' ?></span>
             </a>
         <?php elseif (($round['round_state'] ?? '') === 'submission'): ?>
             <span class="game-round-action-link game-round-action-link-disabled" aria-disabled="true" title="Song changes are closed for this round.">
-                <img src="<?= htmlspecialchars(mlThemeIconPath($hasChosenSong ? 'chosen_song' : 'choose_song')) ?>" alt="<?= $hasChosenSong ? 'Chosen Song unavailable' : 'Choose Song unavailable' ?>" class="game-round-action-icon">
+                <span class="game-round-action-icon" aria-hidden="true">
+					<?php readfile(__DIR__ . '/assets/icons/' . ($hasChosenSong ? 'chosen-song.svg' : 'submit-song.svg')); ?>
+				</span>
+                <span class="game-round-action-label"><?= $hasChosenSong ? 'Chosen Song' : 'Choose Song' ?></span>
             </span>
         <?php else: ?>
             <?php if (!empty($round['playlist_url'])): ?>
                 <a href="<?= htmlspecialchars($round['playlist_url']) ?>" class="game-round-action-link" aria-label="Go To Playlist" target="_blank" rel="noopener noreferrer">
-                    <img src="<?= htmlspecialchars(mlThemeIconPath('playlist')) ?>" alt="Go To Playlist" class="game-round-action-icon">
+				<span class="game-round-action-icon" aria-hidden="true">
+					<?php readfile(__DIR__ . '/assets/icons/build-playlist.svg'); ?>
+				</span>
+                    <span class="game-round-action-label">Playlist</span>
                 </a>
             <?php else: ?>
                 <span class="game-round-action-link game-round-action-link-disabled" aria-disabled="true" title="Playlist has not been generated yet">
-                    <img src="<?= htmlspecialchars(mlThemeIconPath('playlist')) ?>" alt="Playlist unavailable" class="game-round-action-icon">
+					<span class="game-round-action-icon" aria-hidden="true">
+						<?php readfile(__DIR__ . '/assets/icons/build-playlist.svg'); ?>
+					</span>
+                    <span class="game-round-action-label">Playlist</span>
                 </span>
             <?php endif; ?>
         <?php endif; ?>
 
         <?php if (($round['round_state'] ?? '') === 'voting' && !empty($round['vote_submitted'])): ?>
             <a href="results.php?season_round_id=<?= (int)$round['SeasonRoundID'] ?>" class="game-round-action-link" aria-label="Results">
-                <img src="<?= htmlspecialchars(mlThemeIconPath('results')) ?>" alt="Results" class="game-round-action-icon">
+                <span class="game-round-action-icon" aria-hidden="true">
+					<?php readfile(__DIR__ . '/assets/icons/results.svg'); ?>
+				</span>
+                <span class="game-round-action-label">Results</span>
             </a>
         <?php elseif (($round['round_state'] ?? '') === 'voting'): ?>
             <a href="vote.php?season_round_id=<?= (int)$round['SeasonRoundID'] ?>" class="game-round-action-link" aria-label="Vote">
-                <img src="<?= htmlspecialchars(mlThemeIconPath('vote')) ?>" alt="Vote" class="game-round-action-icon">
+                <span class="game-round-action-icon" aria-hidden="true">
+					<?php readfile(__DIR__ . '/assets/icons/vote.svg'); ?>
+				</span>
+                <span class="game-round-action-label">Vote</span>
             </a>
         <?php elseif (($round['round_state'] ?? '') === 'closed'): ?>
             <a href="results.php?season_round_id=<?= (int)$round['SeasonRoundID'] ?>" class="game-round-action-link" aria-label="Results">
-                <img src="<?= htmlspecialchars(mlThemeIconPath('results')) ?>" alt="Results" class="game-round-action-icon">
+                <span class="game-round-action-icon" aria-hidden="true">
+					<?php readfile(__DIR__ . '/assets/icons/results.svg'); ?>
+				</span>
+                <span class="game-round-action-label">Results</span>
             </a>
         <?php else: ?>
             <span class="game-round-action-link game-round-action-link-disabled" aria-disabled="true">
-                <img src="<?= htmlspecialchars(mlThemeIconPath('vote')) ?>" alt="Vote unavailable" class="game-round-action-icon">
+                <span class="game-round-action-icon" aria-hidden="true">
+					<?php readfile(__DIR__ . '/assets/icons/vote.svg'); ?>
+				</span>
+                <span class="game-round-action-label">Vote</span>
             </span>
         <?php endif; ?>
     </div>
