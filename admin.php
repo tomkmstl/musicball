@@ -92,6 +92,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $discordUsername = trim((string)($_POST['discord_username'] ?? ''));
             $discordEveryWebhookUrl = trim((string)($_POST['discord_every_webhook_url'] ?? ''));
             $discordEveryUsername = trim((string)($_POST['discord_every_username'] ?? ''));
+            $discordQaWebhookUrl = trim((string)($_POST['discord_qa_webhook_url'] ?? ''));
+            $discordQaUsername = trim((string)($_POST['discord_qa_username'] ?? ''));
 
             if ($discordWebhookUrl !== '' && !mlDiscordIsWebhookUrlAllowed($discordWebhookUrl)) {
                 throw new RuntimeException('Enter a valid Essential webhook URL that starts with https://discord.com/api/webhooks/.');
@@ -101,11 +103,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Enter a valid Every webhook URL that starts with https://discord.com/api/webhooks/.');
             }
 
-            mlSetSettingValue($pdo, 'discord_enabled', $discordEnabled ? '1' : '0');
-            mlSetSettingValue($pdo, 'discord_webhook_url', $discordWebhookUrl !== '' ? $discordWebhookUrl : null);
-            mlSetSettingValue($pdo, 'discord_username', $discordUsername !== '' ? $discordUsername : null);
-            mlSetSettingValue($pdo, 'discord_every_webhook_url', $discordEveryWebhookUrl !== '' ? $discordEveryWebhookUrl : null);
-            mlSetSettingValue($pdo, 'discord_every_username', $discordEveryUsername !== '' ? $discordEveryUsername : null);
+            if ($discordQaWebhookUrl !== '' && !mlDiscordIsWebhookUrlAllowed($discordQaWebhookUrl)) {
+                throw new RuntimeException('Enter a valid QA webhook URL that starts with https://discord.com/api/webhooks/.');
+            }
+
+            $discordSettingsPdo = function_exists('mlGetLivePdo') ? mlGetLivePdo() : $pdo;
+
+            mlSetSettingValue($discordSettingsPdo, 'discord_enabled', $discordEnabled ? '1' : '0');
+            mlSetSettingValue($discordSettingsPdo, 'discord_webhook_url', $discordWebhookUrl !== '' ? $discordWebhookUrl : null);
+            mlSetSettingValue($discordSettingsPdo, 'discord_username', $discordUsername !== '' ? $discordUsername : null);
+            mlSetSettingValue($discordSettingsPdo, 'discord_every_webhook_url', $discordEveryWebhookUrl !== '' ? $discordEveryWebhookUrl : null);
+            mlSetSettingValue($discordSettingsPdo, 'discord_every_username', $discordEveryUsername !== '' ? $discordEveryUsername : null);
+            mlSetSettingValue($discordSettingsPdo, 'discord_qa_webhook_url', $discordQaWebhookUrl !== '' ? $discordQaWebhookUrl : null);
+            mlSetSettingValue($discordSettingsPdo, 'discord_qa_username', $discordQaUsername !== '' ? $discordQaUsername : null);
 
             $_SESSION['ml_admin_message'] = 'Discord settings saved.';
             header('Location: admin.php');
@@ -245,7 +255,8 @@ $voteMaxPerSongSettingRaw = mlGetIntSetting($pdo, 'vote_max_per_song', 0);
 $voteMaxPerSongUnlimited = ($voteMaxPerSongSettingRaw <= 0);
 $voteMaxPerSongSetting = $voteMaxPerSongUnlimited ? $votesPerRoundSetting : min($voteMaxPerSongSettingRaw, $votesPerRoundSetting);
 $devModeEnabled = mlIsDevMode($pdo);
-$discordStatus = mlDiscordGetConfigStatus($pdo);
+$discordSettingsPdo = function_exists('mlGetLivePdo') ? mlGetLivePdo() : $pdo;
+$discordStatus = mlDiscordGetConfigStatus($discordSettingsPdo);
 $discordTestEventOptions = mlDiscordGetTestEventOptions();
 $discordTrackedEvents = mlDiscordGetTrackedEventLabels();
 $discordRecentEvents = mlDiscordGetRecentEventLog($pdo, 20);
@@ -775,12 +786,46 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                             </div>
                         </div>
 
+                        <div class="admin-section-divider">
+                            <h3>QA notifications</h3>
+                            <p class="note admin-note-top-xs">Receives all notification events, but only while the app is running in QA mode.</p>
+
+                            <div>
+                                <label class="admin-label" for="discord_qa_username">Webhook display name</label>
+                                <input
+                                    type="text"
+                                    name="discord_qa_username"
+                                    id="discord_qa_username"
+                                    class="admin-input"
+                                    maxlength="80"
+                                    value="<?= htmlspecialchars($discordStatus['profiles']['qa']['display_name']) ?>"
+                                    placeholder="Musicball QA"
+                                >
+                            </div>
+
+                            <div>
+                                <label class="admin-label" for="discord_qa_webhook_url">Webhook URL</label>
+                                <input
+                                    type="url"
+                                    name="discord_qa_webhook_url"
+                                    id="discord_qa_webhook_url"
+                                    class="admin-input"
+                                    value="<?= htmlspecialchars($discordStatus['profiles']['qa']['webhook_url']) ?>"
+                                    placeholder="https://discord.com/api/webhooks/..."
+                                    inputmode="url"
+                                    autocomplete="off"
+                                >
+                            </div>
+                        </div>
+
                         <div class="admin-stat-list">
                             <div class="admin-stat-line"><strong>Enabled setting:</strong> <?= $discordStatus['enabled_setting'] ? 'Yes' : 'No' ?></div>
                             <div class="admin-stat-line"><strong>Essential webhook URL present:</strong> <?= $discordStatus['profiles']['essential']['webhook_present'] ? 'Yes' : 'No' ?></div>
                             <div class="admin-stat-line"><strong>Essential webhook URL valid:</strong> <?= $discordStatus['profiles']['essential']['webhook_valid'] ? 'Yes' : 'No' ?></div>
                             <div class="admin-stat-line"><strong>Every webhook URL present:</strong> <?= $discordStatus['profiles']['every']['webhook_present'] ? 'Yes' : 'No' ?></div>
                             <div class="admin-stat-line"><strong>Every webhook URL valid:</strong> <?= $discordStatus['profiles']['every']['webhook_valid'] ? 'Yes' : 'No' ?></div>
+                            <div class="admin-stat-line"><strong>QA webhook URL present:</strong> <?= $discordStatus['profiles']['qa']['webhook_present'] ? 'Yes' : 'No' ?></div>
+                            <div class="admin-stat-line"><strong>QA webhook URL valid:</strong> <?= $discordStatus['profiles']['qa']['webhook_valid'] ? 'Yes' : 'No' ?></div>
                             <div class="admin-stat-line"><strong>Discord event log table ready:</strong> <?= $discordStatus['event_log_ready'] ? 'Yes' : 'No' ?></div>
                         </div>
 

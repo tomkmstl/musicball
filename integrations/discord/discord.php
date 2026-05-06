@@ -39,6 +39,12 @@ function mlDiscordGetProfileDefinitions(): array
             'display_name_setting' => 'discord_every_username',
             'webhook_url_setting' => 'discord_every_webhook_url',
         ],
+        'qa' => [
+            'label' => 'QA notifications',
+            'description' => 'All notifications, used only while Musicball is running in QA mode.',
+            'display_name_setting' => 'discord_qa_username',
+            'webhook_url_setting' => 'discord_qa_webhook_url',
+        ],
     ];
 }
 
@@ -102,6 +108,10 @@ function mlDiscordGetEventDeliveryProfiles(string $eventKey): array
         return [];
     }
 
+    if (function_exists('mlIsQaMode') && mlIsQaMode()) {
+        return ['qa'];
+    }
+
     $essentialEvents = ['submission_open', 'voting_open', 'all_votes_in', 'round_closed', 'builder_voting_complete', 'season_started'];
     if (in_array($baseEventKey, $essentialEvents, true)) {
         return ['essential', 'every'];
@@ -126,6 +136,10 @@ function mlDiscordBuildDeliveryScopedEventKey(string $eventKey, string $profileK
         return mlDiscordNormalizeEventKey($eventKey . '_every');
     }
 
+    if ($profileKey === 'qa') {
+        return mlDiscordNormalizeEventKey($eventKey . '_qa');
+    }
+
     return $eventKey;
 }
 
@@ -138,6 +152,10 @@ function mlDiscordExtractDeliveryProfileFromEventKey(string $eventKey): string
 
     if (preg_match('/(?:^|_)every$/', $normalized)) {
         return 'every';
+    }
+
+    if (preg_match('/(?:^|_)qa$/', $normalized)) {
+        return 'qa';
     }
 
     return 'essential';
@@ -245,7 +263,7 @@ function mlDiscordSendTestMessage(PDO $pdo, string $eventKey = 'submission_open'
         ];
     }
 
-    $profileKey = 'every';
+    $profileKey = (function_exists('mlIsQaMode') && mlIsQaMode()) ? 'qa' : 'every';
     $profileResults = [];
     $webhookUrl = mlDiscordGetWebhookUrl($pdo, $profileKey);
 
@@ -261,7 +279,7 @@ function mlDiscordSendTestMessage(PDO $pdo, string $eventKey = 'submission_open'
             'sent' => false,
             'reason' => 'no_webhook_url',
             'status_code' => 0,
-            'error' => 'Save the Every notification webhook URL first.',
+            'error' => 'Save the selected Discord webhook URL first.',
             'event_key' => $eventKey,
             'profile_results' => $profileResults
         ];
