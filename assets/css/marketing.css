@@ -38,9 +38,14 @@ body.marketing-page svg.mb-symbols {
   stroke-linejoin: round;
 }
 
-.round-actions-mini svg {
+.round-actions-mini {
+  --round-action-icon-color: #3dacec;
+}
+
+.round-actions-mini .round-action-mini-icon {
   width: 58px;
   height: 58px;
+  color: inherit;
 }
 
 .three-step-strip svg {
@@ -442,7 +447,8 @@ article.vote-preview.card-glass {
   color: #3dacec;
   font-size: 0.74rem;
 }
-.round-actions-mini svg {
+.round-actions-mini svg,
+.round-actions-mini img.round-action-mini-icon {
   width: 58px;
   height: 58px;
 }
