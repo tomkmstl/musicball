@@ -198,17 +198,6 @@ try {
             $playlistId = trim((string)$player['SpotifyPlaylistID']);
             $items = repairFetchFullSpotifyItems($pdo, $playlistId);
 
-            echo "\nRAW FIRST PLAYLIST ITEM SHAPE\n";
-            echo "-----------------------------\n";
-
-            if (empty($items)) {
-                echo "Playlist returned zero items.\n";
-                exit;
-            }
-
-            print_r($items[count($items) - 1]);
-            exit;
-
             if (empty($items)) {
                 $notMatched++;
                 $lastTracks[] = '[empty playlist]';
