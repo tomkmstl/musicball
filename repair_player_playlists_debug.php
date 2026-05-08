@@ -14,9 +14,9 @@ echo "ANON PLAYER PLAYLIST REPAIR DEBUG\n";
 echo "=================================\n\n";
 
 try {
-    $targetRoundPlaylistId = isset($_GET['round_playlist_id']) ? (int)$_GET['round_playlist_id'] : 77;
+    $targetSeasonRoundId = isset($_GET['season_round_id']) ? (int)$_GET['season_round_id'] : 77;
 
-    echo "Target RoundPlaylistID: {$targetRoundPlaylistId}\n";
+    echo "Target SeasonRoundID: {$targetSeasonRoundId}\n";
     echo "Spotify app configured: " . (mlSpotifyAppConfigured() ? "YES" : "NO") . "\n";
     echo "Spotify connected: " . (mlSpotifyIsConnected($pdo) ? "YES" : "NO") . "\n\n";
 
@@ -30,55 +30,39 @@ try {
         exit;
     }
 
-    $previousStmt = $pdo->prepare("
-        SELECT MAX(rp.RoundPlaylistID)
-        FROM ML_RoundPlaylists rp
-        INNER JOIN ML_SeasonRounds sr ON sr.SeasonRoundID = rp.SeasonRoundID
-        WHERE rp.RoundPlaylistID < ?
-          AND (
-              sr.RoundState = 'closed'
-              OR (sr.VotesDue IS NOT NULL AND sr.VotesDue < UTC_TIMESTAMP())
-          )
-    ");
-    $previousStmt->execute([$targetRoundPlaylistId]);
-    $previousRoundPlaylistId = (int)$previousStmt->fetchColumn();
-
-    echo "Previous eligible RoundPlaylistID: " . ($previousRoundPlaylistId > 0 ? $previousRoundPlaylistId : "NULL") . "\n\n";
-
     $aggregateStmt = $pdo->query("
         SELECT 
-            ap.AggregatePlaylistID,
-            ap.UserID,
-            ap.SpotifyPlaylistID,
-            ap.LastSourceRoundPlaylistID
-        FROM ML_AggregatePlaylists ap
-        WHERE ap.PlaylistType = 'player'
-          AND ap.SpotifyPlaylistID IS NOT NULL
-          AND ap.SpotifyPlaylistID <> ''
-        ORDER BY ap.UserID ASC
+            AggregatePlaylistID,
+            UserID,
+            SpotifyPlaylistID,
+            LastSourceRoundPlaylistID
+        FROM ML_AggregatePlaylists
+        WHERE PlaylistType = 'player'
+          AND SpotifyPlaylistID IS NOT NULL
+          AND SpotifyPlaylistID <> ''
+        ORDER BY UserID ASC
     ");
     $playerRows = $aggregateStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
     echo "Anonymous player playlist rows checked: " . count($playerRows) . "\n\n";
 
-    $itemsStmt = $pdo->prepare("
+    $songsStmt = $pdo->prepare("
         SELECT 
-            rpi.UserID,
-            rpi.SpotifyURI,
-            rs.TrackName,
-            rs.ArtistName
-        FROM ML_RoundPlaylistItems rpi
-        INNER JOIN ML_RoundSongs rs ON rs.RoundSongID = rpi.RoundSongID
-        WHERE rpi.RoundPlaylistID = ?
-          AND rpi.SpotifyURI IS NOT NULL
-          AND rpi.SpotifyURI <> ''
+            UserID,
+            SpotifyURI,
+            TrackName,
+            ArtistName
+        FROM ML_RoundSongs
+        WHERE SeasonRoundID = ?
+          AND SpotifyURI IS NOT NULL
+          AND SpotifyURI <> ''
     ");
-    $itemsStmt->execute([$targetRoundPlaylistId]);
-    $roundItems = $itemsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $songsStmt->execute([$targetSeasonRoundId]);
+    $roundSongs = $songsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-    $itemsByUserId = [];
-    foreach ($roundItems as $item) {
-        $itemsByUserId[(int)$item['UserID']] = $item;
+    $songsByUserId = [];
+    foreach ($roundSongs as $song) {
+        $songsByUserId[(int)$song['UserID']] = $song;
     }
 
     $wouldRemove = [];
@@ -93,13 +77,18 @@ try {
         $userId = (int)$playerRow['UserID'];
         $playlistId = trim((string)$playerRow['SpotifyPlaylistID']);
 
-        if (!isset($itemsByUserId[$userId])) {
+        if (!isset($songsByUserId[$userId])) {
             $missingCount++;
             continue;
         }
 
-        $targetSong = $itemsByUserId[$userId];
+        $targetSong = $songsByUserId[$userId];
         $targetUri = trim((string)$targetSong['SpotifyURI']);
+
+        if ($targetUri === '') {
+            $missingCount++;
+            continue;
+        }
 
         try {
             $playlistItems = mlSpotifyGetPlaylistItems($pdo, $playlistId);
@@ -136,6 +125,7 @@ try {
     echo "SUMMARY\n";
     echo "-------\n";
     echo "Anonymous player playlists checked: {$checkedCount}\n";
+    echo "Submitted songs for target round: " . count($roundSongs) . "\n";
     echo "Songs found in Spotify player playlists: {$foundCount}\n";
     echo "Songs not found / no matching target song: {$missingCount}\n";
     echo "Spotify lookup errors: {$errorCount}\n\n";
