@@ -336,6 +336,10 @@ function mlFetchPlayerPlaylistSourceSongs(PDO $pdo, int $userId, int $afterRound
         INNER JOIN ML_SeasonRounds sr ON sr.SeasonRoundID = rp.SeasonRoundID
         LEFT JOIN ML_RoundSongs rs ON rs.RoundSongID = rpi.RoundSongID
         WHERE rpi.UserID = ?
+          AND (
+              sr.RoundState = 'closed'
+              OR (sr.VotesDue IS NOT NULL AND sr.VotesDue < UTC_TIMESTAMP())
+          )
     ";
 
     $params = [$userId];
