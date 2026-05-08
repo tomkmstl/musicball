@@ -179,7 +179,7 @@ if ($headerNextSeason) {
                     <span class="mb-menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
                 </summary>
                 <nav class="mb-account-menu-panel" aria-label="Account menu">
-                    <!--<a href="<?= htmlspecialchars(mlUrl('playlists.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'playlists' ? ' is-active' : '' ?>">Playlists</a>-->
+                    <a href="<?= htmlspecialchars(mlUrl('playlists.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'playlists' ? ' is-active' : '' ?>">Playlists</a>
                     <a href="<?= htmlspecialchars(mlUrl('league-database.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'league-database' ? ' is-active' : '' ?>">League Database</a>
                     <?php if ($isAdminUser): ?>
                         <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'admin' ? ' is-active' : '' ?>">Admin Tools</a>
