@@ -10,6 +10,8 @@ if (!mlIsAdminUserId($pdo, $currentUserId)) {
 
 header('Content-Type: text/plain; charset=utf-8');
 
+echo "DEBUG VERSION: RAW-SPOTIFY-ITEM-TEST\n\n";
+
 function repairFetchFullSpotifyItems(PDO $pdo, string $playlistId): array
 {
     $items = [];
