@@ -2,7 +2,7 @@
 require_once __DIR__ . '/gameplay/bootstrap.php';
 require_once __DIR__ . '/integrations/spotify/client.php';
 
-$currentUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : 0;
+$currentUserId = isset($_SESSION['UserID']) ? (int)($_SESSION['UserID'] ?? 0) : 0;
 if (!mlIsAdminUserId($pdo, $currentUserId)) {
     header('Location: index.php');
     exit;
@@ -10,12 +10,8 @@ if (!mlIsAdminUserId($pdo, $currentUserId)) {
 
 header('Content-Type: text/plain; charset=utf-8');
 
-function repairGetSpotifyPlaylistItems(PDO $pdo, string $playlistId): array
+function repairFetchFullSpotifyItems(PDO $pdo, string $playlistId): array
 {
-    if (function_exists('mlSpotifyGetPlaylistItems')) {
-        return mlSpotifyGetPlaylistItems($pdo, $playlistId);
-    }
-
     $items = [];
     $offset = 0;
     $limit = 100;
@@ -24,14 +20,17 @@ function repairGetSpotifyPlaylistItems(PDO $pdo, string $playlistId): array
         $response = mlSpotifyApiRequest($pdo, 'GET', '/playlists/' . rawurlencode($playlistId) . '/items', [
             'limit' => $limit,
             'offset' => $offset,
-            'fields' => 'total,items(track(uri,name,artists(name)))',
         ], []);
 
         if ($response['status_code'] < 200 || $response['status_code'] >= 300) {
-            throw new RuntimeException($response['body']['error']['message'] ?? 'Spotify playlist item lookup failed.');
+            throw new RuntimeException($response['body']['error']['message'] ?? 'Spotify item lookup failed.');
         }
 
         $batch = $response['body']['items'] ?? [];
+        if (!is_array($batch)) {
+            break;
+        }
+
         foreach ($batch as $item) {
             $items[] = $item;
         }
@@ -43,37 +42,64 @@ function repairGetSpotifyPlaylistItems(PDO $pdo, string $playlistId): array
     return $items;
 }
 
-function repairRemoveSpotifyPlaylistItemAtPosition(PDO $pdo, string $playlistId, string $spotifyUri, int $position): void
+function repairTrackLabelFromItem(array $item): string
 {
-    if (function_exists('mlSpotifyRemovePlaylistItemAtPosition')) {
-        mlSpotifyRemovePlaylistItemAtPosition($pdo, $playlistId, $spotifyUri, $position);
-        return;
+    $track = $item['track'] ?? [];
+    if (!is_array($track)) {
+        return '[unknown track]';
     }
 
+    $name = trim((string)($track['name'] ?? ''));
+    $artists = [];
+
+    if (isset($track['artists']) && is_array($track['artists'])) {
+        foreach ($track['artists'] as $artist) {
+            $artistName = trim((string)($artist['name'] ?? ''));
+            if ($artistName !== '') {
+                $artists[] = $artistName;
+            }
+        }
+    }
+
+    if ($name === '') {
+        return '[unknown track]';
+    }
+
+    return $name . (!empty($artists) ? ' — ' . implode(', ', $artists) : '');
+}
+
+function repairTrackUriFromItem(array $item): string
+{
+    $track = $item['track'] ?? [];
+    return is_array($track) ? trim((string)($track['uri'] ?? '')) : '';
+}
+
+function repairRemoveSpotifyItemAtPosition(PDO $pdo, string $playlistId, string $uri, int $position): void
+{
     $response = mlSpotifyApiRequest($pdo, 'DELETE', '/playlists/' . rawurlencode($playlistId) . '/tracks', [], [
         'tracks' => [
             [
-                'uri' => $spotifyUri,
+                'uri' => $uri,
                 'positions' => [$position],
             ],
         ],
     ]);
 
     if ($response['status_code'] < 200 || $response['status_code'] >= 300) {
-        throw new RuntimeException($response['body']['error']['message'] ?? 'Spotify playlist item removal failed.');
+        throw new RuntimeException($response['body']['error']['message'] ?? 'Spotify removal failed.');
     }
 }
 
-echo "ANON ROUND 77 PLAYER PLAYLIST REPAIR\n";
-echo "====================================\n\n";
+echo "ANON ROUND PLAYER PLAYLIST REPAIR\n";
+echo "=================================\n\n";
+
+$targetRoundPlaylistId = isset($_GET['round_playlist_id']) ? (int)$_GET['round_playlist_id'] : 77;
+$liveRun = (trim((string)($_GET['confirm'] ?? '')) === 'REMOVE');
+
+echo $liveRun ? "MODE: LIVE REMOVE\n" : "MODE: DRY RUN\n";
+echo "Target RoundPlaylistID: {$targetRoundPlaylistId}\n\n";
 
 try {
-    $targetRoundPlaylistId = isset($_GET['round_playlist_id']) ? (int)$_GET['round_playlist_id'] : 77;
-    $liveRun = (trim((string)($_GET['confirm'] ?? '')) === 'REMOVE');
-
-    echo $liveRun ? "MODE: LIVE REMOVE\n" : "MODE: DRY RUN\n";
-    echo "Target RoundPlaylistID: {$targetRoundPlaylistId}\n\n";
-
     if (!mlSpotifyAppConfigured() || !mlSpotifyIsConnected($pdo)) {
         echo "Spotify is not connected/configured.\n";
         exit;
@@ -89,12 +115,11 @@ try {
     $round = $roundStmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$round) {
-        echo "No round playlist found.\n";
+        echo "No matching round playlist found.\n";
         exit;
     }
 
-    $seasonRoundId = (int)$round['SeasonRoundID'];
-    echo "Resolved SeasonRoundID: {$seasonRoundId}\n\n";
+    echo "Resolved SeasonRoundID: " . (int)$round['SeasonRoundID'] . "\n\n";
 
     $previousStmt = $pdo->prepare("
         SELECT MAX(rp.RoundPlaylistID)
@@ -112,10 +137,7 @@ try {
     echo "Previous eligible RoundPlaylistID: " . ($previousRoundPlaylistId > 0 ? $previousRoundPlaylistId : "NULL") . "\n\n";
 
     $targetStmt = $pdo->prepare("
-        SELECT 
-            rpi.SpotifyURI,
-            rs.TrackName,
-            rs.ArtistName
+        SELECT rpi.SpotifyURI, rs.TrackName, rs.ArtistName
         FROM ML_RoundPlaylistItems rpi
         LEFT JOIN ML_RoundSongs rs ON rs.RoundSongID = rpi.RoundSongID
         WHERE rpi.RoundPlaylistID = ?
@@ -127,13 +149,14 @@ try {
     $targetSongs = $targetStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
     $targetUris = [];
-    foreach ($targetSongs as $song) {
-        $targetUris[trim((string)$song['SpotifyURI'])] = true;
-    }
-
     echo "TARGET ROUND TRACKS\n";
     echo "-------------------\n";
     foreach ($targetSongs as $song) {
+        $uri = trim((string)$song['SpotifyURI']);
+        if ($uri !== '') {
+            $targetUris[$uri] = true;
+        }
+
         echo "- " . trim((string)$song['TrackName']);
         if (trim((string)$song['ArtistName']) !== '') {
             echo " — " . trim((string)$song['ArtistName']);
@@ -163,44 +186,28 @@ try {
     $removed = 0;
     $notMatched = 0;
     $errors = 0;
-    $wouldRemove = [];
-    $lastTracksSeen = [];
+    $lastTracks = [];
+    $removeTracks = [];
 
     foreach ($players as $player) {
         $checked++;
-        $playlistId = trim((string)$player['SpotifyPlaylistID']);
-        $aggregatePlaylistId = (int)$player['AggregatePlaylistID'];
 
         try {
-            $items = repairGetSpotifyPlaylistItems($pdo, $playlistId);
+            $playlistId = trim((string)$player['SpotifyPlaylistID']);
+            $items = repairFetchFullSpotifyItems($pdo, $playlistId);
 
             if (empty($items)) {
                 $notMatched++;
+                $lastTracks[] = '[empty playlist]';
                 continue;
             }
 
             $lastPosition = count($items) - 1;
             $lastItem = $items[$lastPosition];
-            $lastUri = trim((string)($lastItem['track']['uri'] ?? ''));
-            $lastTrack = trim((string)($lastItem['track']['name'] ?? ''));
+            $lastUri = repairTrackUriFromItem($lastItem);
+            $label = repairTrackLabelFromItem($lastItem);
 
-            $artistNames = [];
-            $artists = $lastItem['track']['artists'] ?? [];
-            if (is_array($artists)) {
-                foreach ($artists as $artist) {
-                    $artistName = trim((string)($artist['name'] ?? ''));
-                    if ($artistName !== '') {
-                        $artistNames[] = $artistName;
-                    }
-                }
-            }
-
-            $label = $lastTrack !== '' ? $lastTrack : '[unknown track]';
-            if (!empty($artistNames)) {
-                $label .= ' — ' . implode(', ', $artistNames);
-            }
-
-            $lastTracksSeen[] = $label;
+            $lastTracks[] = $label;
 
             if ($lastUri === '' || !isset($targetUris[$lastUri])) {
                 $notMatched++;
@@ -208,14 +215,14 @@ try {
             }
 
             $matched++;
-            $wouldRemove[] = $label;
+            $removeTracks[] = $label;
 
             if ($liveRun) {
-                repairRemoveSpotifyPlaylistItemAtPosition($pdo, $playlistId, $lastUri, $lastPosition);
+                repairRemoveSpotifyItemAtPosition($pdo, $playlistId, $lastUri, $lastPosition);
 
                 $updateStmt->execute([
                     $previousRoundPlaylistId > 0 ? $previousRoundPlaylistId : null,
-                    $aggregatePlaylistId,
+                    (int)$player['AggregatePlaylistID'],
                 ]);
 
                 $removed++;
@@ -227,18 +234,17 @@ try {
 
     echo "LAST TRACK CURRENTLY SEEN IN PLAYER PLAYLISTS\n";
     echo "---------------------------------------------\n";
-    foreach ($lastTracksSeen as $trackLabel) {
-        echo "- {$trackLabel}\n";
+    foreach ($lastTracks as $track) {
+        echo "- {$track}\n";
     }
-    echo "\n";
 
-    echo "TRACKS " . ($liveRun ? "REMOVED" : "THAT WOULD BE REMOVED") . "\n";
+    echo "\nTRACKS " . ($liveRun ? "REMOVED" : "THAT WOULD BE REMOVED") . "\n";
     echo "---------------------------------------------\n";
-    if (empty($wouldRemove)) {
+    if (empty($removeTracks)) {
         echo "No last tracks matched the target round URIs.\n";
     } else {
-        foreach ($wouldRemove as $trackLabel) {
-            echo "- {$trackLabel}\n";
+        foreach ($removeTracks as $track) {
+            echo "- {$track}\n";
         }
     }
 
@@ -248,6 +254,7 @@ try {
     echo "Last tracks matching target round: {$matched}\n";
     echo "Last tracks not matching target round: {$notMatched}\n";
     echo "Spotify/API errors: {$errors}\n";
+
     if ($liveRun) {
         echo "Tracks removed: {$removed}\n";
         echo "DB checkpoints rewound to: " . ($previousRoundPlaylistId > 0 ? $previousRoundPlaylistId : "NULL") . "\n";
