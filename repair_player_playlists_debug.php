@@ -65,9 +65,10 @@ try {
         SELECT 
             rpi.UserID,
             rpi.SpotifyURI,
-            rpi.TrackName,
-            rpi.ArtistName
+            rs.TrackName,
+            rs.ArtistName
         FROM ML_RoundPlaylistItems rpi
+        INNER JOIN ML_RoundSongs rs ON rs.RoundSongID = rpi.RoundSongID
         WHERE rpi.RoundPlaylistID = ?
           AND rpi.SpotifyURI IS NOT NULL
           AND rpi.SpotifyURI <> ''
