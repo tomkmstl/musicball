@@ -10,49 +10,25 @@ if (!mlIsAdminUserId($pdo, $currentUserId)) {
 
 header('Content-Type: text/plain; charset=utf-8');
 
-echo "PLAYER PLAYLIST REPAIR DEBUG\n";
-echo "============================\n\n";
+echo "ANON PLAYER PLAYLIST REPAIR DEBUG\n";
+echo "=================================\n\n";
 
 try {
+    $targetRoundPlaylistId = isset($_GET['round_playlist_id']) ? (int)$_GET['round_playlist_id'] : 77;
+
+    echo "Target RoundPlaylistID: {$targetRoundPlaylistId}\n";
     echo "Spotify app configured: " . (mlSpotifyAppConfigured() ? "YES" : "NO") . "\n";
     echo "Spotify connected: " . (mlSpotifyIsConnected($pdo) ? "YES" : "NO") . "\n\n";
 
-    $targetRoundPlaylistId = isset($_GET['round_playlist_id'])
-        ? (int)$_GET['round_playlist_id']
-        : 77;
-
-    echo "Target RoundPlaylistID: {$targetRoundPlaylistId}\n\n";
-
-    $roundStmt = $pdo->prepare("
-        SELECT 
-            rp.RoundPlaylistID,
-            rp.SeasonRoundID,
-            rp.SpotifyPlaylistID,
-            rp.PlaylistName,
-            sr.SeasonID,
-            sr.RoundNumber,
-            sr.Title,
-            sr.RoundState,
-            sr.SubmissionsDue,
-            sr.VotesDue
-        FROM ML_RoundPlaylists rp
-        INNER JOIN ML_SeasonRounds sr ON sr.SeasonRoundID = rp.SeasonRoundID
-        WHERE rp.RoundPlaylistID = ?
-        LIMIT 1
-    ");
-    $roundStmt->execute([$targetRoundPlaylistId]);
-    $round = $roundStmt->fetch(PDO::FETCH_ASSOC);
-
-    echo "ROUND PLAYLIST ROW\n";
-    echo "------------------\n";
-
-    if (!$round) {
-        echo "No ML_RoundPlaylists row found for RoundPlaylistID {$targetRoundPlaylistId}.\n";
+    if (!mlSpotifyAppConfigured() || !mlSpotifyIsConnected($pdo)) {
+        echo "Spotify is not ready. Stopping.\n";
         exit;
     }
 
-    print_r($round);
-    echo "\n";
+    if (!function_exists('mlSpotifyGetPlaylistItems')) {
+        echo "Missing helper: mlSpotifyGetPlaylistItems() is not available in integrations/spotify/client.php.\n";
+        exit;
+    }
 
     $previousStmt = $pdo->prepare("
         SELECT MAX(rp.RoundPlaylistID)
@@ -69,171 +45,116 @@ try {
 
     echo "Previous eligible RoundPlaylistID: " . ($previousRoundPlaylistId > 0 ? $previousRoundPlaylistId : "NULL") . "\n\n";
 
-    echo "AGGREGATE PLAYER PLAYLIST ROWS\n";
-    echo "------------------------------\n";
-
     $aggregateStmt = $pdo->query("
         SELECT 
             ap.AggregatePlaylistID,
-            ap.PlaylistType,
             ap.UserID,
-            u.UserName,
-            ap.PlaylistName,
             ap.SpotifyPlaylistID,
-            ap.LastSourceRoundPlaylistID,
-            ap.CreatedAt,
-            ap.UpdatedAt
+            ap.LastSourceRoundPlaylistID
         FROM ML_AggregatePlaylists ap
-        LEFT JOIN ML_Users u ON u.UserID = ap.UserID
         WHERE ap.PlaylistType = 'player'
+          AND ap.SpotifyPlaylistID IS NOT NULL
+          AND ap.SpotifyPlaylistID <> ''
         ORDER BY ap.UserID ASC
     ");
+    $playerRows = $aggregateStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-    $aggregateRows = $aggregateStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
-    echo "Total player aggregate rows: " . count($aggregateRows) . "\n\n";
-
-    if (empty($aggregateRows)) {
-        echo "No rows found where ML_AggregatePlaylists.PlaylistType = 'player'.\n";
-        echo "This means the earlier repair script had no player rows to process.\n";
-        exit;
-    }
-
-    foreach ($aggregateRows as $row) {
-        echo "AggregatePlaylistID: " . $row['AggregatePlaylistID'] . "\n";
-        echo "UserID: " . $row['UserID'] . "\n";
-        echo "UserName: " . ($row['UserName'] ?? '') . "\n";
-        echo "PlaylistName: " . ($row['PlaylistName'] ?? '') . "\n";
-        echo "SpotifyPlaylistID: " . ($row['SpotifyPlaylistID'] ?? '') . "\n";
-        echo "LastSourceRoundPlaylistID: " . ($row['LastSourceRoundPlaylistID'] ?? 'NULL') . "\n";
-        echo "UpdatedAt: " . ($row['UpdatedAt'] ?? '') . "\n";
-        echo "---\n";
-    }
-
-    echo "\nROWS CURRENTLY POINTING AT TARGET ROUND {$targetRoundPlaylistId}\n";
-    echo "---------------------------------------------------------------\n";
-
-    $pointingRows = array_values(array_filter($aggregateRows, function ($row) use ($targetRoundPlaylistId) {
-        return (int)($row['LastSourceRoundPlaylistID'] ?? 0) === $targetRoundPlaylistId;
-    }));
-
-    echo "Count: " . count($pointingRows) . "\n\n";
-
-    if (empty($pointingRows)) {
-        echo "No player aggregate rows currently have LastSourceRoundPlaylistID = {$targetRoundPlaylistId}.\n";
-        echo "That explains why the previous repair script did not print removal lines.\n";
-        echo "Next step would be a direct repair that targets RoundPlaylistID {$targetRoundPlaylistId}, regardless of current checkpoint.\n\n";
-    }
-
-    echo "ROUND PLAYLIST ITEMS FOR TARGET ROUND\n";
-    echo "-------------------------------------\n";
+    echo "Anonymous player playlist rows checked: " . count($playerRows) . "\n\n";
 
     $itemsStmt = $pdo->prepare("
         SELECT 
-            rpi.RoundPlaylistItemID,
-            rpi.RoundPlaylistID,
             rpi.UserID,
-            u.UserName,
-            rpi.PlaylistPosition,
             rpi.SpotifyURI,
             rpi.TrackName,
             rpi.ArtistName
         FROM ML_RoundPlaylistItems rpi
-        LEFT JOIN ML_Users u ON u.UserID = rpi.UserID
         WHERE rpi.RoundPlaylistID = ?
-        ORDER BY rpi.UserID ASC, rpi.PlaylistPosition ASC
+          AND rpi.SpotifyURI IS NOT NULL
+          AND rpi.SpotifyURI <> ''
     ");
     $itemsStmt->execute([$targetRoundPlaylistId]);
-    $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $roundItems = $itemsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-    echo "Total target round items: " . count($items) . "\n\n";
-
-    foreach ($items as $item) {
-        echo "UserID: " . $item['UserID'] . "\n";
-        echo "UserName: " . ($item['UserName'] ?? '') . "\n";
-        echo "Position: " . ($item['PlaylistPosition'] ?? '') . "\n";
-        echo "Track: " . ($item['TrackName'] ?? '') . "\n";
-        echo "Artist: " . ($item['ArtistName'] ?? '') . "\n";
-        echo "SpotifyURI: " . ($item['SpotifyURI'] ?? '') . "\n";
-        echo "---\n";
+    $itemsByUserId = [];
+    foreach ($roundItems as $item) {
+        $itemsByUserId[(int)$item['UserID']] = $item;
     }
 
-    echo "\nPLAYER-BY-PLAYER MATCH CHECK\n";
-    echo "----------------------------\n";
+    $wouldRemove = [];
+    $checkedCount = 0;
+    $foundCount = 0;
+    $missingCount = 0;
+    $errorCount = 0;
 
-    foreach ($aggregateRows as $player) {
-        $userId = (int)$player['UserID'];
-        $userName = trim((string)($player['UserName'] ?? ''));
-        $spotifyPlaylistId = trim((string)($player['SpotifyPlaylistID'] ?? ''));
+    foreach ($playerRows as $playerRow) {
+        $checkedCount++;
 
-        echo "Player: {$userName} / UserID {$userId}\n";
-        echo "AggregatePlaylistID: " . $player['AggregatePlaylistID'] . "\n";
-        echo "Current checkpoint: " . ($player['LastSourceRoundPlaylistID'] ?? 'NULL') . "\n";
+        $userId = (int)$playerRow['UserID'];
+        $playlistId = trim((string)$playerRow['SpotifyPlaylistID']);
 
-        if ($spotifyPlaylistId === '') {
-            echo "Problem: no SpotifyPlaylistID on aggregate playlist row.\n";
-            echo "---\n";
+        if (!isset($itemsByUserId[$userId])) {
+            $missingCount++;
             continue;
         }
 
-        $matchingSong = null;
-        foreach ($items as $item) {
-            if ((int)$item['UserID'] === $userId) {
-                $matchingSong = $item;
-                break;
-            }
-        }
-
-        if (!$matchingSong) {
-            echo "Problem: no RoundPlaylistItem found for this user in RoundPlaylistID {$targetRoundPlaylistId}.\n";
-            echo "---\n";
-            continue;
-        }
-
-        echo "Target song: " . ($matchingSong['TrackName'] ?? '') . " - " . ($matchingSong['ArtistName'] ?? '') . "\n";
-        echo "Target SpotifyURI: " . ($matchingSong['SpotifyURI'] ?? '') . "\n";
-
-        if (!mlSpotifyAppConfigured() || !mlSpotifyIsConnected($pdo)) {
-            echo "Skipped Spotify lookup because Spotify is not connected/configured.\n";
-            echo "---\n";
-            continue;
-        }
-
-        if (!function_exists('mlSpotifyGetPlaylistItems')) {
-            echo "Problem: mlSpotifyGetPlaylistItems() does not exist in integrations/spotify/client.php.\n";
-            echo "That means the Spotify helper added earlier is missing or not deployed.\n";
-            echo "---\n";
-            continue;
-        }
+        $targetSong = $itemsByUserId[$userId];
+        $targetUri = trim((string)$targetSong['SpotifyURI']);
 
         try {
-            $playlistItems = mlSpotifyGetPlaylistItems($pdo, $spotifyPlaylistId);
-            echo "Spotify playlist item count fetched: " . count($playlistItems) . "\n";
+            $playlistItems = mlSpotifyGetPlaylistItems($pdo, $playlistId);
 
-            $foundPositions = [];
-            $targetUri = trim((string)($matchingSong['SpotifyURI'] ?? ''));
-
+            $positions = [];
             foreach ($playlistItems as $index => $playlistItem) {
-                $playlistUri = trim((string)($playlistItem['track']['uri'] ?? ''));
-                if ($targetUri !== '' && $playlistUri === $targetUri) {
-                    $foundPositions[] = $index;
+                $uri = trim((string)($playlistItem['track']['uri'] ?? ''));
+                if ($uri !== '' && $uri === $targetUri) {
+                    $positions[] = $index;
                 }
             }
 
-            if (empty($foundPositions)) {
-                echo "Spotify match: NOT FOUND in player playlist.\n";
-            } else {
-                echo "Spotify match positions: " . implode(', ', $foundPositions) . "\n";
-                echo "Most likely removal position: " . end($foundPositions) . "\n";
+            if (empty($positions)) {
+                $missingCount++;
+                continue;
             }
-        } catch (Throwable $spotifyError) {
-            echo "Spotify lookup error: " . $spotifyError->getMessage() . "\n";
-        }
 
-        echo "---\n";
+            $foundCount++;
+
+            $trackName = trim((string)($targetSong['TrackName'] ?? ''));
+            $artistName = trim((string)($targetSong['ArtistName'] ?? ''));
+
+            $wouldRemove[] = [
+                'track' => $trackName,
+                'artist' => $artistName,
+                'position' => end($positions),
+            ];
+        } catch (Throwable $e) {
+            $errorCount++;
+            continue;
+        }
     }
 
-    echo "\nDEBUG COMPLETE\n";
+    echo "SUMMARY\n";
+    echo "-------\n";
+    echo "Anonymous player playlists checked: {$checkedCount}\n";
+    echo "Songs found in Spotify player playlists: {$foundCount}\n";
+    echo "Songs not found / no matching target song: {$missingCount}\n";
+    echo "Spotify lookup errors: {$errorCount}\n\n";
+
+    echo "TRACKS THAT WOULD BE REMOVED\n";
+    echo "----------------------------\n";
+
+    if (empty($wouldRemove)) {
+        echo "No matching tracks found to remove.\n";
+    } else {
+        foreach ($wouldRemove as $row) {
+            echo "- " . $row['track'];
+            if ($row['artist'] !== '') {
+                echo " — " . $row['artist'];
+            }
+            echo "\n";
+        }
+    }
+
+    echo "\nNo changes were made by this debug file.\n";
 } catch (Throwable $e) {
     echo "\nFATAL DEBUG ERROR\n";
     echo "-----------------\n";
