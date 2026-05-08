@@ -46,7 +46,7 @@ function repairFetchFullSpotifyItems(PDO $pdo, string $playlistId): array
 
 function repairTrackLabelFromItem(array $item): string
 {
-    $track = $item['track'] ?? [];
+    $track = $item['item'] ?? [];
     if (!is_array($track)) {
         return '[unknown track]';
     }
@@ -72,7 +72,7 @@ function repairTrackLabelFromItem(array $item): string
 
 function repairTrackUriFromItem(array $item): string
 {
-    $track = $item['track'] ?? [];
+    $track = $item['item'] ?? [];
     return is_array($track) ? trim((string)($track['uri'] ?? '')) : '';
 }
 
