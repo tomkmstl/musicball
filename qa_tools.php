@@ -118,8 +118,8 @@ function mlQaPushLiveToQa(PDO $pdo, array $tables): void
                 throw new RuntimeException('Missing QA table: ' . $qaTable . '. Run qa_clone_setup.sql first.');
             }
 
-            $pdo->exec('TRUNCATE TABLE ' . mlQaQuoteIdentifier($qaTable));
-            $pdo->exec('INSERT INTO ' . mlQaQuoteIdentifier($qaTable) . ' SELECT * FROM ' . mlQaQuoteIdentifier($liveTable));
+            $pdo->exec('DELETE FROM ' . mlQaQuoteIdentifier($qaTable));
+			$pdo->exec('INSERT INTO ' . mlQaQuoteIdentifier($qaTable) . ' SELECT * FROM ' . mlQaQuoteIdentifier($liveTable));
         }
 
         mlQaRestoreEnvironmentSpecificSettingRows($pdo, $qaEnvironmentSettings);
