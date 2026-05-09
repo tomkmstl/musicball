@@ -56,7 +56,7 @@ $hasChosenSong = !empty($round['song_saved'])
 				);
 
 				$progressPendingIconSvg = file_get_contents(
-					__DIR__ . '/assets/icons/' . ($isSubmissionProgress ? 'searching.svg' : 'vote.svg')
+					__DIR__ . '/assets/icons/' . ($isSubmissionProgress ? 'searching.svg' : 'vote-waiting.svg')
 				);
 
 				$hasProgressCompletedUsers = !empty($round['progress_completed_users']);
