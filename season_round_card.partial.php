@@ -52,29 +52,29 @@ $hasChosenSong = !empty($round['song_saved'])
                 $progressCompletedTitle = $isSubmissionProgress ? 'Submitted' : 'Voted';
                 $progressPendingTitle = $isSubmissionProgress ? 'Still choosing' : 'Still voting';
                 $progressCompletedIconSvg = file_get_contents(
-					__DIR__ . '/assets/icons/' . ($isSubmissionProgress ? 'chosen-song.svg' : 'vote-complete.svg')
+					__DIR__ . '/assets/icons/' . ($isSubmissionProgress ? 'chosen-song.svg' : 'vote.svg')
 				);
 
 				$progressPendingIconSvg = file_get_contents(
-					__DIR__ . '/assets/icons/' . ($isSubmissionProgress ? 'searching.svg' : 'vote-pending.svg')
+					__DIR__ . '/assets/icons/' . ($isSubmissionProgress ? 'searching.svg' : 'vote.svg')
 				);
+
+				$hasProgressCompletedUsers = !empty($round['progress_completed_users']);
             ?>
             <div class="game-round-progress" aria-label="Round progress">
-                <div class="game-round-progress-line game-round-progress-line-avatar">
-                    <span class="game-round-progress-status">
+			<?php if ($hasProgressCompletedUsers): ?>
+				<div class="game-round-progress-line game-round-progress-line-avatar">
+					<span class="game-round-progress-status">
 						<span class="game-round-progress-icon game-round-progress-icon-complete" aria-label="<?= htmlspecialchars($progressCompletedTitle) ?>" title="<?= htmlspecialchars($progressCompletedTitle) ?>"><?= $progressCompletedIconSvg ?></span>
 						<span class="game-round-progress-status-label">Complete</span>
 					</span>
-                    <?php if (!empty($round['progress_completed_users'])): ?>
-                        <div class="profile-avatar-list profile-avatar-list-progress" aria-label="<?= htmlspecialchars($progressCompletedAria) ?>">
-                            <?php foreach ($round['progress_completed_users'] as $progressUser): ?>
-                                <img src="<?= htmlspecialchars($progressUser['profile_image_path']) ?>" alt="<?= htmlspecialchars($progressUser['user_name']) ?>" title="<?= htmlspecialchars($progressUser['user_name']) ?>" class="profile-avatar profile-avatar-progress">
-                            <?php endforeach; ?>
-                        </div>
-                    <?php else: ?>
-                        <span class="game-round-progress-empty" aria-label="No users yet">—</span>
-                    <?php endif; ?>
-                </div>
+					<div class="profile-avatar-list profile-avatar-list-progress" aria-label="<?= htmlspecialchars($progressCompletedAria) ?>">
+						<?php foreach ($round['progress_completed_users'] as $progressUser): ?>
+							<img src="<?= htmlspecialchars($progressUser['profile_image_path']) ?>" alt="<?= htmlspecialchars($progressUser['user_name']) ?>" title="<?= htmlspecialchars($progressUser['user_name']) ?>" class="profile-avatar profile-avatar-progress">
+						<?php endforeach; ?>
+					</div>
+				</div>
+			<?php endif; ?>
                 <div class="game-round-progress-line game-round-progress-line-avatar">
                     <span class="game-round-progress-status">
 						<span class="game-round-progress-icon game-round-progress-icon-pending" aria-label="<?= htmlspecialchars($progressPendingTitle) ?>" title="<?= htmlspecialchars($progressPendingTitle) ?>"><?= $progressPendingIconSvg ?></span>
