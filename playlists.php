@@ -93,6 +93,11 @@ if ($hasRequiredTables) {
         "SELECT rpi.UserID, COUNT(*) AS SongCount
         FROM ML_RoundPlaylistItems rpi
         INNER JOIN ML_RoundPlaylists rp ON rp.RoundPlaylistID = rpi.RoundPlaylistID
+        INNER JOIN ML_SeasonRounds sr ON sr.SeasonRoundID = rp.SeasonRoundID
+        WHERE (
+            sr.RoundState = 'closed'
+            OR (sr.VotesDue IS NOT NULL AND sr.VotesDue < UTC_TIMESTAMP())
+        )
         GROUP BY rpi.UserID
         ORDER BY rpi.UserID ASC"
     );

@@ -581,3 +581,66 @@ function mlSpotifyAddItemsToPlaylist(PDO $pdo, string $playlistId, array $uris):
         }
     }
 }
+
+function mlSpotifyGetPlaylistItems(PDO $pdo, string $playlistId): array
+{
+    $playlistId = trim($playlistId);
+    if ($playlistId === '') {
+        return [];
+    }
+
+    $items = [];
+    $offset = 0;
+    $limit = 100;
+
+    do {
+        $response = mlSpotifyApiRequest($pdo, 'GET', '/playlists/' . rawurlencode($playlistId) . '/items', [
+            'limit' => $limit,
+            'offset' => $offset,
+            'fields' => 'snapshot_id,total,items(track(uri,name,artists(name)))',
+        ], []);
+
+        if ($response['status_code'] < 200 || $response['status_code'] >= 300) {
+            $message = trim((string)($response['body']['error']['message'] ?? 'Spotify playlist item lookup failed.'));
+            throw new RuntimeException($message);
+        }
+
+        $bodyItems = $response['body']['items'] ?? [];
+        if (!is_array($bodyItems)) {
+            break;
+        }
+
+        foreach ($bodyItems as $item) {
+            $items[] = $item;
+        }
+
+        $total = (int)($response['body']['total'] ?? count($items));
+        $offset += $limit;
+    } while ($offset < $total);
+
+    return $items;
+}
+
+function mlSpotifyRemovePlaylistItemAtPosition(PDO $pdo, string $playlistId, string $spotifyUri, int $position): void
+{
+    $playlistId = trim($playlistId);
+    $spotifyUri = trim($spotifyUri);
+
+    if ($playlistId === '' || $spotifyUri === '' || $position < 0) {
+        return;
+    }
+
+    $response = mlSpotifyApiRequest($pdo, 'DELETE', '/playlists/' . rawurlencode($playlistId) . '/tracks', [], [
+        'tracks' => [
+            [
+                'uri' => $spotifyUri,
+                'positions' => [$position],
+            ],
+        ],
+    ]);
+
+    if ($response['status_code'] < 200 || $response['status_code'] >= 300) {
+        $message = trim((string)($response['body']['error']['message'] ?? 'Spotify playlist item removal failed.'));
+        throw new RuntimeException($message);
+    }
+}
