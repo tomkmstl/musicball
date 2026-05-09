@@ -2,6 +2,23 @@
 // session_boot.php
 // Centralized session setup for Musicball.
 
+$musicballLogPath = (PHP_OS_FAMILY === 'Windows')
+    ? 'C:\\laragon\\data\\musicball_logs\\php-error.log'
+    : '/var/www/musicball_private/logs/php-error.log';
+
+$musicballLogDir = dirname($musicballLogPath);
+
+if (!is_dir($musicballLogDir)) {
+    mkdir($musicballLogDir, 0755, true);
+}
+
+ini_set('log_errors', '1');
+ini_set('error_log', $musicballLogPath);
+
+// Keep production-safe behavior: log errors, do not print them on-screen.
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
+
 $lifetime = 60 * 60 * 24 * 14; // 14 days
 
 if (PHP_OS_FAMILY === 'Windows') {
