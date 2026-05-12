@@ -140,22 +140,24 @@ foreach ($ballot as $entry) {
         <form method="post" action="vote.php?season_round_id=<?= (int)$seasonRoundId ?>" class="vote-form-shell vote-form-shell-questions" id="round-vote-form">
             <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
 
-            <div class="step-header vote-step-header">
-                <h2>total votes given</h2>
-                <div class="counter-value counter-value-q1 changed" id="round-vote-total"><?= (int)$allocatedVotes ?> / <?= (int)$totalVoteCapacity ?></div>
-            </div>
-            <div class="vote-progress-meta">
-				<div class="vote-progress-bar">
-					<div
-						class="vote-progress-bar-fill"
-						id="vote-progress-bar-fill"
-						style="width: <?= min(100, round(($allocatedVotes / max(1, $totalVoteCapacity)) * 100)) ?>%;"
-					></div>
+            <div class="vote-sticky-summary">
+				<div class="step-header vote-step-header">
+					<h2>total votes given</h2>
+					<div class="counter-value counter-value-q1 changed" id="round-vote-total"><?= (int)$allocatedVotes ?> / <?= (int)$totalVoteCapacity ?></div>
 				</div>
+				<div class="vote-progress-meta">
+					<div class="vote-progress-bar">
+						<div
+							class="vote-progress-bar-fill"
+							id="vote-progress-bar-fill"
+							style="width: <?= min(100, round(($allocatedVotes / max(1, $totalVoteCapacity)) * 100)) ?>%;"
+						></div>
+					</div>
 
-				<div class="vote-progress-copy">
-					You can give up to <?= (int)$totalVoteCapacity ?> votes.
-					Max <?= ($maxVotesPerSongRaw <= 0) ? '∞' : (int)$maxPerSong ?> per song.
+					<div class="vote-progress-copy">
+						You can give up to <?= (int)$totalVoteCapacity ?> votes.
+						Max <?= ($maxVotesPerSongRaw <= 0) ? '∞' : (int)$maxPerSong ?> per song.
+					</div>
 				</div>
 			</div>
 
