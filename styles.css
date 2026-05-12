@@ -1219,28 +1219,6 @@ textarea.admin-input,
     opacity: 0.78;
 }
 
-.vote-sticky-summary {
-    position: sticky;
-    top: 132px;
-    z-index: 20;
-    margin: 0 -24px 22px;
-	padding: 14px 24px 16px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--line-strong);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.16);
-}
-
-body.theme-light .vote-sticky-summary {
-    background: #fff;
-    box-shadow: 0 10px 20px rgba(18,32,51,0.08);
-}
-
-@media (max-width: 700px) {
-    .vote-sticky-summary {
-        top: 110px;
-    }
-}
-
 .game-round-card-active {
     border-color: rgba(61, 172, 236, 0.45);
 }
@@ -1545,7 +1523,29 @@ body.theme-light .vote-sticky-summary {
 }
 
 .vote-step-header {
-    margin-bottom: 18px;
+    position: sticky;
+    top: 132px;
+    z-index: 20;
+    margin: 0 -24px 18px;
+    padding: 14px 24px 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line-strong);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.14);
+}
+
+.vote-step-header h2 {
+    margin: 0;
+}
+
+body.theme-light .vote-step-header {
+    background: #fff;
+    box-shadow: 0 8px 18px rgba(18,32,51,0.08);
+}
+
+@media (max-width: 700px) {
+    .vote-step-header {
+        top: 120px;
+    }
 }
 
 .vote-song-list-questions {
