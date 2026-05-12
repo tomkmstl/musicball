@@ -196,12 +196,12 @@ foreach ($ballot as $entry) {
                             <?php if ($isOwnSong): ?>
                                 <div class="vote-ballot-comment-wrap vote-ballot-comment-wrap-own">
                                     <label class="admin-label" for="song_comment">Song comment</label>
-                                    <textarea name="song_comment" id="song_comment" class="vote-comment-input song-comment-input" rows="4" <?= !$canEditVotes ? 'disabled' : '' ?>><?= htmlspecialchars($ownSongCommentValue) ?></textarea>
+                                    <textarea name="song_comment" id="song_comment" class="vote-comment-input song-comment-input" rows="4" readonly ><?= htmlspecialchars($ownSongCommentValue) ?></textarea>
                                 </div>
                                 <div class="vote-ballot-comment-wrap vote-ballot-comment-wrap-own vote-ballot-comment-wrap-own-vote">
                                     <label class="admin-label" for="own_vote_comment">Your voting comment</label>
                                     <textarea name="own_vote_comment" id="own_vote_comment" class="vote-comment-input" rows="3" <?= !$canEditVotes ? 'disabled' : '' ?>><?= htmlspecialchars($ownVoteCommentValue) ?></textarea>
-                                    <div class="note your-song-note">This is your submission. Voting controls are hidden for your own song. Your voting comment will appear with your other round comments as a zero-point note.</div>
+                                    <div class="note your-song-note">You cannot vote for your own song.</div>
                                 </div>
                             <?php else: ?>
                                 <div class="vote-ballot-comment-wrap vote-ballot-comment-wrap-modern">
@@ -249,10 +249,6 @@ foreach ($ballot as $entry) {
 								</button>
                             </div>
                             <input type="hidden" name="scores[<?= htmlspecialchars($entryId) ?>]" id="score_<?= htmlspecialchars($entryId) ?>" value="<?= (int)$savedScore ?>">
-                        <?php else: ?>
-                            <div class="points-control points-control-static vote-points-control-own">
-                                <div class="vote-own-song-lock">—</div>
-                            </div>
                         <?php endif; ?>
                     </section>
                 <?php endforeach; ?>
