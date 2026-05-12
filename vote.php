@@ -144,9 +144,20 @@ foreach ($ballot as $entry) {
                 <h2>total votes given</h2>
                 <div class="counter-value counter-value-q1 changed" id="round-vote-total"><?= (int)$allocatedVotes ?> / <?= (int)$totalVoteCapacity ?></div>
             </div>
-            <p>
-                Max per song: <?= ($maxVotesPerSongRaw <= 0) ? 'No maximum' : (int)$maxPerSong ?>
-            </p>
+            <div class="vote-progress-meta">
+				<div class="vote-progress-bar">
+					<div
+						class="vote-progress-bar-fill"
+						id="vote-progress-bar-fill"
+						style="width: <?= min(100, round(($allocatedVotes / max(1, $totalVoteCapacity)) * 100)) ?>%;"
+					></div>
+				</div>
+
+				<div class="vote-progress-copy">
+					You can give up to <?= (int)$totalVoteCapacity ?> votes.
+					Max <?= ($maxVotesPerSongRaw <= 0) ? '∞' : (int)$maxPerSong ?> per song.
+				</div>
+			</div>
 
             <div class="vote-song-list vote-song-list-questions">
                 <?php foreach ($ballot as $entry): ?>
@@ -163,14 +174,23 @@ foreach ($ballot as $entry) {
                             <div class="vote-ballot-songline">
                                 <img src="<?= htmlspecialchars($entry['artwork']) ?>" alt="Album art" class="vote-ballot-art">
                                 <div class="vote-ballot-copy">
-                                    <div class="game-song-entry-title">
-                                        <?= htmlspecialchars($entry['title']) ?>
-                                        <?php if ($isOwnSong): ?>
-                                            <span class="your-song-badge">your song</span>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div class="game-song-entry-meta"><?= htmlspecialchars($entry['artist']) ?><?php if (trim((string)$entry['album']) !== ''): ?> · <?= htmlspecialchars($entry['album']) ?><?php endif; ?></div>
-                                </div>
+									<div class="vote-ballot-title">
+										<?= htmlspecialchars($entry['title']) ?>
+										<?php if ($isOwnSong): ?>
+											<span class="your-song-badge">your song</span>
+										<?php endif; ?>
+									</div>
+
+									<div class="vote-ballot-artist">
+										<?= htmlspecialchars($entry['artist']) ?>
+									</div>
+
+									<?php if (trim((string)$entry['album']) !== ''): ?>
+										<div class="vote-ballot-album">
+											<?= htmlspecialchars($entry['album']) ?>
+										</div>
+									<?php endif; ?>
+								</div>
                             </div>
 
                             <?php if ($isOwnSong): ?>
@@ -184,18 +204,49 @@ foreach ($ballot as $entry) {
                                     <div class="note your-song-note">This is your submission. Voting controls are hidden for your own song. Your voting comment will appear with your other round comments as a zero-point note.</div>
                                 </div>
                             <?php else: ?>
-                                <div class="vote-ballot-comment-wrap">
-                                    <label class="admin-label" for="comment_<?= htmlspecialchars($entryId) ?>">Comment</label>
-                                    <textarea name="comments[<?= htmlspecialchars($entryId) ?>]" id="comment_<?= htmlspecialchars($entryId) ?>" class="vote-comment-input" rows="3" <?= !$canEditVotes ? 'disabled' : '' ?>><?= htmlspecialchars((string)($savedEntry['comment'] ?? '')) ?></textarea>
-                                </div>
+                                <div class="vote-ballot-comment-wrap vote-ballot-comment-wrap-modern">
+									<div class="vote-comment-shell">
+										<textarea
+											name="comments[<?= htmlspecialchars($entryId) ?>]"
+											id="comment_<?= htmlspecialchars($entryId) ?>"
+											class="vote-comment-input vote-comment-input-modern"
+											rows="4"
+											maxlength="800"
+											placeholder="Add a comment (optional)..."
+											<?= !$canEditVotes ? 'disabled' : '' ?>
+										><?= htmlspecialchars((string)($savedEntry['comment'] ?? '')) ?></textarea>
+
+										<div class="vote-comment-counter">
+											<span class="vote-comment-counter-value">0</span>/800
+										</div>
+									</div>
+								</div>
                             <?php endif; ?>
                         </div>
 
                         <?php if (!$isOwnSong): ?>
                             <div class="points-control vote-points-control" data-entry-id="<?= htmlspecialchars($entryId) ?>">
-                                <button type="button" class="points-btn minus" <?= !$canEditVotes ? 'disabled' : '' ?>>−</button>
-                                <span class="points-value vote-points-value"><?= (int)$savedScore ?></span>
-                                <button type="button" class="points-btn plus" <?= !$canEditVotes ? 'disabled' : '' ?>>+</button>
+                                <?php
+									$isLightTheme = (($themePreference ?? 'dark') === 'light');
+
+									$minusIcon = $isLightTheme
+										? 'square-rounded-minus-light.svg'
+										: 'square-rounded-minus.svg';
+
+									$plusIcon = $isLightTheme
+										? 'square-rounded-plus-light.svg'
+										: 'square-rounded-plus.svg';
+								?>
+
+								<button type="button" class="points-btn minus vote-points-btn" aria-label="Remove one point" <?= !$canEditVotes ? 'disabled' : '' ?>>
+									<?php readfile(__DIR__ . '/assets/icons/' . $minusIcon); ?>
+								</button>
+
+								<span class="points-value vote-points-value"><?= (int)$savedScore ?></span>
+
+								<button type="button" class="points-btn plus vote-points-btn" aria-label="Add one point" <?= !$canEditVotes ? 'disabled' : '' ?>>
+									<?php readfile(__DIR__ . '/assets/icons/' . $plusIcon); ?>
+								</button>
                             </div>
                             <input type="hidden" name="scores[<?= htmlspecialchars($entryId) ?>]" id="score_<?= htmlspecialchars($entryId) ?>" value="<?= (int)$savedScore ?>">
                         <?php else: ?>
@@ -226,6 +277,7 @@ foreach ($ballot as $entry) {
     const controls = Array.from(form.querySelectorAll('.vote-points-control'));
     const maxPerSong = <?= (int)$maxPerSong ?>;
     const totalCapacity = <?= (int)$totalVoteCapacity ?>;
+	const progressFill = document.getElementById('vote-progress-bar-fill');
 
     function getTotalAllocated() {
         let total = 0;
@@ -239,19 +291,26 @@ foreach ($ballot as $entry) {
     }
 
     function updateTotal() {
-        const total = getTotalAllocated();
-        if (totalDisplay) {
-            totalDisplay.textContent = total + ' / ' + totalCapacity;
-            totalDisplay.classList.remove('changed');
-            window.requestAnimationFrame(function () {
-                totalDisplay.classList.add('changed');
-            });
-        }
+		const total = getTotalAllocated();
 
-        if (submitButton) {
-            submitButton.disabled = (total !== totalCapacity);
-        }
-    }
+		if (totalDisplay) {
+			totalDisplay.textContent = total + ' / ' + totalCapacity;
+			totalDisplay.classList.remove('changed');
+
+			window.requestAnimationFrame(function () {
+				totalDisplay.classList.add('changed');
+			});
+		}
+
+		if (progressFill) {
+			progressFill.style.width =
+				Math.min(100, Math.round((total / totalCapacity) * 100)) + '%';
+		}
+
+		if (submitButton) {
+			submitButton.disabled = (total !== totalCapacity);
+		}
+	}
 
     function syncAllButtons() {
         const totalAllocated = getTotalAllocated();
