@@ -180,14 +180,11 @@ $seasonRevealState = $activeRound
         <?php else: ?>
             <?php if ($activeRound): ?>
                 <div class="game-round-section game-round-section-active<?= $seasonRevealState ? ' game-round-section-reveal' : '' ?>">
-                    <div class="game-round-section-heading-wrap">
-                        <div>
-                            <h2><?= $seasonRevealState ? 'Round Complete' : 'Active Round' ?></h2>
-                            <?php if ($seasonRevealState): ?>
-                                <p class="game-round-section-note">Everybody has voted. Results are locked in while this round stays visible until the vote deadline passes.</p>
-                            <?php endif; ?>
-                        </div>
-                    </div>
+                   <div class="game-round-section-heading-wrap">
+						<div>
+							<h2><?= $seasonRevealState ? 'Round Complete' : 'Active Round' ?></h2>
+						</div>
+					</div>
                     <div class="game-round-list game-round-list-active<?= $seasonRevealState ? ' game-round-list-reveal' : '' ?>">
                         <?php $round = $activeRound; $showProgress = !$seasonRevealState; $showRevealPodium = $seasonRevealState; include __DIR__ . '/season_round_card.partial.php'; ?>
                     </div>
