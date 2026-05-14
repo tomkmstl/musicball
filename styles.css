@@ -2065,7 +2065,7 @@ body.theme-light .mb-image-lightbox {
     width: 36px;
     height: 36px;
     flex: 0 0 36px;
-    border-radius: 999px;
+    border-radius: 6px;
 }
 
 .profile-avatar-standings {
@@ -2376,7 +2376,7 @@ body.theme-light .standings-table-expanded tr.is-current-user td:nth-child(2) {
 .profile-avatar-settings {
     width: 120px;
     height: 120px;
-    border-radius: 18px;
+    border-radius: 6px;
 }
 
 .settings-profile-fields {
@@ -2492,7 +2492,7 @@ body.theme-light .settings-admin-link {
     width: 36px;
     height: 36px;
     flex: 0 0 36px;
-    border-radius: 999px;
+    border-radius: 6px;
 }
 
 .game-round-progress {
@@ -2983,7 +2983,7 @@ body.ml-pull-refreshing .wrapper {
     width: 64px;
     height: 64px;
     flex: 0 0 64px;
-    border-radius: 999px;
+    border-radius: 6px;
     border: 3px solid rgba(61, 172, 236, 0.22);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
 }
