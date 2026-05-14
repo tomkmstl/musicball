@@ -1555,7 +1555,7 @@ body.theme-light .vote-step-header {
 .vote-ballot-item {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 18px 18px;
+    gap: 0px 18px;
     padding: 22px;
     margin-bottom: 18px;
     border-radius: 24px;
@@ -1853,6 +1853,11 @@ body.theme-light .vote-comment-input-modern:focus {
 
 .result-ballot-item {
     align-items: flex-start;
+}
+
+.result-breakdown-wrap {
+    grid-column: 1 / -1;
+    min-width: 0;
 }
 
 .result-submitted-by-row,
