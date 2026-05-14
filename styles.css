@@ -251,6 +251,50 @@ p {
     letter-spacing: 0.02em;
 }
 
+.game-page-topline.season-page-topline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 16px;
+    width: 100%;
+}
+
+.game-page-topline.season-page-topline .game-page-intro {
+    min-width: 0;
+}
+
+.game-page-topline.season-page-topline .game-page-title {
+    max-width: 100%;
+}
+
+.season-page-season-switcher {
+    width: auto;
+    min-width: 0;
+    justify-self: end;
+}
+
+.season-page-season-switcher .standings-season-switcher-toggle {
+    width: auto;
+    min-width: 74px;
+    max-width: 92px;
+    padding: 10px 12px;
+}
+
+.season-page-season-switcher .standings-season-switcher-label {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.season-page-season-switcher .standings-season-switcher-season {
+    max-width: 4ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.season-page-season-switcher .standings-season-options-panel {
+    min-width: 190px;
+}
+
 .mb-header-subnav-row {
     width: 100%;
     max-width: var(--content-width);
@@ -3007,6 +3051,13 @@ body.ml-pull-refreshing .wrapper {
 @media (max-width: 700px) {
     .game-round-reveal-podium {
         gap: 8px;
+        width: 100%;
+    }
+
+    .game-round-reveal-place {
+        flex: 1 1 0;
+        max-width: none;
+        min-width: 0;
     }
 
     .profile-avatar-reveal {
@@ -4148,4 +4199,198 @@ body.playlist-page-loading .playlist-cta-button {
     color: inherit;
     text-decoration: underline;
     text-underline-offset: 3px;
+}
+
+.standings-section-nav {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    border-bottom: 1px solid var(--line);
+}
+
+.standings-section-nav-link {
+    flex: 1 1 25%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: 10px;
+    background: rgba(255,255,255,0.02);
+    color: var(--muted);
+    font-size: 1rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.standings-section-nav-link + .standings-section-nav-link {
+    border-left: 1px solid rgba(255,255,255,0.05);
+}
+
+.standings-section-nav-link:hover {
+    color: var(--text);
+}
+
+.standings-section-nav-link-active {
+    background: rgba(61,172,236,0.14);
+    color: var(--brand);
+}
+
+body.theme-light .standings-section-nav-link {
+    background: rgba(18,32,51,0.025);
+}
+
+body.theme-light .standings-section-nav-link + .standings-section-nav-link {
+    border-left: 1px solid rgba(18,32,51,0.06);
+}
+
+body.theme-light .standings-section-nav-link-active {
+    background: rgba(61,172,236,0.12);
+}
+
+.standings-page-topline {
+    margin-bottom: 18px;
+}
+
+.standings-season-switcher-menu {
+    width: 100%;
+    flex: 1 1 auto;
+}
+
+.standings-season-switcher-toggle,
+.standings-season-static {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+    height: auto;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.standings-season-switcher-toggle .standings-season-switcher-label,
+.standings-season-static .standings-season-switcher-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    line-height: 1.2;
+    font-size: 1rem;
+    transform: none;
+}
+
+.standings-season-switcher-league {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+    font-weight: 800;
+}
+
+.standings-page-topline {
+    margin-bottom: 18px;
+}
+
+.standings-season-switcher-menu {
+    width: 100%;
+    flex: 1 1 auto;
+}
+
+.standings-season-switcher-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface-2);
+    color: var(--text);
+    cursor: pointer;
+    list-style: none;
+}
+
+.standings-season-switcher-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.standings-season-switcher-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    line-height: 1.2;
+    font-size: 1rem;
+}
+
+.standings-season-switcher-league {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+    font-weight: 800;
+}
+
+.standings-season-switcher-separator {
+    color: var(--muted);
+    opacity: 0.7;
+    flex: 0 0 auto;
+}
+
+.standings-season-switcher-season {
+    color: var(--muted);
+    font-weight: 600;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+.standings-season-switcher-icon {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1;
+    flex: 0 0 auto;
+}
+
+.standings-season-options-panel {
+    display: grid;
+    gap: 6px;
+}
+
+.standings-season-option {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: var(--text);
+    text-decoration: none;
+    line-height: 1.2;
+    transition: opacity 0.14s ease, background 0.14s ease, transform 0.14s ease;
+}
+
+.standings-season-option:hover {
+    background: var(--surface-3);
+}
+
+.standings-season-option:active {
+    transform: scale(0.985);
+}
+
+.standings-season-option.is-loading,
+body.mb-page-loading .standings-season-option {
+    opacity: 0.78;
+    pointer-events: none;
+}
+
+.standings-season-option.is-pressed {
+    opacity: 0.72;
 }
