@@ -419,7 +419,16 @@ function mlBuildRoundResultsPreview(PDO $pdo, int $seasonId, int $seasonRoundId,
     $voteDraftMap = [];
     if (mlTableExists($pdo, 'ML_RoundVotes')) {
         try {
-            $stmt = $pdo->prepare("\n                SELECT rv.RoundSongID, rv.VoterUserID, rv.Score, rv.Comment, u.UserName, u.ProfileImageFilename\n                FROM ML_RoundVotes rv\n                LEFT JOIN ML_Users u ON rv.VoterUserID = u.UserID\n                WHERE rv.SeasonRoundID = ?\n                ORDER BY rv.RoundSongID ASC, rv.VoterUserID ASC\n            ");
+            $stmt = $pdo->prepare("
+				SELECT rv.RoundSongID, rv.VoterUserID, rv.Score, rv.Comment, u.UserName, u.ProfileImageFilename
+				FROM ML_RoundVotes rv
+				INNER JOIN ML_RoundVoteSubmissions rvs
+				  ON rvs.SeasonRoundID = rv.SeasonRoundID
+				 AND rvs.UserID = rv.VoterUserID
+				LEFT JOIN ML_Users u ON rv.VoterUserID = u.UserID
+				WHERE rv.SeasonRoundID = ?
+				ORDER BY rv.RoundSongID ASC, rv.VoterUserID ASC
+			");
             $stmt->execute([$seasonRoundId]);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             foreach ($rows as $row) {

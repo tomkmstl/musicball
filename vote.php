@@ -55,7 +55,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $songComment = trim((string)($_POST['song_comment'] ?? ''));
-        $markSubmitted = isset($_POST['vote_action']) && $_POST['vote_action'] === 'submit_votes';
+		$ownVoteComment = trim((string)($_POST['own_vote_comment'] ?? ''));
+		$markSubmitted = isset($_POST['vote_action']) && $_POST['vote_action'] === 'submit_votes';
+
+		if ($ownSongEntryId !== '' && $ownVoteComment !== '') {
+			$entries[$ownSongEntryId] = [
+				'score' => 0,
+				'comment' => $ownVoteComment,
+			];
+		}
 
         if ($allocatedVotes > $totalVoteCapacity) {
             $error = 'You assigned more than the allowed total votes for this round.';

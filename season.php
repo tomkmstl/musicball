@@ -130,37 +130,36 @@ $seasonRevealState = $activeRound
 <?php include 'header.php'; ?>
 <div class="wrapper">
     <div class="card game-card game-card-wide">
-        <div class="game-page-topline game-page-topline-compact">
+        <div class="game-page-topline game-page-topline-compact season-page-topline">
             <div class="game-page-intro">
-                <div class="home-shell-kicker">Season</div>
-                <h1 class="game-page-title">
-				<?= htmlspecialchars(mlGetLeagueName($pdo)) ?>
-				<?php if ($seasonRow): ?>
-					<span class="game-season-subtitle">
-						<?= htmlspecialchars($seasonRow['SeasonName']) ?>
-					</span>
-				<?php endif; ?>
-			</h1>
-            </div>
+				<div class="home-shell-kicker">Season</div>
+
+				<h1 class="game-page-title">
+					<?= htmlspecialchars(mlGetLeagueName($pdo)) ?>
+				</h1>
+			</div>
             <?php if (count($seasonList) > 1): ?>
-                <details class="game-season-switcher-menu">
-                    <summary class="game-season-switcher-toggle" aria-label="Change season">
-                        <span aria-hidden="true">...</span>
-                    </summary>
-                    <div class="game-season-switcher-panel">
-                        <form method="get" action="season.php" class="game-season-switcher-form">
-                            <label class="game-season-switcher-label" for="season_id">View season</label>
-                            <select name="season_id" id="season_id" class="admin-input game-season-select" onchange="this.form.submit()">
-                                <?php foreach ($seasonList as $seasonOption): ?>
-                                    <option value="<?= (int)$seasonOption['SeasonID'] ?>" <?= $seasonRow && (int)$seasonRow['SeasonID'] === (int)$seasonOption['SeasonID'] ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($seasonOption['SeasonName']) ?><?= ((int)$seasonOption['RoundCount'] > 0) ? '' : ' - no rounds yet' ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </form>
-                    </div>
-                </details>
-            <?php endif; ?>
+				<details class="game-season-switcher-menu standings-season-switcher-menu season-page-season-switcher">
+					<summary class="game-season-switcher-toggle standings-season-switcher-toggle" aria-label="Change season">
+						<span class="standings-season-switcher-label">
+							<span class="standings-season-switcher-season">
+								<?= $seasonRow ? htmlspecialchars($seasonRow['SeasonName']) : 'Select Season' ?>
+							</span>
+						</span>
+						<span class="standings-season-switcher-icon" aria-hidden="true">▾</span>
+					</summary>
+
+					<div class="game-season-switcher-panel standings-season-options-panel">
+						<?php foreach ($seasonList as $seasonOption): ?>
+							<a href="season.php?season_id=<?= (int)$seasonOption['SeasonID'] ?>" class="standings-season-option" data-mb-nav>
+								<span class="standings-season-switcher-season">
+									<?= htmlspecialchars($seasonOption['SeasonName']) ?><?= ((int)$seasonOption['RoundCount'] > 0) ? '' : ' - no rounds yet' ?>
+								</span>
+							</a>
+						<?php endforeach; ?>
+					</div>
+				</details>
+			<?php endif; ?>
         </div>
 
         <?php if ($seasonMessage !== ''): ?>
@@ -180,14 +179,11 @@ $seasonRevealState = $activeRound
         <?php else: ?>
             <?php if ($activeRound): ?>
                 <div class="game-round-section game-round-section-active<?= $seasonRevealState ? ' game-round-section-reveal' : '' ?>">
-                    <div class="game-round-section-heading-wrap">
-                        <div>
-                            <h2><?= $seasonRevealState ? 'Round Complete' : 'Active Round' ?></h2>
-                            <?php if ($seasonRevealState): ?>
-                                <p class="game-round-section-note">Everybody has voted. Results are locked in while this round stays visible until the vote deadline passes.</p>
-                            <?php endif; ?>
-                        </div>
-                    </div>
+                   <div class="game-round-section-heading-wrap">
+						<div>
+							<h2><?= $seasonRevealState ? 'Round Complete' : 'Active Round' ?></h2>
+						</div>
+					</div>
                     <div class="game-round-list game-round-list-active<?= $seasonRevealState ? ' game-round-list-reveal' : '' ?>">
                         <?php $round = $activeRound; $showProgress = !$seasonRevealState; $showRevealPodium = $seasonRevealState; include __DIR__ . '/season_round_card.partial.php'; ?>
                     </div>
@@ -267,6 +263,17 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             node.textContent = formatted;
         }
+    });
+});
+document.querySelectorAll('.standings-season-option').forEach(function (link) {
+    link.addEventListener('click', function () {
+        link.classList.add('is-pressed');
+
+        document.body.classList.add('mb-page-leaving');
+
+        document.querySelectorAll('.standings-season-option').forEach(function (otherLink) {
+            otherLink.classList.add('is-loading');
+        });
     });
 });
 </script>
