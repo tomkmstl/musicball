@@ -4248,6 +4248,46 @@ body.theme-light .standings-section-nav-link-active {
     background: rgba(61,172,236,0.12);
 }
 
+@media (min-width: 900px) {
+    .standings-section-nav {
+        justify-content: center;
+        gap: 56px;
+        width: auto;
+        margin: 16px auto 0;
+        border: 0;
+    }
+
+    .standings-section-nav-link {
+        flex: 0 0 auto;
+        padding: 0;
+        background: transparent;
+        color: var(--muted);
+        font-size: 1.05rem;
+        font-weight: 800;
+        position: relative;
+    }
+
+    .standings-section-nav-link + .standings-section-nav-link {
+        border-left: 0;
+    }
+
+    .standings-section-nav-link-active {
+        background: transparent;
+        color: var(--text);
+    }
+
+    .standings-section-nav-link-active::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -6px;
+        height: 2px;
+        border-radius: 999px;
+        background: rgba(61,172,236,0.75);
+    }
+}
+
 .standings-page-topline {
     margin-bottom: 18px;
 }

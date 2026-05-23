@@ -12,7 +12,7 @@ $headerScriptName = basename((string)($_SERVER['PHP_SELF'] ?? ''));
 $headerActivePrimaryPage = '';
 if ($headerScriptName === 'season.php') {
     $headerActivePrimaryPage = 'season';
-} elseif ($headerScriptName === 'standings.php') {
+} elseif ($headerScriptName === 'standings.php' || $headerScriptName === 'statistics.php') {
     $headerActivePrimaryPage = 'standings';
 }
 $headerUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : (isset($_SESSION['ml_user_id']) ? (int)$_SESSION['ml_user_id'] : 0);
@@ -197,8 +197,8 @@ if ($headerNextSeason) {
             <a href="<?= htmlspecialchars(mlUrl('season.php')) ?>" class="mb-subnav-card<?= $headerActivePrimaryPage === 'season' ? ' is-active' : '' ?>">
                 Season
             </a>
-            <a href="<?= htmlspecialchars(mlUrl('standings.php')) ?>" class="mb-subnav-card<?= $headerActivePrimaryPage === 'standings' ? ' is-active' : '' ?>">
-                Standings
+            <a href="<?= htmlspecialchars(mlUrl('statistics.php')) ?>" class="mb-subnav-card<?= $headerActivePrimaryPage === 'standings' ? ' is-active' : '' ?>">
+                Statistics
             </a>
         </div>
     </div>
