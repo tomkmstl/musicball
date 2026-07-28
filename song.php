@@ -326,10 +326,21 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                     </div>
                 </form>
 
-                <form method="post" action="song.php?season_round_id=<?= (int)$seasonRoundId ?>" class="song-current-pick-actions">
+                <form method="post" action="song.php?season_round_id=<?= (int)$seasonRoundId ?>" class="song-current-pick-actions" id="remove_song_form">
                     <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
                     <input type="hidden" name="song_action" value="remove_track">
-                    <button type="submit" class="button-secondary" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>>Remove Song</button>
+                    <button type="button" id="show_remove_song_confirm_button" class="button-secondary" aria-controls="remove_song_confirm_panel" aria-expanded="false" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>>Remove Song</button>
+
+                    <div id="remove_song_confirm_panel" class="song-remove-confirm" hidden>
+                        <div class="song-remove-confirm-copy">
+                            <strong>Remove this song?</strong>
+                            <span class="note">You'll need to choose another song before the deadline.</span>
+                        </div>
+                        <div class="song-remove-confirm-actions">
+                            <button type="button" id="cancel_remove_song_button" class="button-secondary">Cancel</button>
+                            <button type="submit" id="confirm_remove_song_button" class="button-primary button-danger">Remove Song</button>
+                        </div>
+                    </div>
                 </form>
             <?php else: ?>
                 <p>No song chosen yet.</p>
@@ -375,9 +386,26 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                 <div id="spotify_search_status" class="spotify-search-status muted"></div>
                 <div id="spotify_search_results" class="spotify-search-results"></div>
 
+                <div id="spotify_selection_confirm_panel" class="spotify-selection-confirm-panel" hidden>
+                    <div class="home-shell-kicker">Confirm this choice</div>
+                    <div class="spotify-selection-confirm-card">
+                        <div id="spotify_selection_confirm_art" class="spotify-selection-confirm-art song-artwork-fallback" aria-hidden="true"></div>
+                        <div class="spotify-selection-confirm-copy">
+                            <div id="spotify_selection_confirm_title" class="song-card-title"></div>
+                            <div id="spotify_selection_confirm_meta" class="song-card-meta"></div>
+                            <div class="note">This song is not saved yet. Confirm below to lock in this pick.</div>
+                        </div>
+                    </div>
+                    <div class="spotify-selection-confirm-actions">
+                        <button type="button" id="spotify_selection_confirm_button" class="button-primary">Confirm Song</button>
+                        <button type="button" id="spotify_selection_cancel_button" class="button-secondary">Go Back</button>
+                    </div>
+                </div>
+
                 <form method="post" action="song.php?season_round_id=<?= (int)$seasonRoundId ?>" id="spotify_track_save_form" class="spotify-track-save-form">
                     <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
                     <input type="hidden" name="song_action" value="save_track">
+                    <input type="hidden" name="confirm_selection" value="1">
                     <input type="hidden" name="track_id" id="selected_track_id" value="">
                     <input type="hidden" name="track_uri" id="selected_track_uri" value="">
                     <input type="hidden" name="track_title" id="selected_track_title" value="">
@@ -435,6 +463,33 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
     <script src="<?= htmlspecialchars(mlAssetUrl('assets/js/song_spotify.js')) ?>"></script>
 <?php endif; ?>
 <script src="<?= htmlspecialchars(mlAssetUrl('assets/js/song_database.js')) ?>"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var showRemoveButton = document.getElementById('show_remove_song_confirm_button');
+    var removeConfirmPanel = document.getElementById('remove_song_confirm_panel');
+    var confirmRemoveButton = document.getElementById('confirm_remove_song_button');
+    var cancelRemoveButton = document.getElementById('cancel_remove_song_button');
+
+    if (!showRemoveButton || !removeConfirmPanel || !confirmRemoveButton || !cancelRemoveButton) {
+        return;
+    }
+
+    showRemoveButton.addEventListener('click', function () {
+        showRemoveButton.hidden = true;
+        showRemoveButton.setAttribute('aria-expanded', 'true');
+        removeConfirmPanel.hidden = false;
+        cancelRemoveButton.focus();
+    });
+
+    cancelRemoveButton.addEventListener('click', function () {
+        removeConfirmPanel.hidden = true;
+        showRemoveButton.hidden = false;
+        showRemoveButton.setAttribute('aria-expanded', 'false');
+        showRemoveButton.focus();
+    });
+});
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var body = document.body;
@@ -462,19 +517,7 @@ document.addEventListener('DOMContentLoaded', function () {
         button.addEventListener('click', applySongLeavingState);
     });
 
-    document.addEventListener('click', function (event) {
-        var resultButton = event.target.closest('.spotify-search-result');
-        if (!resultButton) {
-            return;
-        }
 
-        window.setTimeout(function () {
-            var selectedTrackId = document.getElementById('selected_track_id');
-            if (selectedTrackId && selectedTrackId.value !== '') {
-                applySongLeavingState();
-            }
-        }, 0);
-    });
 });
 </script>
 <script>

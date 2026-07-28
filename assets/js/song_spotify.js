@@ -14,6 +14,13 @@ document.addEventListener('DOMContentLoaded', function () {
     var trackArtistField = document.getElementById('selected_track_artist');
     var trackAlbumField = document.getElementById('selected_track_album');
     var trackArtworkField = document.getElementById('selected_track_artwork');
+    var confirmPanel = document.getElementById('spotify_selection_confirm_panel');
+    var confirmArt = document.getElementById('spotify_selection_confirm_art');
+    var confirmTitle = document.getElementById('spotify_selection_confirm_title');
+    var confirmMeta = document.getElementById('spotify_selection_confirm_meta');
+    var confirmButton = document.getElementById('spotify_selection_confirm_button');
+    var cancelButton = document.getElementById('spotify_selection_cancel_button');
+    var searchSubmit = document.querySelector('.song-search-submit');
     var activeRequest = 0;
     var debounceTimer = null;
 
@@ -24,6 +31,68 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function clearResults() {
         resultsWrap.innerHTML = '';
+    }
+
+    function setSearchLocked(isLocked) {
+        searchInput.disabled = isLocked;
+        if (searchSubmit) {
+            searchSubmit.disabled = isLocked;
+        }
+        resultsWrap.classList.toggle('spotify-search-results-locked', isLocked);
+    }
+
+    function resetSelectedTrackFields() {
+        trackIdField.value = '';
+        trackUriField.value = '';
+        trackTitleField.value = '';
+        trackArtistField.value = '';
+        trackAlbumField.value = '';
+        trackArtworkField.value = '';
+    }
+
+    function hideConfirmPanel() {
+        if (!confirmPanel) {
+            return;
+        }
+
+        confirmPanel.hidden = true;
+        setSearchLocked(false);
+        resetSelectedTrackFields();
+        setStatus('Select the correct song below.', 'muted');
+        searchInput.focus();
+    }
+
+    function showConfirmPanel(track) {
+        if (!confirmPanel || !confirmTitle || !confirmMeta || !confirmButton || !cancelButton) {
+            saveForm.submit();
+            return;
+        }
+
+        trackIdField.value = track.id || '';
+        trackUriField.value = track.uri || '';
+        trackTitleField.value = track.title || '';
+        trackArtistField.value = track.artist || '';
+        trackAlbumField.value = track.album || '';
+        trackArtworkField.value = track.artwork || '';
+
+        confirmTitle.textContent = track.title || '';
+        confirmMeta.textContent = (track.artist || '') + (track.album ? ' · ' + track.album : '');
+
+        if (confirmArt) {
+            if (track.artwork) {
+                confirmArt.innerHTML = '<img src="' + escapeHtml(track.artwork) + '" alt="Album art" class="song-artwork-large">';
+                confirmArt.classList.remove('song-artwork-fallback');
+            } else {
+                confirmArt.innerHTML = '';
+                confirmArt.classList.add('song-artwork-fallback');
+            }
+        }
+
+        confirmPanel.hidden = false;
+        setSearchLocked(true);
+        setStatus('Confirm this song before continuing.', 'muted');
+        confirmPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        confirmButton.focus();
     }
 
     function escapeHtml(value) {
@@ -60,13 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<span class="spotify-search-result-action">Choose</span>';
 
             button.addEventListener('click', function () {
-                trackIdField.value = track.id || '';
-                trackUriField.value = track.uri || '';
-                trackTitleField.value = track.title || '';
-                trackArtistField.value = track.artist || '';
-                trackAlbumField.value = track.album || '';
-                trackArtworkField.value = track.artwork || '';
-                saveForm.submit();
+                showConfirmPanel(track);
             });
 
             resultsWrap.appendChild(button);
@@ -131,6 +194,21 @@ document.addEventListener('DOMContentLoaded', function () {
             runSearch();
         }
     });
+
+    if (confirmButton) {
+        confirmButton.addEventListener('click', function () {
+            if (!trackIdField.value || !trackUriField.value || !trackTitleField.value || !trackArtistField.value) {
+                setStatus('Choose a Spotify song before confirming.', 'error');
+                return;
+            }
+
+            saveForm.submit();
+        });
+    }
+
+    if (cancelButton) {
+        cancelButton.addEventListener('click', hideConfirmPanel);
+    }
 
     setStatus('Start typing to search Spotify.', 'muted');
 });

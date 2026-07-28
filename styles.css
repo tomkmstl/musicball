@@ -1227,6 +1227,59 @@ textarea.admin-input,
     margin-top: 14px;
 }
 
+.song-remove-confirm {
+    margin-top: 12px;
+    padding: 14px;
+    border: 1px solid var(--danger);
+    border-radius: 14px;
+    background: var(--surface-2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.song-remove-confirm[hidden] {
+    display: none;
+}
+
+.song-remove-confirm-copy {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.song-remove-confirm-copy strong {
+    color: var(--text);
+}
+
+.song-remove-confirm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    flex: 0 0 auto;
+}
+
+.song-remove-confirm .button-danger {
+    border-color: var(--danger);
+}
+
+@media (max-width: 640px) {
+    .song-remove-confirm {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .song-remove-confirm-actions {
+        width: 100%;
+    }
+
+    .song-remove-confirm-actions .button-primary,
+    .song-remove-confirm-actions .button-secondary {
+        flex: 1 1 0;
+    }
+}
+
 .song-artwork-large {
     width: 92px;
     height: 92px;
@@ -2710,6 +2763,58 @@ body.theme-light .settings-admin-link {
     white-space: nowrap;
 }
 
+.spotify-search-results-locked {
+    opacity: 0.42;
+    pointer-events: none;
+}
+
+.spotify-selection-confirm-panel {
+    margin-top: 16px;
+    padding: 16px;
+    border: 1px solid var(--brand);
+    border-radius: 18px;
+    background: var(--surface);
+    display: grid;
+    gap: 12px;
+}
+
+.spotify-selection-confirm-panel[hidden] {
+    display: none;
+}
+
+.spotify-selection-confirm-card {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 14px;
+    align-items: center;
+}
+
+.spotify-selection-confirm-art {
+    width: 84px;
+    height: 84px;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.spotify-selection-confirm-art img {
+    width: 84px;
+    height: 84px;
+    object-fit: cover;
+    display: block;
+}
+
+.spotify-selection-confirm-copy {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.spotify-selection-confirm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
 .spotify-track-save-form {
     display: none;
 }
@@ -2742,6 +2847,16 @@ body.theme-light .settings-admin-link {
 
     .spotify-search-result-action {
         grid-column: 2;
+    }
+
+    .spotify-selection-confirm-card {
+        grid-template-columns: 64px minmax(0, 1fr);
+    }
+
+    .spotify-selection-confirm-art,
+    .spotify-selection-confirm-art img {
+        width: 64px;
+        height: 64px;
     }
 }
 
