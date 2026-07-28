@@ -232,3 +232,210 @@
     border: 1px solid rgba(214, 69, 69, 0.45);
     background: color-mix(in srgb, var(--surface-2) 90%, #d64545 10%);
 }
+
+/* Dynamic Option Vote configuration */
+.admin-option-vote-list {
+    display: grid;
+    gap: 10px;
+    max-width: 820px;
+    margin-top: 16px;
+}
+
+.admin-option-vote-row {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.admin-option-vote-index {
+    font-weight: 700;
+    color: var(--muted);
+    text-align: center;
+}
+
+.admin-option-vote-remove {
+    white-space: nowrap;
+}
+
+.admin-option-vote-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.admin-option-vote-hint {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+@media (max-width: 700px) {
+    .admin-option-vote-row {
+        grid-template-columns: 28px minmax(0, 1fr);
+    }
+
+    .admin-option-vote-remove {
+        grid-column: 2;
+        justify-self: start;
+    }
+}
+
+
+/* Option Vote selections-per-player setting */
+.admin-option-vote-settings {
+    max-width: 620px;
+    margin: 18px 0 20px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--surface-2);
+}
+
+.admin-option-vote-setting-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.admin-option-vote-selection-input {
+    width: 90px;
+    flex: 0 0 90px;
+}
+
+.admin-option-vote-setting-copy,
+.admin-option-vote-readiness {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.admin-option-vote-readiness {
+    margin-top: 8px;
+}
+
+.admin-option-vote-readiness.is-ready {
+    color: var(--text);
+}
+
+@media (max-width: 700px) {
+    .admin-option-vote-setting-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+/* Dynamic User Submitted Rounds configuration */
+.admin-round-idea-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.admin-round-idea-card {
+    min-width: 0;
+}
+
+.admin-round-idea-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.admin-round-idea-remove {
+    white-space: nowrap;
+}
+
+.admin-round-idea-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+@media (max-width: 800px) {
+    .admin-round-idea-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Dynamic Madlibs configuration */
+.admin-madlib-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.admin-madlib-editor {
+    min-width: 0;
+}
+
+.admin-madlib-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.admin-madlib-row {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.admin-madlib-index {
+    font-weight: 700;
+    color: var(--muted);
+    text-align: center;
+}
+
+.admin-madlib-remove {
+    white-space: nowrap;
+}
+
+.admin-madlib-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.admin-madlib-draft-hint {
+    margin-top: 14px;
+}
+
+@media (max-width: 800px) {
+    .admin-madlib-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .admin-madlib-row {
+        grid-template-columns: 28px minmax(0, 1fr);
+    }
+
+    .admin-madlib-remove {
+        grid-column: 2;
+        justify-self: start;
+    }
+}
+
+/* Schedule editing feedback */
+.admin-schedule-validation-message {
+    margin: 6px 0 0;
+    color: #d64545;
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
+.admin-schedule-validation-message[hidden] {
+    display: none;
+}

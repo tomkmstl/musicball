@@ -5,8 +5,19 @@
 function mlTableExists(PDO $pdo, $tableName) {
     static $cache = [];
 
-    if (isset($cache[$tableName])) {
-        return $cache[$tableName];
+    // The QA PDO proxy rewrites table names that appear directly in SQL, but
+    // it cannot rewrite a table name passed as a bound parameter. Resolve the
+    // physical table name here so schema checks match the tables that the
+    // subsequent query will actually use.
+    $isQaMode = function_exists('mlIsQaMode') && mlIsQaMode();
+    $physicalTableName = (string)$tableName;
+    if ($isQaMode && strpos($physicalTableName, 'QA_') !== 0) {
+        $physicalTableName = 'QA_' . $physicalTableName;
+    }
+
+    $cacheKey = ($isQaMode ? 'qa:' : 'live:') . $physicalTableName;
+    if (isset($cache[$cacheKey])) {
+        return $cache[$cacheKey];
     }
 
     try {
@@ -16,13 +27,13 @@ function mlTableExists(PDO $pdo, $tableName) {
             WHERE table_schema = DATABASE()
               AND table_name = ?
         " );
-        $stmt->execute([$tableName]);
-        $cache[$tableName] = ((int)$stmt->fetchColumn() > 0);
+        $stmt->execute([$physicalTableName]);
+        $cache[$cacheKey] = ((int)$stmt->fetchColumn() > 0);
     } catch (Throwable $e) {
-        $cache[$tableName] = false;
+        $cache[$cacheKey] = false;
     }
 
-    return $cache[$tableName];
+    return $cache[$cacheKey];
 }
 
 function mlSeasonBuilderAvailable(PDO $pdo) {
@@ -53,8 +64,8 @@ function mlDefaultQuestionConfig() {
     return [
         'headings' => [
             'q1' => [
-                'wizard' => 'MLP Category Pool',
-                'choice' => 'MLP Category Pool',
+                'wizard' => 'User Submitted Rounds',
+                'choice' => 'User Submitted Rounds',
             ],
             'q2' => [
                 'wizard' => [
@@ -64,8 +75,8 @@ function mlDefaultQuestionConfig() {
                 'choice' => 'Someone\'s Walkman',
             ],
             'q3' => [
-                'wizard' => 'Era Pick',
-                'choice' => 'Era Pick',
+                'wizard' => 'Option Vote',
+                'choice' => 'Option Vote',
             ],
         ],
         'q2Options' => [
@@ -87,12 +98,12 @@ function mlDefaultQuestionConfig() {
             ],
         ],
         'q3Options' => [
-            1 => '1967-1970',
-            2 => '1978-1982',
-            3 => '2012',
-            4 => '1983-1986',
-            5 => '1975-1978',
-            6 => '2004',
+            1 => '',
+            2 => '',
+            3 => '',
+            4 => '',
+            5 => '',
+            6 => '',
         ],
     ];
 }
@@ -131,6 +142,21 @@ function mlLoadSeasonQuestionConfig(PDO $pdo, $seasonId) {
         }
     }
 
+    // q3_era is retained as the legacy storage key for now, but it now
+    // represents the generic Option Vote round type. TagOverride stores the
+    // required Option Vote round name and becomes the player-facing heading.
+    $optionVoteName = '';
+    foreach (mlLoadSeasonRoundSlots($pdo, $seasonId, 12) as $slot) {
+        if ($slot['round_type'] === 'q3_era' && trim((string)$slot['tag_override']) !== '') {
+            $optionVoteName = trim((string)$slot['tag_override']);
+            break;
+        }
+    }
+    if ($optionVoteName !== '') {
+        $config['headings']['q3']['wizard'] = $optionVoteName;
+        $config['headings']['q3']['choice'] = $optionVoteName;
+    }
+
     return $config;
 }
 
@@ -155,6 +181,7 @@ function mlLoadSeasonRoundSlots(PDO $pdo, $seasonId, $slotCount = 12) {
             'tag_override' => '',
             'schedule_left' => '',
             'schedule_right' => '',
+            'option_vote_selections' => 1,
         ];
     }
 
@@ -162,7 +189,27 @@ function mlLoadSeasonRoundSlots(PDO $pdo, $seasonId, $slotCount = 12) {
         return $slots;
     }
 
-    $stmt = $pdo->prepare('SELECT RoundNumber, RoundType, FixedRoundID, Q1Rank, TitleOverride, TagOverride, SongsDue, VotesDue FROM ML_SeasonRoundSlots WHERE SeasonID = ? ORDER BY RoundNumber');
+    // OptionVoteSelections was added after the original round-slot table.
+    // Detect it before building the SELECT so an older/incompletely migrated
+    // local database can still open Season Setup instead of failing with a 500.
+    $hasOptionVoteSelections = false;
+    try {
+        $columnStmt = $pdo->query("SHOW COLUMNS FROM ML_SeasonRoundSlots LIKE 'OptionVoteSelections'");
+        $hasOptionVoteSelections = (bool)$columnStmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $hasOptionVoteSelections = false;
+    }
+
+    $optionVoteSelectionsSelect = $hasOptionVoteSelections
+        ? 'OptionVoteSelections'
+        : 'NULL AS OptionVoteSelections';
+
+    $stmt = $pdo->prepare(
+        'SELECT RoundNumber, RoundType, FixedRoundID, Q1Rank, TitleOverride, TagOverride, '
+        . $optionVoteSelectionsSelect
+        . ', SongsDue, VotesDue '
+        . 'FROM ML_SeasonRoundSlots WHERE SeasonID = ? ORDER BY RoundNumber'
+    );
     $stmt->execute([(int)$seasonId]);
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $roundNumber = (int)$row['RoundNumber'];
@@ -179,10 +226,147 @@ function mlLoadSeasonRoundSlots(PDO $pdo, $seasonId, $slotCount = 12) {
             'tag_override' => (string)($row['TagOverride'] ?? ''),
             'schedule_left' => (string)($row['SongsDue'] ?? ''),
             'schedule_right' => (string)($row['VotesDue'] ?? ''),
+            'option_vote_selections' => max(1, (int)($row['OptionVoteSelections'] ?? 1)),
         ];
     }
 
     return $slots;
+}
+
+function mlGetRoundQuestionRequirements(array $roundSlots) {
+    $hasConfiguredStructure = false;
+    $q1Enabled = false;
+    $q1MaxRank = 0;
+    $madlibsEnabled = false;
+    $optionVoteCount = 0;
+
+    foreach ($roundSlots as $slot) {
+        $roundType = (string)($slot['round_type'] ?? '');
+        if ($roundType === '') {
+            continue;
+        }
+
+        $hasConfiguredStructure = true;
+
+        if ($roundType === 'q1_ranked_category') {
+            $q1Enabled = true;
+            $q1MaxRank = max($q1MaxRank, (int)($slot['q1_rank'] ?? 0));
+        } elseif ($roundType === 'q2_madlib') {
+            $madlibsEnabled = true;
+        } elseif ($roundType === 'q3_era') {
+            $optionVoteCount++;
+        }
+    }
+
+    // User Submitted Rounds requires at least three ideas because players must distribute
+    // 10 points with a maximum of 4 points per category. It may require more
+    // when the builder references a lower finishing position (for example 4th).
+    $q1MinimumCategories = $q1Enabled ? max(3, $q1MaxRank) : 0;
+
+    return [
+        'has_configured_structure' => $hasConfiguredStructure,
+        'q1_enabled' => $q1Enabled,
+        'q1_max_rank' => $q1MaxRank,
+        'q1_minimum_categories' => $q1MinimumCategories,
+        'madlibs_enabled' => $madlibsEnabled,
+        'option_vote_count' => $optionVoteCount,
+    ];
+}
+
+function mlLoadOptionVoteRounds(PDO $pdo, $seasonId, $slotCount = 12) {
+    $rounds = [];
+
+    foreach (mlLoadSeasonRoundSlots($pdo, $seasonId, $slotCount) as $roundNumber => $slot) {
+        if (($slot['round_type'] ?? '') !== 'q3_era') {
+            continue;
+        }
+
+        $name = trim((string)($slot['tag_override'] ?? ''));
+        $rounds[(int)$roundNumber] = [
+            'round_number' => (int)$roundNumber,
+            'name' => $name !== '' ? $name : 'Option Vote',
+            'selections_per_player' => max(1, (int)($slot['option_vote_selections'] ?? 1)),
+            'choices' => [],
+        ];
+    }
+
+    if (empty($rounds) || !mlTableExists($pdo, 'ML_SeasonRoundOptionChoices')) {
+        return $rounds;
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT RoundNumber, OptionIndex, ChoiceText
+         FROM ML_SeasonRoundOptionChoices
+         WHERE SeasonID = ?
+         ORDER BY RoundNumber, OptionIndex'
+    );
+    $stmt->execute([(int)$seasonId]);
+
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $roundNumber = (int)$row['RoundNumber'];
+        if (!isset($rounds[$roundNumber])) {
+            continue;
+        }
+
+        $rounds[$roundNumber]['choices'][(int)$row['OptionIndex']] = (string)$row['ChoiceText'];
+    }
+
+    return $rounds;
+}
+
+function mlOptionVotePlayerStorageAvailable(PDO $pdo) {
+    return mlTableExists($pdo, 'ML_SeasonRoundOptionChoices')
+        && mlTableExists($pdo, 'ML_SeasonRoundOptionVotes');
+}
+
+function mlLoadUserOptionVoteAnswers(PDO $pdo, $seasonId, $userId) {
+    $answers = [];
+
+    if (!mlTableExists($pdo, 'ML_SeasonRoundOptionVotes')) {
+        return $answers;
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT RoundNumber, OptionIndex
+         FROM ML_SeasonRoundOptionVotes
+         WHERE SeasonID = ? AND UserID = ?
+         ORDER BY RoundNumber, OptionIndex'
+    );
+    $stmt->execute([(int)$seasonId, (int)$userId]);
+
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $roundNumber = (int)$row['RoundNumber'];
+        if (!isset($answers[$roundNumber])) {
+            $answers[$roundNumber] = [];
+        }
+        $answers[$roundNumber][] = (int)$row['OptionIndex'];
+    }
+
+    return $answers;
+}
+
+function mlComputeWinningOptionVoteRoundLabel(PDO $pdo, $seasonId, $roundNumber, array $choices) {
+    if (empty($choices) || !mlTableExists($pdo, 'ML_SeasonRoundOptionVotes')) {
+        return 'TBD Option';
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT OptionIndex, COUNT(*) AS VoteCount
+         FROM ML_SeasonRoundOptionVotes
+         WHERE SeasonID = ? AND RoundNumber = ?
+         GROUP BY OptionIndex
+         ORDER BY VoteCount DESC, OptionIndex ASC
+         LIMIT 1'
+    );
+    $stmt->execute([(int)$seasonId, (int)$roundNumber]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        return 'TBD Option';
+    }
+
+    $winningIndex = (int)$row['OptionIndex'];
+    return isset($choices[$winningIndex]) ? (string)$choices[$winningIndex] : 'TBD Option';
 }
 
 function mlComputeTopQ1ByRank(PDO $pdo, $seasonId, $limit = 12) {
@@ -191,7 +375,7 @@ function mlComputeTopQ1ByRank(PDO $pdo, $seasonId, $limit = 12) {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-function mlComputeWinningEraLabel(PDO $pdo, $seasonId, array $q3Options) {
+function mlComputeWinningOptionVoteLabel(PDO $pdo, $seasonId, array $q3Options) {
     $q3Counts = [];
 
     $stmt = $pdo->prepare('SELECT Choice1Index, Choice2Index FROM ML_Q3Answers WHERE SeasonID = ?');
@@ -207,7 +391,7 @@ function mlComputeWinningEraLabel(PDO $pdo, $seasonId, array $q3Options) {
         $q3Counts[$c2]++;
     }
 
-    $label = 'TBD Era';
+    $label = 'TBD Option';
     $bestIndex = null;
     $bestCount = -1;
 
@@ -223,6 +407,11 @@ function mlComputeWinningEraLabel(PDO $pdo, $seasonId, array $q3Options) {
     }
 
     return $label;
+}
+
+function mlComputeWinningEraLabel(PDO $pdo, $seasonId, array $q3Options) {
+    // Backward-compatible alias while older callers and stored round types are migrated incrementally.
+    return mlComputeWinningOptionVoteLabel($pdo, $seasonId, $q3Options);
 }
 
 function mlComputeWinningQ2MadlibLabel(PDO $pdo, $seasonId, array $q2Options) {
@@ -453,7 +642,7 @@ function mlResolveSeasonRounds(PDO $pdo, $seasonId, $seasonName, array $q2Option
                 $q1ByRank[$index + 1] = $row;
             }
 
-            $eraLabel = mlComputeWinningEraLabel($pdo, $seasonId, $q3Options);
+            $optionVoteRounds = mlLoadOptionVoteRounds($pdo, $seasonId, $slotCount);
             $q2CombinedLabel = mlComputeWinningQ2MadlibLabel($pdo, $seasonId, $q2Options);
             $walkmanSlotCount = 0;
             foreach ($builderSlots as $walkmanSlot) {
@@ -497,8 +686,24 @@ function mlResolveSeasonRounds(PDO $pdo, $seasonId, $seasonName, array $q2Option
                         break;
 
                     case 'q3_era':
-                        $title = $eraLabel;
-                        $tag = 'Era';
+                        $optionVoteRound = $optionVoteRounds[(int)$roundNumber] ?? null;
+                        if (
+                            $optionVoteRound
+                            && !empty($optionVoteRound['choices'])
+                            && mlTableExists($pdo, 'ML_SeasonRoundOptionVotes')
+                        ) {
+                            $title = mlComputeWinningOptionVoteRoundLabel(
+                                $pdo,
+                                $seasonId,
+                                $roundNumber,
+                                $optionVoteRound['choices']
+                            );
+                        } else {
+                            // Backward-compatible fallback for seasons that still use
+                            // the old single-Q3 answer table.
+                            $title = mlComputeWinningOptionVoteLabel($pdo, $seasonId, $q3Options);
+                        }
+                        $tag = $optionVoteRound ? $optionVoteRound['name'] : 'Option Vote';
                         break;
 
                     case 'walkman':
@@ -556,7 +761,7 @@ function mlResolveSeasonRounds(PDO $pdo, $seasonId, $seasonName, array $q2Option
         }
     }
 
-    $eraLabel = mlComputeWinningEraLabel($pdo, $seasonId, $q3Options);
+    $optionVoteLabel = mlComputeWinningOptionVoteLabel($pdo, $seasonId, $q3Options);
     $q2CombinedLabel = mlComputeWinningQ2MadlibLabel($pdo, $seasonId, $q2Options);
     $walkmanDisplay = mlComputeWalkmanDisplay($pdo, $seasonId);
 
@@ -611,8 +816,8 @@ function mlResolveSeasonRounds(PDO $pdo, $seasonId, $seasonName, array $q2Option
         ],
         [
             'round_number' => 7,
-            'title' => $eraLabel,
-            'tag' => 'Era',
+            'title' => $optionVoteLabel,
+            'tag' => 'Option Vote',
             'schedule_left' => 'submit on 2/20',
             'schedule_right' => 'vote by 2/25',
             'schedule_is_utc' => false,

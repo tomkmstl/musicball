@@ -57,59 +57,67 @@ if ($row = $subStmt->fetch(PDO::FETCH_ASSOC)) {
     $submittedAt = $row['SubmittedAt'];
 }
 
-// --- Fetch Q1 votes for this user ---
-$q1Stmt = $pdo->prepare("
-    SELECT v.CategoryIndex, v.Points, c.Title, c.Description
-    FROM ML_Q1Votes v
-    JOIN ML_Q1Categories c
-      ON v.SeasonID = c.SeasonID
-     AND v.CategoryIndex = c.CategoryIndex
-    WHERE v.SeasonID = ?
-      AND v.UserID = ?
-    ORDER BY v.CategoryIndex
-");
-$q1Stmt->execute([$seasonId, $userId]);
-$q1Votes = $q1Stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// --- Fetch Q2 answers (now only QuestionNumber 1 and 2) ---
-$q2Stmt = $pdo->prepare("
-    SELECT QuestionNumber, Choice1Index, Choice2Index
-    FROM ML_Q2Answers
-    WHERE SeasonID = ?
-      AND UserID = ?
-      AND QuestionNumber IN (1,2)
-    ORDER BY QuestionNumber
-");
-$q2Stmt->execute([$seasonId, $userId]);
-$q2Rows = $q2Stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$userQ2 = [
-    1 => [],
-    2 => [],
-];
-foreach ($q2Rows as $row) {
-    $qn = (int)$row['QuestionNumber']; // 1 = Person, 2 = Activity
-    $c1 = (int)$row['Choice1Index'];
-    $c2 = (int)$row['Choice2Index'];
-    $userQ2[$qn] = [$c1, $c2];
+// --- Fetch only the answer families used by this season structure. ---
+$q1Votes = [];
+if ($q1Enabled) {
+    $q1Stmt = $pdo->prepare("
+        SELECT v.CategoryIndex, v.Points, c.Title, c.Description
+        FROM ML_Q1Votes v
+        JOIN ML_Q1Categories c
+          ON v.SeasonID = c.SeasonID
+         AND v.CategoryIndex = c.CategoryIndex
+        WHERE v.SeasonID = ?
+          AND v.UserID = ?
+        ORDER BY v.CategoryIndex
+    ");
+    $q1Stmt->execute([$seasonId, $userId]);
+    $q1Votes = $q1Stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// --- Fetch Q3 answers (single row with two choices) ---
-$q3Stmt = $pdo->prepare("
-    SELECT Choice1Index, Choice2Index
-    FROM ML_Q3Answers
-    WHERE SeasonID = ?
-      AND UserID = ?
-");
-$q3Stmt->execute([$seasonId, $userId]);
-$q3Row = $q3Stmt->fetch(PDO::FETCH_ASSOC);
+$q2Rows = [];
+$userQ2 = [1 => [], 2 => []];
+if ($madlibsEnabled) {
+    $q2Stmt = $pdo->prepare("
+        SELECT QuestionNumber, Choice1Index, Choice2Index
+        FROM ML_Q2Answers
+        WHERE SeasonID = ?
+          AND UserID = ?
+          AND QuestionNumber IN (1,2)
+        ORDER BY QuestionNumber
+    ");
+    $q2Stmt->execute([$seasonId, $userId]);
+    $q2Rows = $q2Stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    foreach ($q2Rows as $row) {
+        $qn = (int)$row['QuestionNumber'];
+        $c1 = (int)$row['Choice1Index'];
+        $c2 = (int)$row['Choice2Index'];
+        $userQ2[$qn] = [$c1, $c2];
+    }
+}
+
+// --- Fetch round-specific Option Vote answers ---
+$userOptionVotes = $useGenericOptionVotes
+    ? mlLoadUserOptionVoteAnswers($pdo, $seasonId, $userId)
+    : [];
+
+// Legacy Q3 remains readable for seasons created before Option Votes became
+// round-specific.
 $userQ3 = [];
-if ($q3Row) {
-    $userQ3 = [
-        (int)$q3Row['Choice1Index'],
-        (int)$q3Row['Choice2Index'],
-    ];
+if ($legacyQ3Enabled) {
+    $q3Stmt = $pdo->prepare("
+        SELECT Choice1Index, Choice2Index
+        FROM ML_Q3Answers
+        WHERE SeasonID = ?
+          AND UserID = ?
+    ");
+    $q3Stmt->execute([$seasonId, $userId]);
+    if ($q3Row = $q3Stmt->fetch(PDO::FETCH_ASSOC)) {
+        $userQ3 = [
+            (int)$q3Row['Choice1Index'],
+            (int)$q3Row['Choice2Index'],
+        ];
+    }
 }
 
 // Helpers to map indexes -> labels from sb_questions.php
@@ -123,7 +131,7 @@ function mapQ2LabelsForPart(array $optionsForPart, array $indexes): array {
     return $labels;
 }
 
-function mapQ3Labels(array $allOptions, array $indexes): array {
+function mapOptionLabels(array $allOptions, array $indexes): array {
     $labels = [];
     foreach ($indexes as $idx) {
         if (isset($allOptions[$idx])) {
@@ -133,10 +141,17 @@ function mapQ3Labels(array $allOptions, array $indexes): array {
     return $labels;
 }
 
-$hasQ1 = count($q1Votes) > 0;
-$hasQ2 = !empty($q2Rows);
+$hasQ1 = $q1Enabled && count($q1Votes) > 0;
+$hasQ2 = $madlibsEnabled && !empty($q2Rows);
+$hasOptionVotes = false;
+foreach ($userOptionVotes as $roundSelections) {
+    if (!empty($roundSelections)) {
+        $hasOptionVotes = true;
+        break;
+    }
+}
 $hasQ3 = !empty($userQ3);
-$hasAnyAnswers = $hasQ1 || $hasQ2 || $hasQ3;
+$hasAnyAnswers = $hasQ1 || $hasQ2 || $hasOptionVotes || $hasQ3;
 
 // --- League submission summary (for pie chart / counter) ---
 $submittedCountStmt = $pdo->prepare("
@@ -302,6 +317,7 @@ foreach ($allUsers as $leagueUser) {
 
         <?php else: ?>
 
+            <?php if ($q1Enabled): ?>
             <!-- Q1 -->
             <h2>
                 <?= $mlHeadings['q1']['choice']; ?>
@@ -333,7 +349,9 @@ foreach ($allUsers as $leagueUser) {
                     <p>You haven't assigned any points yet.</p>
                 <?php endif; ?>
             </div>
+            <?php endif; ?>
 
+            <?php if ($madlibsEnabled): ?>
             <!-- Q2 -->
             <h2>
                 <?= $mlHeadings['q2']['choice']; ?>
@@ -368,24 +386,44 @@ foreach ($allUsers as $leagueUser) {
                     </div>
                 <?php endif; ?>
             </div>
+            <?php endif; ?>
 
-            <!-- Q3 -->
-            <h2>
-                <?= $mlHeadings['q3']['choice']; ?>
-            </h2>
-            <div class="q3-group choice-group">
-                <?php
-                $labelsQ3 = mapQ3Labels($q3Options, $userQ3);
-                if (count($labelsQ3) === 0): ?>
-                    <p>No choices yet.</p>
-                <?php else: ?>
-                    <div class="choice-values">
-                        <?php foreach ($labelsQ3 as $label): ?>
-                            <div class="choice-value-item"><?= htmlspecialchars($label) ?></div>
-                        <?php endforeach; ?>
+            <?php if ($useGenericOptionVotes): ?>
+                <?php foreach ($optionVoteRounds as $roundNumber => $optionVote): ?>
+                    <h2><?= htmlspecialchars($optionVote['name']) ?></h2>
+                    <div class="q3-group choice-group">
+                        <?php
+                        $labels = mapOptionLabels(
+                            $optionVote['choices'],
+                            $userOptionVotes[$roundNumber] ?? []
+                        );
+                        if (count($labels) === 0): ?>
+                            <p>No choices yet.</p>
+                        <?php else: ?>
+                            <div class="choice-values">
+                                <?php foreach ($labels as $label): ?>
+                                    <div class="choice-value-item"><?= htmlspecialchars($label) ?></div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                <?php endif; ?>
-            </div>
+                <?php endforeach; ?>
+            <?php elseif ($legacyQ3Enabled): ?>
+                <h2><?= $mlHeadings['q3']['choice']; ?></h2>
+                <div class="q3-group choice-group">
+                    <?php
+                    $labelsQ3 = mapOptionLabels($q3Options, $userQ3);
+                    if (count($labelsQ3) === 0): ?>
+                        <p>No choices yet.</p>
+                    <?php else: ?>
+                        <div class="choice-values">
+                            <?php foreach ($labelsQ3 as $label): ?>
+                                <div class="choice-value-item"><?= htmlspecialchars($label) ?></div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
 
 			<div class="buttons choice-buttons-centered">
 				<a href="<?= htmlspecialchars(mlUrl('season-builder/questions.php')) ?>"
