@@ -342,7 +342,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new RuntimeException('Run the database migration first: db/ml_season_builder_schema.sql');
         }
 
-        if (!in_array($setupAction, ['save_options', 'start_voting'], true)) {
+        if (!in_array($setupAction, ['save_options', 'preview_voting', 'start_voting'], true)) {
             throw new RuntimeException('Unknown season options action.');
         }
 
@@ -397,7 +397,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($label !== '') { $q2Part2Count++; }
         }
 
-        if ($setupAction === 'start_voting') {
+        if (in_array($setupAction, ['preview_voting', 'start_voting'], true)) {
             if (!empty($optionVoteRounds) && !$optionVotePlayerStorageReady) {
                 throw new RuntimeException(
                     'Create ML_SeasonRoundOptionVotes before starting voting with Option Vote rounds.'
@@ -547,11 +547,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($setupAction === 'start_voting') {
             mlSetSeasonConfig($pdo, $targetSeasonId, 'voting_open', '1');
             $_SESSION['ml_admin_message'] = 'Voting is now live for ' . $setupSeason['SeasonName'] . '.';
-        } else {
+        } elseif ($setupAction === 'save_options') {
             $_SESSION['ml_admin_message'] = 'Voting options saved for ' . $setupSeason['SeasonName'] . '.';
         }
 
         $pdo->commit();
+
+        if ($setupAction === 'preview_voting') {
+            header('Location: ' . mlUrl('season-builder/preview.php?season_id=' . $targetSeasonId));
+            exit;
+        }
+
         header('Location: ' . mlUrl('season-builder/season_options.php?season_id=' . $targetSeasonId . $overrideQuerySuffix));
         exit;
     } catch (Throwable $e) {
@@ -905,6 +911,14 @@ $startVotingDisabled = (
                 <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . (int)$targetSeasonId . $overrideQuerySuffix)) ?>" class="button-secondary">&laquo; Edit Round Structure</a>
                 <button type="submit" name="setup_action" value="save_options" class="button-secondary" <?= (!$seasonBuilderReady || $submissionCount > 0) ? 'disabled' : '' ?>>Save Options</button>
                 <?php if (!$startVotingDisabled): ?>
+                    <button
+                        type="submit"
+                        name="setup_action"
+                        value="preview_voting"
+                        class="button-secondary"
+                        formtarget="_blank"
+                        title="Save these options and preview the player voting experience in a new tab"
+                    >Preview Voting</button>
                     <button type="submit" name="setup_action" value="start_voting" class="button-primary"><?= htmlspecialchars($startButtonLabel) ?></button>
                 <?php endif; ?>
             </div>

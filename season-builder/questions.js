@@ -13,7 +13,7 @@ function computeQ1Total() {
 
 function setStepActionEnabled(step, enabled) {
     if (!step) return;
-    var action = step.querySelector('.wizard-next, button[type="submit"]');
+    var action = step.querySelector('.wizard-next, .wizard-finish-preview, button[type="submit"]');
     if (action) action.disabled = !enabled;
 }
 
@@ -296,13 +296,36 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     var form = document.getElementById('ml_form');
+    var isPreview = form && form.getAttribute('data-preview-mode') === '1';
+
     if (form) {
         form.addEventListener('submit', function (event) {
             var result = validateForm();
-            if (!result.ok) {
+
+            if (isPreview || !result.ok) {
                 event.preventDefault();
+            }
+
+            if (!result.ok) {
                 alert(result.message);
                 showStep(result.step);
+            }
+        });
+    }
+
+    var finishPreviewButton = document.querySelector('.wizard-finish-preview');
+    if (finishPreviewButton) {
+        finishPreviewButton.addEventListener('click', function () {
+            var result = validateForm();
+            if (!result.ok) {
+                alert(result.message);
+                showStep(result.step);
+                return;
+            }
+
+            var returnUrl = form ? form.getAttribute('data-preview-return-url') : '';
+            if (returnUrl) {
+                window.location.href = returnUrl;
             }
         });
     }
