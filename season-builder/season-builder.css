@@ -792,6 +792,32 @@
     overflow: visible;
 }
 
+.preseason-preview-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 0 0 20px;
+    padding: 13px 15px;
+    border: 1px solid color-mix(in srgb, var(--brand) 55%, var(--line));
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--brand) 11%, var(--surface));
+    color: var(--text);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.preseason-preview-banner strong {
+    flex: 0 0 auto;
+    color: var(--brand);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.preseason-preview-banner span {
+    color: var(--muted);
+}
+
 .preseason-vote-page-intro {
     gap: 4px;
     margin-bottom: 18px;
@@ -1033,6 +1059,11 @@
 }
 
 @media (max-width: 700px) {
+    .preseason-preview-banner {
+        display: grid;
+        gap: 4px;
+    }
+
     .preseason-question-title,
     .voting-question-heading.preseason-question-title {
         font-size: clamp(1.55rem, 7vw, 1.9rem);

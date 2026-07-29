@@ -3,18 +3,32 @@
 require_once __DIR__ . '/../session_boot.php';
 require_once __DIR__ . '/../config.php';
 
-$votingSeason = mlGetVotingSeason($pdo);
-if (!$votingSeason) {
-    $_SESSION['ml_notice'] = 'Voting for the next season is currently closed.';
-    header('Location: ' . mlUrl('index.php'));
-    exit;
+$previewMode = !empty($previewMode);
+
+if (!$previewMode) {
+    $votingSeason = mlGetVotingSeason($pdo);
+    if (!$votingSeason) {
+        $_SESSION['ml_notice'] = 'Voting for the next season is currently closed.';
+        header('Location: ' . mlUrl('index.php'));
+        exit;
+    }
+
+    $seasonId = (int)$votingSeason['SeasonID'];
+    $seasonName = (string)$votingSeason['SeasonName'];
+    $votingOpen = true;
+} else {
+    $seasonId = isset($seasonId) ? (int)$seasonId : 0;
+    $seasonName = isset($seasonName) ? (string)$seasonName : '';
+    $votingOpen = true;
+
+    if ($seasonId <= 0 || $seasonName === '') {
+        http_response_code(400);
+        exit('Preview configuration is incomplete.');
+    }
 }
 
-$seasonId = (int)$votingSeason['SeasonID'];
-$seasonName = (string)$votingSeason['SeasonName'];
-$votingOpen = true;
 require_once __DIR__ . '/sb_questions.php';
-if (!$votingOpen) {
+if (!$previewMode && !$votingOpen) {
     $_SESSION['ml_notice'] = 'Voting for the next season is currently closed.';
     header('Location: ' . mlUrl('index.php'));
     exit;
@@ -53,21 +67,23 @@ if ($q1Enabled) {
     $stmt->execute([$seasonId]);
     $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $q1Stmt = $pdo->prepare(
-        'SELECT CategoryIndex, Points
-         FROM ML_Q1Votes
-         WHERE SeasonID = ? AND UserID = ?'
-    );
-    $q1Stmt->execute([$seasonId, $userId]);
-    foreach ($q1Stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $q1Existing[(int)$row['CategoryIndex']] = (int)$row['Points'];
+    if (!$previewMode) {
+        $q1Stmt = $pdo->prepare(
+            'SELECT CategoryIndex, Points
+             FROM ML_Q1Votes
+             WHERE SeasonID = ? AND UserID = ?'
+        );
+        $q1Stmt->execute([$seasonId, $userId]);
+        foreach ($q1Stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $q1Existing[(int)$row['CategoryIndex']] = (int)$row['Points'];
+        }
     }
 }
 
 $q2Part1 = $madlibsEnabled ? ($q2Options[1] ?? []) : [];
 $q2Part2 = $madlibsEnabled ? ($q2Options[2] ?? []) : [];
 $q2Existing = [1 => [], 2 => []];
-if ($madlibsEnabled) {
+if ($madlibsEnabled && !$previewMode) {
     $q2Stmt = $pdo->prepare(
         'SELECT QuestionNumber, Choice1Index, Choice2Index
          FROM ML_Q2Answers
@@ -80,12 +96,12 @@ if ($madlibsEnabled) {
     }
 }
 
-$optionVoteExisting = $useGenericOptionVotes
+$optionVoteExisting = ($useGenericOptionVotes && !$previewMode)
     ? mlLoadUserOptionVoteAnswers($pdo, $seasonId, $userId)
     : [];
 
 $q3Existing = [];
-if ($legacyQ3Enabled) {
+if ($legacyQ3Enabled && !$previewMode) {
     $q3Stmt = $pdo->prepare(
         'SELECT Choice1Index, Choice2Index
          FROM ML_Q3Answers
@@ -126,6 +142,11 @@ unset($votingStep);
 
 $totalSteps = count($votingSteps);
 if ($totalSteps === 0) {
+    if ($previewMode) {
+        http_response_code(400);
+        exit('This season does not currently have any preseason voting questions configured.');
+    }
+
     $_SESSION['ml_notice'] = 'This season does not currently have any preseason voting questions configured.';
     header('Location: ' . mlUrl('index.php'));
     exit;
@@ -180,13 +201,20 @@ $minusIcon = $isLightTheme
 $plusIcon = $isLightTheme
     ? 'square-rounded-plus-light.svg'
     : 'square-rounded-plus.svg';
+
+$previewReturnUrl = isset($previewReturnUrl) && (string)$previewReturnUrl !== ''
+    ? (string)$previewReturnUrl
+    : mlUrl('season-builder/season_options.php?season_id=' . $seasonId);
+$formAction = $previewMode
+    ? mlUrl('season-builder/preview.php?season_id=' . $seasonId)
+    : mlUrl('season-builder/submit.php');
 ?>
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Music League – Next Season Voting</title>
+    <title>Music League – <?= $previewMode ? 'Voting Preview' : 'Next Season Voting' ?></title>
     <link rel="stylesheet" href="<?= htmlspecialchars(mlAssetUrl('styles.css')) ?>">
     <link rel="stylesheet" href="<?= htmlspecialchars(mlAssetUrl('season-builder/season-builder.css')) ?>">
     <?php require_once __DIR__ . '/../pwa_head.php'; ?>
@@ -195,9 +223,16 @@ $plusIcon = $isLightTheme
 <body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?>">
 <?php $currentPage = 'vote'; include __DIR__ . '/../header.php'; ?>
 <div class="wrapper">
-    <div class="card game-card game-card-wide game-card-narrow preseason-vote-card">
+    <div class="card game-card game-card-wide game-card-narrow preseason-vote-card<?= $previewMode ? ' preseason-vote-card-preview' : '' ?>">
+        <?php if ($previewMode): ?>
+            <div class="preseason-preview-banner" role="status">
+                <strong>Preview mode</strong>
+                <span>Walk through the player experience. Votes will not be saved, and league voting has not started.</span>
+            </div>
+        <?php endif; ?>
+
         <div class="game-page-intro game-round-page-intro preseason-vote-page-intro">
-            <div class="home-shell-kicker">Next Season Voting</div>
+            <div class="home-shell-kicker"><?= $previewMode ? 'Voting Preview' : 'Next Season Voting' ?></div>
             <div class="preseason-vote-context">
                 <span><?= htmlspecialchars($seasonName) ?></span>
                 <span aria-hidden="true">·</span>
@@ -209,9 +244,11 @@ $plusIcon = $isLightTheme
         </div>
 
         <form method="post"
-              action="<?= htmlspecialchars(mlUrl('season-builder/submit.php')) ?>"
+              action="<?= htmlspecialchars($formAction) ?>"
               id="ml_form"
-              class="vote-form-shell vote-form-shell-questions preseason-vote-form">
+              class="vote-form-shell vote-form-shell-questions preseason-vote-form"
+              data-preview-mode="<?= $previewMode ? '1' : '0' ?>"
+              data-preview-return-url="<?= htmlspecialchars($previewReturnUrl) ?>">
             <input type="hidden" name="user_id" value="<?= (int)$userId ?>">
 
             <?php foreach ($votingSteps as $stepIndex => $votingStep): ?>
@@ -484,7 +521,11 @@ $plusIcon = $isLightTheme
                         <?php endif; ?>
 
                         <?php if ($isLast): ?>
-                            <button type="submit" class="button-primary" disabled>Submit Votes</button>
+                            <?php if ($previewMode): ?>
+                                <button type="button" class="button-primary wizard-finish-preview" disabled>Finish Preview</button>
+                            <?php else: ?>
+                                <button type="submit" class="button-primary" disabled>Submit Votes</button>
+                            <?php endif; ?>
                         <?php else: ?>
                             <button type="button"
                                     class="button-primary wizard-next"
