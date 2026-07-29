@@ -1114,3 +1114,42 @@
         padding: 16px;
     }
 }
+
+/* =========================================================
+   Season Builder voting — light-mode refinements
+========================================================= */
+body.theme-light .preseason-preview-banner {
+    border-color: #9bcfed;
+    background: #edf8fe;
+}
+
+body.theme-light .preseason-ballot-item,
+body.theme-light .preseason-choice-card {
+    background: #ffffff;
+}
+
+body.theme-light .preseason-choice-row:hover .preseason-choice-card {
+    border-color: #9fb7cc;
+    background: #f8fbfe;
+}
+
+body.theme-light .preseason-choice-indicator {
+    border-color: #a9bfd2;
+    background: #edf4fb;
+}
+
+body.theme-light .preseason-choice-row input[type="checkbox"]:checked + .preseason-choice-card {
+    border-color: #4faee3;
+    background: #eaf6fd;
+    box-shadow: 0 8px 22px rgba(32, 113, 160, 0.09);
+}
+
+body.theme-light .preseason-choice-row input[type="checkbox"]:checked + .preseason-choice-card .preseason-choice-indicator {
+    border-color: #2797d7;
+    background: #3dacec;
+    color: #06111d;
+}
+
+body.theme-light .preseason-pick-value {
+    background: #f4f8fc;
+}
