@@ -439,3 +439,647 @@
 .admin-schedule-validation-message[hidden] {
     display: none;
 }
+
+/* Preseason voting page hierarchy */
+.questions-page-intro,
+.choice-page-intro {
+    gap: 3px;
+    margin-bottom: 18px;
+}
+
+.voting-page-context {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+    text-transform: uppercase;
+}
+
+.voting-page-season {
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.35;
+}
+
+.choice-page-intro h1 {
+    margin: 3px 0 0;
+}
+
+.step-header .voting-question-heading {
+    flex: 1 1 auto;
+    margin: 0;
+    font-size: clamp(1.9rem, 4vw, 2.6rem);
+    line-height: 1.05;
+}
+
+.choice-question {
+    margin: -5px 0 12px 12px;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+@media (max-width: 700px) {
+    .step-header {
+        align-items: flex-start;
+    }
+
+    .step-header .voting-question-heading {
+        font-size: clamp(1.7rem, 8vw, 2.2rem);
+    }
+
+    .choice-question {
+        margin-left: 0;
+    }
+}
+
+.option-vote-step .step-header > div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Focused preseason voting wizard */
+.voting-wizard-card {
+    width: min(100%, 900px);
+    margin-inline: auto;
+    padding: 24px;
+}
+
+.voting-wizard-card .questions-page-intro {
+    gap: 4px;
+    margin-bottom: 16px;
+}
+
+.voting-wizard-card .voting-page-context {
+    color: var(--brand);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+}
+
+.voting-page-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.35;
+}
+
+.voting-progress-block {
+    margin-bottom: 22px;
+}
+
+.voting-wizard-card .step-indicator {
+    margin-bottom: 7px;
+    color: var(--muted);
+    font-size: 0.86rem;
+}
+
+.voting-wizard-card .progress-bar-bg {
+    height: 5px;
+    margin-bottom: 0;
+}
+
+.voting-question-block {
+    margin-bottom: 16px;
+}
+
+.voting-question-heading {
+    max-width: 720px;
+    margin: 0;
+    color: var(--text);
+    font-size: clamp(1.65rem, 3vw, 2rem);
+    line-height: 1.14;
+    letter-spacing: -0.015em;
+}
+
+.voting-question-support {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 10px;
+}
+
+.voting-question-instruction {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.voting-selection-status {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+.voting-selection-status strong {
+    color: var(--brand);
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.voting-selection-status strong.changed {
+    animation: ml-voting-count-pop 0.18s ease;
+}
+
+@keyframes ml-voting-count-pop {
+    50% { transform: scale(1.08); }
+}
+
+.voting-idea-list,
+.voting-option-list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+}
+
+.voting-wizard-card .voting-idea-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 0;
+    padding: 13px 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface-2);
+}
+
+.voting-wizard-card .cat-main {
+    min-width: 0;
+}
+
+.voting-wizard-card .cat-title {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.3;
+}
+
+.voting-wizard-card .cat-desc {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.42;
+}
+
+.voting-wizard-card .points-control {
+    display: inline-grid;
+    grid-template-columns: 38px 34px 38px;
+    align-items: stretch;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    border-radius: 9px;
+    background: var(--surface);
+}
+
+.voting-wizard-card .points-btn {
+    width: 38px;
+    height: 36px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.voting-wizard-card .points-btn:first-child {
+    border-right: 1px solid var(--line);
+}
+
+.voting-wizard-card .points-btn:last-child {
+    border-left: 1px solid var(--line);
+}
+
+.voting-wizard-card .points-btn:hover:not([disabled]) {
+    background: var(--surface-3);
+}
+
+.voting-wizard-card .points-value {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+}
+
+.voting-wizard-card .voting-option-list .option-row {
+    margin: 0;
+}
+
+.voting-wizard-card .voting-option-list .option-box {
+    min-height: 48px;
+    padding: 12px 14px;
+    border-color: var(--line);
+    border-radius: 11px;
+    background: var(--surface-2);
+}
+
+.voting-wizard-card .voting-option-list .option-row:hover .option-box {
+    background: var(--surface-3);
+    border-color: var(--line-strong);
+}
+
+.voting-wizard-card .voting-option-list input[type="checkbox"]:checked + .option-box {
+    border-color: color-mix(in srgb, var(--brand) 65%, var(--line));
+    background: color-mix(in srgb, var(--brand) 10%, var(--surface-2));
+}
+
+.voting-wizard-actions {
+    align-items: center;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+}
+
+.voting-wizard-actions .button-primary,
+.voting-wizard-actions .button-secondary {
+    width: auto;
+}
+
+.voting-wizard-actions .button-primary {
+    min-width: 210px;
+    margin-left: auto;
+}
+
+.voting-wizard-action-spacer {
+    flex: 1 1 auto;
+}
+
+@media (max-width: 700px) {
+    .voting-wizard-card {
+        padding: 18px 14px;
+    }
+
+    .voting-question-heading {
+        font-size: clamp(1.45rem, 7vw, 1.75rem);
+        line-height: 1.16;
+    }
+
+    .voting-question-support {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 9px;
+    }
+
+    .voting-wizard-card .voting-idea-card {
+        align-items: flex-start;
+        padding: 12px;
+    }
+
+    .voting-wizard-card .points-control {
+        grid-template-columns: 40px 32px 40px;
+    }
+
+    .voting-wizard-card .points-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .voting-wizard-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .voting-wizard-action-spacer {
+        display: none;
+    }
+
+    .voting-wizard-actions .button-primary,
+    .voting-wizard-actions .button-secondary {
+        width: 100%;
+        min-width: 0;
+        margin-left: 0;
+    }
+
+    .voting-wizard-actions .button-primary {
+        order: 1;
+    }
+
+    .voting-wizard-actions .button-secondary {
+        order: 2;
+    }
+}
+
+@media (max-width: 480px) {
+    .voting-wizard-card .voting-idea-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+    }
+
+    .voting-wizard-card .cat-desc {
+        font-size: 0.84rem;
+    }
+}
+
+/* =========================================================
+   Gameplay-aligned preseason voting
+   Reuses the main round-voting shell, ballot cards, counters,
+   progress bars, point controls, and action layout.
+========================================================= */
+
+.preseason-vote-card {
+    overflow: visible;
+}
+
+.preseason-vote-page-intro {
+    gap: 4px;
+    margin-bottom: 18px;
+}
+
+.preseason-vote-context {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.preseason-vote-question-count {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.preseason-vote-question-count span {
+    color: var(--text);
+}
+
+.preseason-vote-form {
+    margin-top: 0;
+}
+
+.preseason-question-intro {
+    margin-bottom: 18px;
+}
+
+.preseason-question-intro p {
+    max-width: 720px;
+    margin-top: 7px;
+    margin-bottom: 0;
+}
+
+.preseason-question-title,
+.voting-question-heading.preseason-question-title {
+    max-width: 760px;
+    font-size: clamp(1.72rem, 3.2vw, 2.15rem);
+    line-height: 1.08;
+    letter-spacing: 0.005em;
+}
+
+.preseason-vote-step-header {
+    margin-top: 0;
+}
+
+.preseason-vote-step-header h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: lowercase;
+}
+
+.preseason-vote-list,
+.preseason-choice-list {
+    display: grid;
+    gap: 18px;
+}
+
+.preseason-ballot-item {
+    margin-bottom: 0;
+}
+
+.preseason-ballot-description {
+    max-width: 690px;
+    line-height: 1.45;
+}
+
+.preseason-choice-row {
+    display: block;
+    margin: 0;
+}
+
+.preseason-choice-row input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.preseason-choice-card {
+    margin: 0;
+    cursor: pointer;
+    transition:
+        border-color 0.14s ease,
+        background-color 0.14s ease,
+        transform 0.12s ease,
+        opacity 0.14s ease;
+}
+
+.preseason-choice-card .vote-ballot-songline {
+    min-height: 40px;
+}
+
+.preseason-choice-row:hover .preseason-choice-card {
+    border-color: var(--line-strong);
+    transform: translateY(-1px);
+}
+
+.preseason-choice-indicator {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 2px solid var(--line-strong);
+    border-radius: 11px;
+    color: transparent;
+    background: var(--surface-2);
+    font-size: 1rem;
+    font-weight: 800;
+    transition:
+        color 0.14s ease,
+        border-color 0.14s ease,
+        background-color 0.14s ease,
+        transform 0.12s ease;
+}
+
+.preseason-choice-row input[type="checkbox"]:checked + .preseason-choice-card {
+    border-color: rgba(61, 172, 236, 0.62);
+    background:
+        linear-gradient(180deg, rgba(61, 172, 236, 0.09), rgba(61, 172, 236, 0.035));
+}
+
+.preseason-choice-row input[type="checkbox"]:checked + .preseason-choice-card .preseason-choice-indicator {
+    border-color: var(--brand);
+    background: var(--brand);
+    color: #06111d;
+    transform: scale(1.03);
+}
+
+.preseason-choice-row input[type="checkbox"]:focus-visible + .preseason-choice-card {
+    outline: 3px solid rgba(61, 172, 236, 0.2);
+    outline-offset: 3px;
+}
+
+.preseason-choice-row input[type="checkbox"]:disabled:not(:checked) + .preseason-choice-card {
+    opacity: 0.42;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.preseason-vote-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.preseason-vote-actions .button-primary,
+.preseason-vote-actions .button-secondary {
+    width: auto;
+    min-width: 150px;
+}
+
+.preseason-vote-action-spacer {
+    flex: 1 1 auto;
+}
+
+/* Submitted preseason picks, using the same ballot language. */
+.preseason-picks-card .game-round-page-intro {
+    margin-bottom: 18px;
+}
+
+.preseason-picks-meta {
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.preseason-picks-section {
+    margin-top: 26px;
+}
+
+.preseason-picks-heading {
+    margin-bottom: 10px;
+}
+
+.preseason-picks-heading .home-shell-kicker {
+    margin-bottom: 5px;
+}
+
+.preseason-picks-list {
+    display: grid;
+    gap: 12px;
+}
+
+.preseason-pick-item {
+    margin: 0;
+    padding: 18px 20px;
+    border-radius: 18px;
+}
+
+.preseason-pick-static-score {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 5px;
+    min-width: 70px;
+    color: var(--muted);
+}
+
+.preseason-pick-static-score strong {
+    color: var(--brand);
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.preseason-pick-values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 9px;
+}
+
+.preseason-pick-value {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.preseason-picks-actions {
+    justify-content: center;
+}
+
+@media (max-width: 700px) {
+    .preseason-question-title,
+    .voting-question-heading.preseason-question-title {
+        font-size: clamp(1.55rem, 7vw, 1.9rem);
+    }
+
+    .preseason-vote-step-header {
+        margin-left: -24px;
+        margin-right: -24px;
+    }
+
+    .preseason-vote-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .preseason-vote-action-spacer {
+        display: none;
+    }
+
+    .preseason-vote-actions .button-primary,
+    .preseason-vote-actions .button-secondary {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .preseason-vote-actions .button-primary {
+        order: 1;
+    }
+
+    .preseason-vote-actions .button-secondary {
+        order: 2;
+    }
+}
+
+@media (max-width: 520px) {
+    .preseason-ballot-item,
+    .preseason-choice-card {
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    .preseason-choice-indicator {
+        width: 32px;
+        height: 32px;
+    }
+
+    .preseason-pick-item {
+        padding: 16px;
+    }
+}

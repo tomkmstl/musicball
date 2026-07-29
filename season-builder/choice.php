@@ -217,13 +217,18 @@ foreach ($allUsers as $leagueUser) {
 <body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?>">
 <?php $currentPage = 'vote'; include __DIR__ . '/../header.php'; ?>
 <div class="wrapper">
-    <div class="card">
-        <div class="choice-page-intro">
-		<h1>Your picks, <?= htmlspecialchars($user['UserName']); ?>.</h1>
-            <h3>Next season: <?= htmlspecialchars($seasonName) ?></h3>
+    <div class="card game-card game-card-wide game-card-narrow preseason-picks-card">
+        <div class="game-page-intro game-round-page-intro">
+            <div class="home-shell-kicker">Next Season Voting</div>
+            <h1 class="game-page-title">Your Picks</h1>
+            <div class="preseason-picks-meta">
+                <?= htmlspecialchars($seasonName) ?> · <?= htmlspecialchars($user['UserName']) ?>
+                <?php if ($submittedAt): ?>
+                    · Submitted <?= htmlspecialchars($submittedAt) ?>
+                <?php endif; ?>
+            </div>
         </div>
 
-        <!-- Submission summary section -->
         <?php
         $submissionProgressPercent = 0;
         if ($totalUsers > 0) {
@@ -246,201 +251,239 @@ foreach ($allUsers as $leagueUser) {
 
                     <div class="submission-summary-label">
                         <?php if (!$allSubmitted): ?>
-                            # of users submitted
+                            league members submitted
                         <?php else: ?>
-                            Everyone has voted - <?= htmlspecialchars($seasonName) ?> is now ready!
+                            Everyone has voted — <?= htmlspecialchars($seasonName) ?> is ready.
                         <?php endif; ?>
                     </div>
 
                     <?php if ($allSubmitted): ?>
                         <a href="<?= htmlspecialchars(mlUrl('final.php')) ?>"
                            class="button-primary next-season-btn">
-                            Show Me Next Season!
+                            Show Me Next Season
                         </a>
                     <?php else: ?>
-                        <button
-                            class="button-secondary next-season-btn"
-                            disabled>
-                            Show Me Next Season!
+                        <button class="button-secondary next-season-btn" disabled>
+                            Show Me Next Season
                         </button>
                     <?php endif; ?>
                 </div>
             </div>
 
             <div class="submission-summary-voters">
-				<div class="submission-summary-voter-group">
-					<div class="voters-title">VOTED:</div>
-					<?php if (!empty($submittedUsers)): ?>
-						<div class="profile-avatar-list profile-avatar-list-progress" aria-label="Voted users">
-							<?php foreach ($submittedUsers as $su): ?>
-								<img src="<?= htmlspecialchars(mlAssetUrl($su['profile_image_path'])) ?>" alt="<?= htmlspecialchars($su['UserName']) ?>" title="<?= htmlspecialchars($su['UserName']) ?>" class="profile-avatar profile-avatar-progress">
-							<?php endforeach; ?>
-						</div>
-					<?php else: ?>
-						<div class="voter-name">None yet</div>
-					<?php endif; ?>
-				</div>
+                <div class="submission-summary-voter-group">
+                    <div class="voters-title">Voted</div>
+                    <?php if (!empty($submittedUsers)): ?>
+                        <div class="profile-avatar-list profile-avatar-list-progress" aria-label="Voted users">
+                            <?php foreach ($submittedUsers as $su): ?>
+                                <img src="<?= htmlspecialchars(mlAssetUrl($su['profile_image_path'])) ?>"
+                                     alt="<?= htmlspecialchars($su['UserName']) ?>"
+                                     title="<?= htmlspecialchars($su['UserName']) ?>"
+                                     class="profile-avatar profile-avatar-progress">
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="voter-name">None yet</div>
+                    <?php endif; ?>
+                </div>
 
-				<div class="submission-summary-voter-group">
-					<div class="voters-title">NOT VOTED:</div>
-					<?php if (!empty($pendingUsers)): ?>
-						<div class="profile-avatar-list profile-avatar-list-progress" aria-label="Users who have not voted">
-							<?php foreach ($pendingUsers as $pendingUser): ?>
-								<img src="<?= htmlspecialchars(mlAssetUrl($pendingUser['profile_image_path'])) ?>" alt="<?= htmlspecialchars($pendingUser['UserName']) ?>" title="<?= htmlspecialchars($pendingUser['UserName']) ?>" class="profile-avatar profile-avatar-progress">
-							<?php endforeach; ?>
-						</div>
-					<?php else: ?>
-						<div class="voter-name">No one</div>
-					<?php endif; ?>
-				</div>
-			</div>
-		</div>
+                <div class="submission-summary-voter-group">
+                    <div class="voters-title">Not voted</div>
+                    <?php if (!empty($pendingUsers)): ?>
+                        <div class="profile-avatar-list profile-avatar-list-progress" aria-label="Users who have not voted">
+                            <?php foreach ($pendingUsers as $pendingUser): ?>
+                                <img src="<?= htmlspecialchars(mlAssetUrl($pendingUser['profile_image_path'])) ?>"
+                                     alt="<?= htmlspecialchars($pendingUser['UserName']) ?>"
+                                     title="<?= htmlspecialchars($pendingUser['UserName']) ?>"
+                                     class="profile-avatar profile-avatar-progress">
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="voter-name">No one</div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
 
         <?php if (!$hasAnyAnswers): ?>
-
-            <div class="buttons">
+            <div class="status-banner">
+                It looks like you have not submitted any choices yet.
+            </div>
+            <div class="game-form-actions vote-form-actions-simple preseason-picks-actions">
                 <a href="<?= htmlspecialchars(mlUrl('season-builder/questions.php')) ?>"
                    class="button-primary">
-                    Start my picks
+                    Start Voting
                 </a>
             </div>
-
-            <?php if ($submittedAt): ?>
-                <p>
-                    Last submitted: <?= htmlspecialchars($submittedAt); ?>
-                </p>
-            <?php endif; ?>
-
-            <p>
-                It looks like you haven't submitted any choices yet.
-            </p>
-
         <?php else: ?>
 
             <?php if ($q1Enabled): ?>
-            <!-- Q1 -->
-            <h2>
-                <?= $mlHeadings['q1']['choice']; ?>
-            </h2>
-            <div class="q2-group">
-                <?php
-                $totalPoints = 0;
-                foreach ($q1Votes as $vote) {
-                    $pts = (int)$vote['Points'];
-                    if ($pts <= 0) {
-                        continue; // only show categories they actually gave points to
-                    }
-                    $totalPoints += $pts;
-                    ?>
-                    <div class="cat-choice">
-                        <div class="cat-main">
-                            <div class="cat-title">
-                                <?= htmlspecialchars($vote['Title']) ?>
-                            </div>
-                        </div>
-                        <div class="points-control points-control-static">
-                            <span class="points-value"><?= $pts ?></span>
-                            <span class="note">pts</span>
-                        </div>
+                <section class="game-round-section preseason-picks-section">
+                    <div class="preseason-picks-heading">
+                        <div class="home-shell-kicker">Points Ballot</div>
+                        <h2><?= $mlHeadings['q1']['choice']; ?></h2>
                     </div>
-                    <?php
-                }
-                if ($totalPoints === 0): ?>
-                    <p>You haven't assigned any points yet.</p>
-                <?php endif; ?>
-            </div>
+                    <div class="vote-song-list vote-song-list-questions preseason-picks-list">
+                        <?php
+                        $totalPoints = 0;
+                        foreach ($q1Votes as $vote):
+                            $pts = (int)$vote['Points'];
+                            if ($pts <= 0) {
+                                continue;
+                            }
+                            $totalPoints += $pts;
+                            ?>
+                            <section class="game-song-entry vote-ballot-item preseason-pick-item">
+                                <div class="game-song-entry-main vote-ballot-main">
+                                    <div class="vote-ballot-songline">
+                                        <div class="vote-ballot-copy">
+                                            <div class="vote-ballot-title"><?= htmlspecialchars($vote['Title']) ?></div>
+                                            <?php if (trim((string)$vote['Description']) !== ''): ?>
+                                                <div class="vote-ballot-artist"><?= htmlspecialchars($vote['Description']) ?></div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="preseason-pick-static-score">
+                                    <strong><?= $pts ?></strong>
+                                    <span>pts</span>
+                                </div>
+                            </section>
+                        <?php endforeach; ?>
+
+                        <?php if ($totalPoints === 0): ?>
+                            <div class="status-banner">You have not assigned any points yet.</div>
+                        <?php endif; ?>
+                    </div>
+                </section>
             <?php endif; ?>
 
             <?php if ($madlibsEnabled): ?>
-            <!-- Q2 -->
-            <h2>
-                <?= $mlHeadings['q2']['choice']; ?>
-            </h2>
-
-            <div class="q2-group choice-group">
-                <strong>Main Character</strong>
-                <?php
-                $labelsPerson = mapQ2LabelsForPart($q2Options[1] ?? [], $userQ2[1] ?? []);
-                if (count($labelsPerson) === 0): ?>
-                    <p>No choices yet.</p>
-                <?php else: ?>
-                    <div class="choice-values">
-                        <?php foreach ($labelsPerson as $label): ?>
-                            <div class="choice-value-item"><?= htmlspecialchars($label) ?></div>
-                        <?php endforeach; ?>
+                <section class="game-round-section preseason-picks-section">
+                    <div class="preseason-picks-heading">
+                        <div class="home-shell-kicker">Madlibs</div>
+                        <h2>Your selected ingredients</h2>
                     </div>
-                <?php endif; ?>
-            </div>
 
-            <div class="q2-group choice-group">
-                <strong>Doing a Thing</strong>
-                <?php
-                $labelsActivity = mapQ2LabelsForPart($q2Options[2] ?? [], $userQ2[2] ?? []);
-                if (count($labelsActivity) === 0): ?>
-                    <p>No choices yet.</p>
-                <?php else: ?>
-                    <div class="choice-values">
-                        <?php foreach ($labelsActivity as $label): ?>
-                            <div class="choice-value-item"><?= htmlspecialchars($label) ?></div>
-                        <?php endforeach; ?>
+                    <?php
+                    $labelsPerson = mapQ2LabelsForPart($q2Options[1] ?? [], $userQ2[1] ?? []);
+                    $labelsActivity = mapQ2LabelsForPart($q2Options[2] ?? [], $userQ2[2] ?? []);
+                    ?>
+                    <div class="vote-song-list vote-song-list-questions preseason-picks-list">
+                        <section class="game-song-entry vote-ballot-item preseason-pick-item">
+                            <div class="game-song-entry-main vote-ballot-main">
+                                <div class="vote-ballot-songline">
+                                    <div class="vote-ballot-copy">
+                                        <div class="vote-ballot-title">Main Character</div>
+                                        <div class="preseason-pick-values">
+                                            <?php if (empty($labelsPerson)): ?>
+                                                <span class="note">No choices yet.</span>
+                                            <?php else: ?>
+                                                <?php foreach ($labelsPerson as $label): ?>
+                                                    <span class="preseason-pick-value"><?= htmlspecialchars($label) ?></span>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="game-song-entry vote-ballot-item preseason-pick-item">
+                            <div class="game-song-entry-main vote-ballot-main">
+                                <div class="vote-ballot-songline">
+                                    <div class="vote-ballot-copy">
+                                        <div class="vote-ballot-title">Doing a Thing</div>
+                                        <div class="preseason-pick-values">
+                                            <?php if (empty($labelsActivity)): ?>
+                                                <span class="note">No choices yet.</span>
+                                            <?php else: ?>
+                                                <?php foreach ($labelsActivity as $label): ?>
+                                                    <span class="preseason-pick-value"><?= htmlspecialchars($label) ?></span>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
                     </div>
-                <?php endif; ?>
-            </div>
+                </section>
             <?php endif; ?>
 
             <?php if ($useGenericOptionVotes): ?>
                 <?php foreach ($optionVoteRounds as $roundNumber => $optionVote): ?>
-                    <h2><?= htmlspecialchars($optionVote['name']) ?></h2>
-                    <div class="q3-group choice-group">
-                        <?php
-                        $labels = mapOptionLabels(
-                            $optionVote['choices'],
-                            $userOptionVotes[$roundNumber] ?? []
-                        );
-                        if (count($labels) === 0): ?>
-                            <p>No choices yet.</p>
-                        <?php else: ?>
-                            <div class="choice-values">
-                                <?php foreach ($labels as $label): ?>
-                                    <div class="choice-value-item"><?= htmlspecialchars($label) ?></div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+                    <section class="game-round-section preseason-picks-section">
+                        <div class="preseason-picks-heading">
+                            <div class="home-shell-kicker">Option Vote · Round <?= (int)$roundNumber ?></div>
+                            <h2><?= htmlspecialchars($optionVote['question']) ?></h2>
+                        </div>
+                        <div class="vote-song-list vote-song-list-questions preseason-picks-list">
+                            <section class="game-song-entry vote-ballot-item preseason-pick-item">
+                                <div class="game-song-entry-main vote-ballot-main">
+                                    <div class="vote-ballot-songline">
+                                        <div class="vote-ballot-copy">
+                                            <div class="vote-ballot-title">Your selection<?= count($userOptionVotes[$roundNumber] ?? []) === 1 ? '' : 's' ?></div>
+                                            <div class="preseason-pick-values">
+                                                <?php
+                                                $labels = mapOptionLabels(
+                                                    $optionVote['choices'],
+                                                    $userOptionVotes[$roundNumber] ?? []
+                                                );
+                                                ?>
+                                                <?php if (empty($labels)): ?>
+                                                    <span class="note">No choices yet.</span>
+                                                <?php else: ?>
+                                                    <?php foreach ($labels as $label): ?>
+                                                        <span class="preseason-pick-value"><?= htmlspecialchars($label) ?></span>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </section>
                 <?php endforeach; ?>
             <?php elseif ($legacyQ3Enabled): ?>
-                <h2><?= $mlHeadings['q3']['choice']; ?></h2>
-                <div class="q3-group choice-group">
-                    <?php
-                    $labelsQ3 = mapOptionLabels($q3Options, $userQ3);
-                    if (count($labelsQ3) === 0): ?>
-                        <p>No choices yet.</p>
-                    <?php else: ?>
-                        <div class="choice-values">
-                            <?php foreach ($labelsQ3 as $label): ?>
-                                <div class="choice-value-item"><?= htmlspecialchars($label) ?></div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
+                <section class="game-round-section preseason-picks-section">
+                    <div class="preseason-picks-heading">
+                        <div class="home-shell-kicker">Option Vote</div>
+                        <h2><?= $mlHeadings['q3']['choice']; ?></h2>
+                    </div>
+                    <div class="vote-song-list vote-song-list-questions preseason-picks-list">
+                        <section class="game-song-entry vote-ballot-item preseason-pick-item">
+                            <div class="game-song-entry-main vote-ballot-main">
+                                <div class="vote-ballot-songline">
+                                    <div class="vote-ballot-copy">
+                                        <div class="vote-ballot-title">Your selections</div>
+                                        <div class="preseason-pick-values">
+                                            <?php $labelsQ3 = mapOptionLabels($q3Options, $userQ3); ?>
+                                            <?php if (empty($labelsQ3)): ?>
+                                                <span class="note">No choices yet.</span>
+                                            <?php else: ?>
+                                                <?php foreach ($labelsQ3 as $label): ?>
+                                                    <span class="preseason-pick-value"><?= htmlspecialchars($label) ?></span>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </section>
             <?php endif; ?>
 
-			<div class="buttons choice-buttons-centered">
-				<a href="<?= htmlspecialchars(mlUrl('season-builder/questions.php')) ?>"
-				   class="button-primary">
-					Change my answers
-				</a>
-			</div>
-			
-            <?php if ($submittedAt): ?>
-                <p>
-                    Last submitted: <?= htmlspecialchars($submittedAt); ?>
-                </p>
-            <?php endif; ?>
-
+            <div class="game-form-actions vote-form-actions-simple preseason-picks-actions">
+                <a href="<?= htmlspecialchars(mlUrl('season-builder/questions.php')) ?>"
+                   class="button-primary">
+                    Change My Answers
+                </a>
+            </div>
         <?php endif; ?>
     </div>
 </div>
-
 </body>
 </html>

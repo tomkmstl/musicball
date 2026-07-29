@@ -23,6 +23,18 @@ function stepNumber(step) {
     return isNaN(value) ? 1 : value;
 }
 
+function updateSelectionProgress(step, current, required) {
+    if (!step) return;
+
+    var safeRequired = Math.max(1, parseInt(required || '1', 10));
+    var safeCurrent = Math.max(0, parseInt(current || '0', 10));
+    var fill = step.querySelector('[data-selection-progress-fill]');
+
+    if (fill) {
+        fill.style.width = Math.min(100, Math.round((safeCurrent / safeRequired) * 100)) + '%';
+    }
+}
+
 function updateQ1UI() {
     var step = document.querySelector('.step[data-question-type="q1"]');
     if (!step) return;
@@ -35,6 +47,7 @@ function updateQ1UI() {
         setTimeout(function () { totalEl.classList.add('changed'); }, 10);
     }
 
+    updateSelectionProgress(step, total, 10);
     setStepActionEnabled(step, total === 10);
 
     var controls = step.querySelectorAll('.points-control');
@@ -42,11 +55,13 @@ function updateQ1UI() {
         var control = controls[i];
         var catIndex = control.getAttribute('data-cat');
         var hiddenInput = document.getElementById('q1-hidden-' + catIndex);
+        var minusBtn = control.querySelector('.points-btn.minus');
         var plusBtn = control.querySelector('.points-btn.plus');
         if (!hiddenInput || !plusBtn) continue;
 
         var val = parseInt(hiddenInput.value || '0', 10);
         if (isNaN(val)) val = 0;
+        if (minusBtn) minusBtn.disabled = (val <= 0);
         plusBtn.disabled = (val >= 4 || total >= 10);
     }
 }
@@ -65,8 +80,13 @@ function updateQ2StepState(step) {
     }
 
     var counter = step.querySelector('[data-q2-counter]');
-    if (counter) counter.textContent = checkedCount + ' / 2';
+    if (counter) {
+        counter.textContent = checkedCount + ' / 2';
+        counter.classList.remove('changed');
+        window.requestAnimationFrame(function () { counter.classList.add('changed'); });
+    }
 
+    updateSelectionProgress(step, checkedCount, 2);
     setStepActionEnabled(step, checkedCount === 2);
 }
 
@@ -87,8 +107,13 @@ function updateSelectionStep(step, checkboxSelector, counterSelector) {
     }
 
     var counter = step.querySelector(counterSelector);
-    if (counter) counter.textContent = checkedCount + ' / ' + required;
+    if (counter) {
+        counter.textContent = checkedCount + ' / ' + required;
+        counter.classList.remove('changed');
+        window.requestAnimationFrame(function () { counter.classList.add('changed'); });
+    }
 
+    updateSelectionProgress(step, checkedCount, required);
     setStepActionEnabled(step, checkedCount === required);
 }
 
@@ -137,7 +162,7 @@ function validateForm() {
         var required = parseInt(optionStep.getAttribute('data-required-selections') || '1', 10);
         var checked = optionStep.querySelectorAll('[data-option-vote-choice]:checked').length;
         if (checked !== required) {
-            var name = optionStep.querySelector('h2');
+            var name = optionStep.querySelector('.voting-question-heading');
             var roundName = name ? name.textContent.trim() : 'Option Vote';
             return {
                 ok: false,
@@ -165,18 +190,22 @@ function validateForm() {
 document.addEventListener('DOMContentLoaded', function () {
     var steps = Array.from(document.querySelectorAll('.step'));
     var totalSteps = steps.length;
-    var progressFill = document.querySelector('.progress-bar-fill');
     var stepLabel = document.getElementById('step-label');
+    var voteCard = document.querySelector('.preseason-vote-card');
 
     if (totalSteps === 0) return;
 
-    function showStep(targetStepNumber) {
+    function showStep(targetStepNumber, shouldScroll) {
         steps.forEach(function (step) { step.classList.remove('current'); });
         var activeStep = document.querySelector('.step[data-step="' + targetStepNumber + '"]');
         if (activeStep) activeStep.classList.add('current');
 
         if (stepLabel) stepLabel.textContent = targetStepNumber + ' of ' + totalSteps;
-        if (progressFill) progressFill.style.width = ((targetStepNumber / totalSteps) * 100) + '%';
+
+        if (shouldScroll !== false && voteCard) {
+            var top = voteCard.getBoundingClientRect().top + window.pageYOffset - 88;
+            window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+        }
     }
 
     // Q1 point picker, when the saved round structure actually uses Q1.
@@ -278,5 +307,5 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    showStep(stepNumber(steps[0]));
+    showStep(stepNumber(steps[0]), false);
 });

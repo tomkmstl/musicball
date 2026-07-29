@@ -138,7 +138,9 @@ function mlBuildOptionVoteRounds(array $roundSlots) {
 
         $optionVoteRounds[(int)$roundNumber] = [
             'round_number' => (int)$roundNumber,
-            'name' => trim((string)($slot['tag_override'] ?? '')),
+            'question' => trim((string)($slot['option_vote_question'] ?? '')) !== ''
+                ? trim((string)$slot['option_vote_question'])
+                : trim((string)($slot['tag_override'] ?? '')),
             'selections_per_player' => 1,
             'choices' => [],
         ];
@@ -406,7 +408,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $selectionCount = max(1, (int)$optionVote['selections_per_player']);
                 if ($choiceCount <= $selectionCount) {
                     throw new RuntimeException(
-                        'Round ' . $roundNumber . ' (' . $optionVote['name'] . ') needs at least ' .
+                        'Round ' . $roundNumber . ' (' . $optionVote['question'] . ') needs at least ' .
                         ($selectionCount + 1) . ' choices when players select ' . $selectionCount . '.'
                     );
                 }
@@ -846,7 +848,7 @@ $startVotingDisabled = (
                     data-round-number="<?= (int)$roundNumber ?>"
                 >
                     <div class="home-shell-kicker">Option Vote · Round <?= (int)$roundNumber ?></div>
-                    <h2><?= htmlspecialchars($optionVote['name'] !== '' ? $optionVote['name'] : 'Option Vote') ?></h2>
+                    <h2><?= htmlspecialchars($optionVote['question'] !== '' ? $optionVote['question'] : 'Choose from these options') ?></h2>
                     <p>
                         Define the choices users will vote on for this round.
                         Add as many choices as you need; blank rows are ignored when you save.
@@ -883,7 +885,7 @@ $startVotingDisabled = (
                                     value="<?= htmlspecialchars($choice) ?>"
                                     maxlength="150"
                                     placeholder="Choice"
-                                    aria-label="<?= htmlspecialchars($optionVote['name'] !== '' ? $optionVote['name'] : 'Option Vote') ?> choice <?= $choiceIndex + 1 ?>"
+                                    aria-label="<?= htmlspecialchars($optionVote['question'] !== '' ? $optionVote['question'] : 'Choose from these options') ?> choice <?= $choiceIndex + 1 ?>"
                                 >
                                 <button type="button" class="button-secondary admin-option-vote-remove" data-remove-choice>Remove</button>
                             </div>

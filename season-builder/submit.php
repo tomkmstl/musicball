@@ -118,14 +118,14 @@ if ($useGenericOptionVotes) {
 
         if (count($postedChoices) !== $requiredSelections) {
             die(
-                'For ' . htmlspecialchars($optionVote['name']) . ', select exactly ' .
+                'For ' . htmlspecialchars($optionVote['question']) . ', select exactly ' .
                 $requiredSelections . ' option' . ($requiredSelections === 1 ? '' : 's') . '.'
             );
         }
 
         foreach ($postedChoices as $choiceIndex) {
             if (!isset($optionVote['choices'][$choiceIndex])) {
-                die('Invalid option selected for ' . htmlspecialchars($optionVote['name']) . '.');
+                die('Invalid option selected for ' . htmlspecialchars($optionVote['question']) . '.');
             }
         }
 

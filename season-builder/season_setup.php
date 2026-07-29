@@ -31,6 +31,7 @@ $overrideQuerySuffix = $overrideDates ? '&override_dates=1' : '';
 
 $slotCount = 12;
 $seasonBuilderReady = mlSeasonBuilderAvailable($pdo);
+$optionVoteQuestionColumnReady = mlColumnExists($pdo, 'ML_SeasonRoundSlots', 'OptionVoteQuestion');
 
 function mlGetDefaultBuilderRoundSlots($slotCount) {
     $defaults = [];
@@ -42,6 +43,7 @@ function mlGetDefaultBuilderRoundSlots($slotCount) {
             'q1_rank' => '',
             'title_override' => '',
             'tag_override' => '',
+            'option_vote_question' => '',
             'schedule_left' => '',
             'schedule_right' => '',
         ];
@@ -95,6 +97,7 @@ function mlBuildRoundSlotsFromPost($slotCount) {
             'q1_rank' => trim((string)($row['q1_rank'] ?? '')),
             'title_override' => trim((string)($row['title_override'] ?? '')),
             'tag_override' => trim((string)($row['tag_override'] ?? '')),
+            'option_vote_question' => trim((string)($row['option_vote_question'] ?? '')),
             'schedule_left' => $scheduleLeft,
             'schedule_right' => $scheduleRight,
         ];
@@ -213,6 +216,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$seasonBuilderReady) {
             throw new RuntimeException('Run the database migration first: db/ml_season_builder_schema.sql');
         }
+        if (!$optionVoteQuestionColumnReady) {
+            throw new RuntimeException('Run db/ml_option_vote_question.sql before saving the season structure.');
+        }
 
         if ($setupAction === 'create_fixed_round') {
             $newFixedTitle = trim((string)($_POST['new_fixed_title'] ?? ''));
@@ -263,12 +269,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($slot['round_type'] === 'q3_era') {
-                // Option Vote uses TagOverride to store its required round name.
-                // The name is entered directly in the Round Builder.
+                // Option Vote stores its player-facing instruction separately
+                // from final round title/tagline overrides.
                 $slot['title_override'] = '';
+                $slot['tag_override'] = '';
             } elseif ($slot['round_type'] !== 'fixed') {
                 $slot['title_override'] = '';
                 $slot['tag_override'] = '';
+                $slot['option_vote_question'] = '';
+            } else {
+                $slot['option_vote_question'] = '';
             }
 
             if ($slot['round_type'] === 'fixed') {
@@ -322,8 +332,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $madlibsRoundCount++;
             }
 
-            if ($roundType === 'q3_era' && trim((string)$slot['tag_override']) === '') {
-                throw new RuntimeException('Round ' . $roundNumber . ' Option Vote needs a round name.');
+            if ($roundType === 'q3_era') {
+                if (!$optionVoteQuestionColumnReady) {
+                    throw new RuntimeException('Run the Option Vote question migration before saving this structure.');
+                }
+                if (trim((string)$slot['option_vote_question']) === '') {
+                    throw new RuntimeException('Round ' . $roundNumber . ' Option Vote needs a voting question.');
+                }
             }
         }
 
@@ -345,14 +360,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // the admin edits and re-saves the season structure.
         $saveRoundStmt = $pdo->prepare(
             'INSERT INTO ML_SeasonRoundSlots
-                (SeasonID, RoundNumber, RoundType, FixedRoundID, Q1Rank, TitleOverride, TagOverride, SongsDue, VotesDue)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (SeasonID, RoundNumber, RoundType, FixedRoundID, Q1Rank, TitleOverride, TagOverride, OptionVoteQuestion, SongsDue, VotesDue)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE
                 RoundType = VALUES(RoundType),
                 FixedRoundID = VALUES(FixedRoundID),
                 Q1Rank = VALUES(Q1Rank),
                 TitleOverride = VALUES(TitleOverride),
                 TagOverride = VALUES(TagOverride),
+                OptionVoteQuestion = VALUES(OptionVoteQuestion),
                 SongsDue = VALUES(SongsDue),
                 VotesDue = VALUES(VotesDue)'
         );
@@ -365,6 +381,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $slot['q1_rank'] !== '' ? (int)$slot['q1_rank'] : null,
                 $slot['title_override'] !== '' ? $slot['title_override'] : null,
                 $slot['tag_override'] !== '' ? $slot['tag_override'] : null,
+                $slot['option_vote_question'] !== '' ? $slot['option_vote_question'] : null,
                 $slot['schedule_left'] !== '' ? $slot['schedule_left'] : null,
                 $slot['schedule_right'] !== '' ? $slot['schedule_right'] : null,
             ]);
@@ -463,6 +480,12 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
 
         <?php if ($overrideDates): ?>
             <div class="status-banner">Override mode enabled — past dates can be edited and saved on this page.</div>
+        <?php endif; ?>
+
+        <?php if (!$optionVoteQuestionColumnReady): ?>
+            <div class="status-banner">
+                Option Vote questions need the <strong>OptionVoteQuestion</strong> column on <strong>ML_SeasonRoundSlots</strong>. Run the supplied migration before saving an Option Vote round.
+            </div>
         <?php endif; ?>
 
         <?php if (!$seasonBuilderReady): ?>
@@ -619,9 +642,9 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
                                 </div>
 
                                 <div class="admin-round-type-panel" data-round-panel="q3_era">
-                                    <label class="admin-label" for="option-vote-name-<?= $roundNumber ?>">Round name</label>
-                                    <input type="text" id="option-vote-name-<?= $roundNumber ?>" name="rounds[<?= $roundNumber ?>][tag_override]" class="admin-input" value="<?= htmlspecialchars($slot['tag_override']) ?>" placeholder="Example: Era, City, Genre" required data-round-config-input>
-                                    <p>Name what users are voting on in this round. The voting choices themselves are configured on the next step.</p>
+                                    <label class="admin-label" for="option-vote-question-<?= $roundNumber ?>">Voting question</label>
+                                    <input type="text" id="option-vote-question-<?= $roundNumber ?>" name="rounds[<?= $roundNumber ?>][option_vote_question]" class="admin-input" value="<?= htmlspecialchars($slot['option_vote_question']) ?>" placeholder="Example: Select one of these global scenes" maxlength="255" required data-round-config-input>
+                                    <p>This becomes the main heading players see while voting. The choices themselves are configured on the next step.</p>
                                 </div>
 
                                 <div class="admin-round-type-panel" data-round-panel="walkman">
