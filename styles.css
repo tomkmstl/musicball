@@ -4549,3 +4549,35 @@ body.mb-page-loading .standings-season-option {
 .standings-season-option.is-pressed {
     opacity: 0.72;
 }
+/* =========================================================
+   Light-mode voting contrast
+   Shared by regular gameplay voting and Season Builder voting.
+========================================================= */
+body.theme-light .vote-ballot-item {
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(18, 32, 51, 0.055);
+}
+
+body.theme-light .vote-progress-bar {
+    background: #dbe6f1;
+    box-shadow: inset 0 0 0 1px rgba(18, 32, 51, 0.055);
+}
+
+body.theme-light .vote-points-btn {
+    color: #177fb8;
+}
+
+body.theme-light .vote-points-btn:hover:not([disabled]) {
+    color: #0d6898;
+    background: rgba(61, 172, 236, 0.1);
+}
+
+body.theme-light .vote-points-btn[disabled] {
+    color: #6f879e;
+    opacity: 0.42;
+}
+
+body.theme-light .vote-points-btn:focus-visible {
+    outline: 3px solid rgba(61, 172, 236, 0.22);
+    outline-offset: 2px;
+}
