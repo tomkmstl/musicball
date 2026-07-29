@@ -30,9 +30,8 @@ $overrideDates = isset($_GET['override_dates']) && $_GET['override_dates'] === '
 $overrideQuerySuffix = $overrideDates ? '&override_dates=1' : '';
 
 $slotCount = 12;
-$q2OptionCount = 6;
-$q3OptionCount = 6;
 $seasonBuilderReady = mlSeasonBuilderAvailable($pdo);
+$optionVoteQuestionColumnReady = mlColumnExists($pdo, 'ML_SeasonRoundSlots', 'OptionVoteQuestion');
 
 function mlGetDefaultBuilderRoundSlots($slotCount) {
     $defaults = [];
@@ -44,6 +43,7 @@ function mlGetDefaultBuilderRoundSlots($slotCount) {
             'q1_rank' => '',
             'title_override' => '',
             'tag_override' => '',
+            'option_vote_question' => '',
             'schedule_left' => '',
             'schedule_right' => '',
         ];
@@ -73,66 +73,6 @@ function mlGetDefaultBuilderRoundSlots($slotCount) {
     return $defaults;
 }
 
-function mlBuildCategorySlotsFromPost($slotCount) {
-    $slots = [];
-    $posted = isset($_POST['categories']) && is_array($_POST['categories']) ? $_POST['categories'] : [];
-
-    for ($i = 1; $i <= $slotCount; $i++) {
-        $row = isset($posted[$i]) && is_array($posted[$i]) ? $posted[$i] : [];
-        $slots[$i] = [
-            'title' => trim((string)($row['title'] ?? '')),
-            'description' => trim((string)($row['description'] ?? '')),
-        ];
-    }
-
-    return $slots;
-}
-
-function mlLoadCategorySlots(PDO $pdo, $seasonId, $slotCount) {
-    $slots = [];
-    for ($i = 1; $i <= $slotCount; $i++) {
-        $slots[$i] = ['title' => '', 'description' => ''];
-    }
-
-    $stmt = $pdo->prepare('SELECT CategoryIndex, Title, Description FROM ML_Q1Categories WHERE SeasonID = ? ORDER BY CategoryIndex');
-    $stmt->execute([(int)$seasonId]);
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $idx = (int)$row['CategoryIndex'];
-        if ($idx >= 1 && $idx <= $slotCount) {
-            $slots[$idx] = [
-                'title' => (string)$row['Title'],
-                'description' => (string)($row['Description'] ?? ''),
-            ];
-        }
-    }
-
-    return $slots;
-}
-
-function mlBuildQ2OptionsFromPost($optionCount) {
-    $parts = [1 => [], 2 => []];
-    $posted = isset($_POST['q2_options']) && is_array($_POST['q2_options']) ? $_POST['q2_options'] : [];
-
-    foreach ([1, 2] as $part) {
-        for ($i = 1; $i <= $optionCount; $i++) {
-            $parts[$part][$i] = trim((string)($posted[$part][$i] ?? ''));
-        }
-    }
-
-    return $parts;
-}
-
-function mlBuildQ3OptionsFromPost($optionCount) {
-    $options = [];
-    $posted = isset($_POST['q3_options']) && is_array($_POST['q3_options']) ? $_POST['q3_options'] : [];
-
-    for ($i = 1; $i <= $optionCount; $i++) {
-        $options[$i] = trim((string)($posted[$i] ?? ''));
-    }
-
-    return $options;
-}
-
 function mlBuildRoundSlotsFromPost($slotCount) {
     $slots = [];
     $posted = isset($_POST['rounds']) && is_array($_POST['rounds']) ? $_POST['rounds'] : [];
@@ -157,6 +97,7 @@ function mlBuildRoundSlotsFromPost($slotCount) {
             'q1_rank' => trim((string)($row['q1_rank'] ?? '')),
             'title_override' => trim((string)($row['title_override'] ?? '')),
             'tag_override' => trim((string)($row['tag_override'] ?? '')),
+            'option_vote_question' => trim((string)($row['option_vote_question'] ?? '')),
             'schedule_left' => $scheduleLeft,
             'schedule_right' => $scheduleRight,
         ];
@@ -227,19 +168,6 @@ if (!$setupSeason) {
     exit;
 }
 
-$questionConfig = mlLoadSeasonQuestionConfig($pdo, $targetSeasonId);
-$categorySlots = mlLoadCategorySlots($pdo, $targetSeasonId, $slotCount);
-$q2OptionsForSetup = [1 => [], 2 => []];
-foreach ([1, 2] as $part) {
-    for ($i = 1; $i <= $q2OptionCount; $i++) {
-        $q2OptionsForSetup[$part][$i] = isset($questionConfig['q2Options'][$part][$i]) ? (string)$questionConfig['q2Options'][$part][$i] : '';
-    }
-}
-$q3OptionsForSetup = [];
-for ($i = 1; $i <= $q3OptionCount; $i++) {
-    $q3OptionsForSetup[$i] = isset($questionConfig['q3Options'][$i]) ? (string)$questionConfig['q3Options'][$i] : '';
-}
-
 $fixedRoundLibrary = mlLoadFixedRoundLibrary($pdo);
 $roundSlots = mlLoadSeasonRoundSlots($pdo, $targetSeasonId, $slotCount);
 $hasSavedSlots = false;
@@ -288,6 +216,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$seasonBuilderReady) {
             throw new RuntimeException('Run the database migration first: db/ml_season_builder_schema.sql');
         }
+        if (!$optionVoteQuestionColumnReady) {
+            throw new RuntimeException('Run db/ml_option_vote_question.sql before saving the season structure.');
+        }
 
         if ($setupAction === 'create_fixed_round') {
             $newFixedTitle = trim((string)($_POST['new_fixed_title'] ?? ''));
@@ -305,15 +236,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        if ($setupAction !== 'save_structure_continue') {
+            throw new RuntimeException('Unknown season setup action.');
+        }
+
         $postedSeasonName = trim((string)($_POST['season_name'] ?? ''));
         $browserTimezone = trim((string)($_POST['browser_timezone'] ?? ''));
         if (!mlIsValidBrowserTimezone($browserTimezone)) {
             $browserTimezone = 'UTC';
         }
 
-        $categorySlots = mlBuildCategorySlotsFromPost($slotCount);
-        $q2OptionsForSetup = mlBuildQ2OptionsFromPost($q2OptionCount);
-        $q3OptionsForSetup = mlBuildQ3OptionsFromPost($q3OptionCount);
         $roundSlots = mlBuildRoundSlotsFromPost($slotCount);
         foreach ($roundSlots as $roundNumber => &$slot) {
             $originalSlot = isset($loadedRoundSlots[$roundNumber]) && is_array($loadedRoundSlots[$roundNumber]) ? $loadedRoundSlots[$roundNumber] : [];
@@ -336,15 +268,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Round ' . $roundNumber . ' Votes Due cannot be set before the current date/time.');
             }
 
-            if ($slot['round_type'] !== 'fixed') {
+            if ($slot['round_type'] === 'q3_era') {
+                // Option Vote stores its player-facing instruction separately
+                // from final round title/tagline overrides.
                 $slot['title_override'] = '';
                 $slot['tag_override'] = '';
-                if ($slot['round_type'] !== 'q1_ranked_category') {
-                    $slot['q1_rank'] = '';
-                }
-                if ($slot['round_type'] !== 'fixed') {
-                    $slot['fixed_round_id'] = '';
-                }
+            } elseif ($slot['round_type'] !== 'fixed') {
+                $slot['title_override'] = '';
+                $slot['tag_override'] = '';
+                $slot['option_vote_question'] = '';
+            } else {
+                $slot['option_vote_question'] = '';
             }
 
             if ($slot['round_type'] === 'fixed') {
@@ -362,58 +296,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new RuntimeException('Season name is required.');
         }
 
-        foreach ($categorySlots as $index => $slot) {
-            if ($slot['title'] === '' && $slot['description'] !== '') {
-                throw new RuntimeException('Category ' . $index . ' has a description but no title.');
-            }
-        }
-
-        $configuredCategoryCount = 0;
-        foreach ($categorySlots as $slot) {
-            if ($slot['title'] !== '') {
-                $configuredCategoryCount++;
-            }
-        }
-
-        $q2Part1Count = 0;
-        $q2Part2Count = 0;
-        foreach ($q2OptionsForSetup[1] as $label) {
-            if ($label !== '') { $q2Part1Count++; }
-        }
-        foreach ($q2OptionsForSetup[2] as $label) {
-            if ($label !== '') { $q2Part2Count++; }
-        }
-        $q3Count = 0;
-        foreach ($q3OptionsForSetup as $label) {
-            if ($label !== '') { $q3Count++; }
-        }
-
-        if ($setupAction === 'start_voting') {
-            if (!$overrideDates && $seasonHasBegun) {
-                throw new RuntimeException('Season Builder voting cannot be started after this season has already begun.');
-            }
-            if ($configuredCategoryCount < 6) {
-                throw new RuntimeException('Add at least 6 Q1 categories before starting voting.');
-            }
-            if ($q2Part1Count < 2 || $q2Part2Count < 2) {
-                throw new RuntimeException('Each Madlibs column needs at least 2 options before starting voting.');
-            }
-            if ($q3Count < 2) {
-                throw new RuntimeException('Add at least 2 Era options before starting voting.');
-            }
-        }
-
         $validRoundTypes = ['fixed', 'q1_ranked_category', 'q2_madlib', 'q3_era', 'walkman'];
         $usedQ1Ranks = [];
         $configuredRoundCount = 0;
+        $madlibsRoundCount = 0;
 
         foreach ($roundSlots as $roundNumber => $slot) {
             $roundType = $slot['round_type'];
             if ($roundType === '') {
-                if ($setupAction === 'start_voting') {
-                    throw new RuntimeException('Choose a round type for round ' . $roundNumber . '.');
-                }
-                continue;
+                throw new RuntimeException('Choose a round type for round ' . $roundNumber . '.');
             }
 
             $configuredRoundCount++;
@@ -422,29 +313,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Round ' . $roundNumber . ' has an invalid round type.');
             }
 
-            if ($roundType === 'fixed' && $slot['fixed_round_id'] === '' && $setupAction === 'start_voting') {
+            if ($roundType === 'fixed' && $slot['fixed_round_id'] === '') {
                 throw new RuntimeException('Round ' . $roundNumber . ' is fixed, but no fixed round was selected.');
             }
 
             if ($roundType === 'q1_ranked_category') {
                 $rank = (int)$slot['q1_rank'];
-                if ($rank <= 0 && $setupAction === 'start_voting') {
-                    throw new RuntimeException('Round ' . $roundNumber . ' needs a Q1 rank.');
+                if ($rank <= 0) {
+                    throw new RuntimeException('Round ' . $roundNumber . ' needs a User Submitted Round finishing position.');
                 }
-                if ($rank > 0 && $rank > $configuredCategoryCount && $setupAction === 'start_voting') {
-                    throw new RuntimeException('Round ' . $roundNumber . ' references Q1 rank ' . $rank . ', but only ' . $configuredCategoryCount . ' categories are configured.');
+                if (isset($usedQ1Ranks[$rank])) {
+                    throw new RuntimeException('The ' . mlOrdinalLabel($rank) . '-place User Submitted Round result is used more than once in the round order.');
                 }
-                if ($rank > 0 && isset($usedQ1Ranks[$rank]) && $setupAction === 'start_voting') {
-                    throw new RuntimeException('Q1 rank ' . $rank . ' is used more than once in the round order.');
+                $usedQ1Ranks[$rank] = true;
+            }
+
+            if ($roundType === 'q2_madlib') {
+                $madlibsRoundCount++;
+            }
+
+            if ($roundType === 'q3_era') {
+                if (!$optionVoteQuestionColumnReady) {
+                    throw new RuntimeException('Run the Option Vote question migration before saving this structure.');
                 }
-                if ($rank > 0) {
-                    $usedQ1Ranks[$rank] = true;
+                if (trim((string)$slot['option_vote_question']) === '') {
+                    throw new RuntimeException('Round ' . $roundNumber . ' Option Vote needs a voting question.');
                 }
             }
         }
 
-        if ($setupAction === 'start_voting' && $configuredRoundCount !== $slotCount) {
-            throw new RuntimeException('Configure all ' . $slotCount . ' rounds before starting voting.');
+        if ($madlibsRoundCount > 1) {
+            throw new RuntimeException('Madlibs Winner can only be used once per season.');
+        }
+
+        if ($configuredRoundCount !== $slotCount) {
+            throw new RuntimeException('Configure all ' . $slotCount . ' rounds before continuing.');
         }
 
         $pdo->beginTransaction();
@@ -452,44 +355,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $updateSeasonStmt = $pdo->prepare('UPDATE ML_Seasons SET SeasonName = ? WHERE SeasonID = ?');
         $updateSeasonStmt->execute([$postedSeasonName, $targetSeasonId]);
 
-        $deleteCategoriesStmt = $pdo->prepare('DELETE FROM ML_Q1Categories WHERE SeasonID = ?');
-        $deleteCategoriesStmt->execute([$targetSeasonId]);
-
-        $insertCategoryStmt = $pdo->prepare('INSERT INTO ML_Q1Categories (SeasonID, CategoryIndex, Title, Description) VALUES (?, ?, ?, ?)');
-        foreach ($categorySlots as $index => $slot) {
-            if ($slot['title'] === '') {
-                continue;
-            }
-            $insertCategoryStmt->execute([$targetSeasonId, $index, $slot['title'], $slot['description'] !== '' ? $slot['description'] : null]);
-        }
-
-        $pdo->prepare('DELETE FROM ML_SeasonQ2Options WHERE SeasonID = ?')->execute([$targetSeasonId]);
-        $insertQ2Stmt = $pdo->prepare('INSERT INTO ML_SeasonQ2Options (SeasonID, PartNumber, OptionIndex, Label) VALUES (?, ?, ?, ?)');
-        foreach ([1, 2] as $part) {
-            foreach ($q2OptionsForSetup[$part] as $index => $label) {
-                if ($label === '') {
-                    continue;
-                }
-                $insertQ2Stmt->execute([$targetSeasonId, $part, $index, $label]);
-            }
-        }
-
-        $pdo->prepare('DELETE FROM ML_SeasonQ3Options WHERE SeasonID = ?')->execute([$targetSeasonId]);
-        $insertQ3Stmt = $pdo->prepare('INSERT INTO ML_SeasonQ3Options (SeasonID, OptionIndex, Label) VALUES (?, ?, ?)');
-        foreach ($q3OptionsForSetup as $index => $label) {
-            if ($label === '') {
-                continue;
-            }
-            $insertQ3Stmt->execute([$targetSeasonId, $index, $label]);
-        }
-
-        $pdo->prepare('DELETE FROM ML_SeasonRoundSlots WHERE SeasonID = ?')->execute([$targetSeasonId]);
-        $insertRoundStmt = $pdo->prepare('INSERT INTO ML_SeasonRoundSlots (SeasonID, RoundNumber, RoundType, FixedRoundID, Q1Rank, TitleOverride, TagOverride, SongsDue, VotesDue) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        // Keep the existing round-slot rows in place so child configuration
+        // (such as ML_SeasonRoundOptionChoices) is not cascade-deleted when
+        // the admin edits and re-saves the season structure.
+        $saveRoundStmt = $pdo->prepare(
+            'INSERT INTO ML_SeasonRoundSlots
+                (SeasonID, RoundNumber, RoundType, FixedRoundID, Q1Rank, TitleOverride, TagOverride, OptionVoteQuestion, SongsDue, VotesDue)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+                RoundType = VALUES(RoundType),
+                FixedRoundID = VALUES(FixedRoundID),
+                Q1Rank = VALUES(Q1Rank),
+                TitleOverride = VALUES(TitleOverride),
+                TagOverride = VALUES(TagOverride),
+                OptionVoteQuestion = VALUES(OptionVoteQuestion),
+                SongsDue = VALUES(SongsDue),
+                VotesDue = VALUES(VotesDue)'
+        );
         foreach ($roundSlots as $roundNumber => $slot) {
-            if ($slot['round_type'] === '') {
-                continue;
-            }
-            $insertRoundStmt->execute([
+            $saveRoundStmt->execute([
                 $targetSeasonId,
                 $roundNumber,
                 $slot['round_type'],
@@ -497,6 +381,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $slot['q1_rank'] !== '' ? (int)$slot['q1_rank'] : null,
                 $slot['title_override'] !== '' ? $slot['title_override'] : null,
                 $slot['tag_override'] !== '' ? $slot['tag_override'] : null,
+                $slot['option_vote_question'] !== '' ? $slot['option_vote_question'] : null,
                 $slot['schedule_left'] !== '' ? $slot['schedule_left'] : null,
                 $slot['schedule_right'] !== '' ? $slot['schedule_right'] : null,
             ]);
@@ -506,10 +391,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $updateCommittedRoundDatesStmt = $pdo->prepare('UPDATE ML_SeasonRounds SET SongsDue = ?, VotesDue = ? WHERE SeasonID = ? AND RoundNumber = ?');
 
             foreach ($roundSlots as $roundNumber => $slot) {
-                if ($slot['round_type'] === '') {
-                    continue;
-                }
-
                 $updateCommittedRoundDatesStmt->execute([
                     $slot['schedule_left'] !== '' ? $slot['schedule_left'] : null,
                     $slot['schedule_right'] !== '' ? $slot['schedule_right'] : null,
@@ -519,15 +400,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        if ($setupAction === 'start_voting') {
-            mlSetSeasonConfig($pdo, $targetSeasonId, 'voting_open', '1');
-            $_SESSION['ml_admin_message'] = 'Voting is now live for ' . $postedSeasonName . '.';
-        } else {
-            $_SESSION['ml_admin_message'] = 'Progress saved for ' . $postedSeasonName . '.';
-        }
+        $_SESSION['ml_admin_message'] = 'Season structure saved for ' . $postedSeasonName . '. Now configure the voting options.';
 
         $pdo->commit();
-        header('Location: ' . mlUrl('season-builder/season_setup.php?season_id=' . $targetSeasonId . $overrideQuerySuffix));
+        header('Location: ' . mlUrl('season-builder/season_options.php?season_id=' . $targetSeasonId . $overrideQuerySuffix));
         exit;
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
@@ -560,25 +436,6 @@ $submissionStmt = $pdo->prepare('SELECT COUNT(DISTINCT UserID) FROM ML_Submissio
 $submissionStmt->execute([$targetSeasonId]);
 $submissionCount = (int)$submissionStmt->fetchColumn();
 
-$configuredCategoryCount = 0;
-foreach ($categorySlots as $slot) {
-    if ($slot['title'] !== '') {
-        $configuredCategoryCount++;
-    }
-}
-
-$q2Part1Count = 0;
-$q2Part2Count = 0;
-foreach ($q2OptionsForSetup[1] as $label) {
-    if ($label !== '') { $q2Part1Count++; }
-}
-foreach ($q2OptionsForSetup[2] as $label) {
-    if ($label !== '') { $q2Part2Count++; }
-}
-$q3Count = 0;
-foreach ($q3OptionsForSetup as $label) {
-    if ($label !== '') { $q3Count++; }
-}
 $configuredRoundCount = 0;
 foreach ($roundSlots as $slot) {
     if ($slot['round_type'] !== '') {
@@ -586,8 +443,6 @@ foreach ($roundSlots as $slot) {
     }
 }
 
-$startButtonLabel = 'Start ' . $setupSeason['SeasonName'] . ' Voting';
-$startVotingDisabled = (!$seasonBuilderReady || ($seasonHasBegun && !$overrideDates));
 $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields), ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
@@ -609,7 +464,7 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
                 <div class="home-shell-kicker">Season setup</div>
                 <h1><?= htmlspecialchars($setupSeason['SeasonName']) ?></h1>
                 <p>
-                    Build the voting inputs and round structure first. When everything is ready, intentionally start voting for this season.
+                    Step 1 of 2: define the season basics and round structure. Save the structure to continue to the voting options.
                 </p>
             </div>
             <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="button-secondary admin-back-link">&laquo; Back to Admin</a>
@@ -625,6 +480,12 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
 
         <?php if ($overrideDates): ?>
             <div class="status-banner">Override mode enabled — past dates can be edited and saved on this page.</div>
+        <?php endif; ?>
+
+        <?php if (!$optionVoteQuestionColumnReady): ?>
+            <div class="status-banner">
+                Option Vote questions need the <strong>OptionVoteQuestion</strong> column on <strong>ML_SeasonRoundSlots</strong>. Run the supplied migration before saving an Option Vote round.
+            </div>
         <?php endif; ?>
 
         <?php if (!$seasonBuilderReady): ?>
@@ -643,9 +504,6 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
                     </span>
                 </p>
                 <p>Submissions: <strong><?= $submissionCount ?> / <?= $totalUsers ?></strong></p>
-                <p>Q1 categories: <strong><?= $configuredCategoryCount ?></strong></p>
-                <p>Madlibs options: <strong><?= $q2Part1Count ?></strong> + <strong><?= $q2Part2Count ?></strong></p>
-                <p>Era options: <strong><?= $q3Count ?></strong></p>
                 <p>Configured rounds: <strong><?= $configuredRoundCount ?> / <?= $slotCount ?></strong></p>
                 <?php if ($setupIsActive): ?>
                     <p>This season is currently marked as the active voting target.</p>
@@ -707,68 +565,11 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
             </section>
 
             <section class="admin-panel admin-panel-full">
-                <div class="home-shell-kicker">Q1</div>
-                <h2>Categories users will rank</h2>
-                <p>Users still distribute 10 points here. The round builder below decides which vote ranks actually make the cut.</p>
-                <div class="admin-category-grid">
-                    <?php foreach ($categorySlots as $index => $slot): ?>
-                        <div class="admin-category-card">
-                            <div class="admin-category-number">Category <?= $index ?></div>
-                            <label class="admin-label" for="category-title-<?= $index ?>">Title</label>
-                            <input type="text" id="category-title-<?= $index ?>" name="categories[<?= $index ?>][title]" class="admin-input" value="<?= htmlspecialchars($slot['title']) ?>">
-                            <label class="admin-label admin-label-spaced" for="category-description-<?= $index ?>">Description</label>
-                            <textarea id="category-description-<?= $index ?>" name="categories[<?= $index ?>][description]" class="admin-input admin-textarea"><?= htmlspecialchars($slot['description']) ?></textarea>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </section>
-
-            <section class="admin-panel admin-panel-full">
-                <div class="home-shell-kicker">Q2</div>
-                <h2>Madlibs options</h2>
-                <p>Keep the same voting mechanic, but define the two option pools for this season.</p>
-                <div class="admin-madlib-grid">
-                    <div class="admin-subpanel">
-                        <h3>Main Character</h3>
-                        <?php for ($i = 1; $i <= $q2OptionCount; $i++): ?>
-                            <div class="admin-inline-row">
-                                <label class="admin-inline-label" for="q2-part1-<?= $i ?>"><?= $i ?></label>
-                                <input type="text" id="q2-part1-<?= $i ?>" name="q2_options[1][<?= $i ?>]" class="admin-input" value="<?= htmlspecialchars($q2OptionsForSetup[1][$i]) ?>">
-                            </div>
-                        <?php endfor; ?>
-                    </div>
-                    <div class="admin-subpanel">
-                        <h3>Doing a Thing</h3>
-                        <?php for ($i = 1; $i <= $q2OptionCount; $i++): ?>
-                            <div class="admin-inline-row">
-                                <label class="admin-inline-label" for="q2-part2-<?= $i ?>"><?= $i ?></label>
-                                <input type="text" id="q2-part2-<?= $i ?>" name="q2_options[2][<?= $i ?>]" class="admin-input" value="<?= htmlspecialchars($q2OptionsForSetup[2][$i]) ?>">
-                            </div>
-                        <?php endfor; ?>
-                    </div>
-                </div>
-            </section>
-
-            <section class="admin-panel admin-panel-full">
-                <div class="home-shell-kicker">Q3</div>
-                <h2>Era options</h2>
-                <p>Users will choose two eras from this season-specific list.</p>
-                <div class="admin-era-grid">
-                    <?php for ($i = 1; $i <= $q3OptionCount; $i++): ?>
-                        <div class="admin-inline-row admin-inline-row-block">
-                            <label class="admin-inline-label" for="q3-option-<?= $i ?>"><?= $i ?></label>
-                            <input type="text" id="q3-option-<?= $i ?>" name="q3_options[<?= $i ?>]" class="admin-input" value="<?= htmlspecialchars($q3OptionsForSetup[$i]) ?>">
-                        </div>
-                    <?php endfor; ?>
-                </div>
-            </section>
-
-            <section class="admin-panel admin-panel-full">
                 <div class="admin-section-header admin-section-header-stack-mobile">
                     <div>
                         <div class="home-shell-kicker">Round builder</div>
                         <h2>Define the season structure</h2>
-                        <p>Use fixed rounds, Q1 ranking slots, Madlibs, Era, and Walkman to build the reveal. The seeded order mirrors the current app flow, but you can change any round.</p>
+                        <p>Use fixed rounds, User Submitted Rounds, Madlibs, Option Vote, and Walkman to build the reveal. The seeded order mirrors the current app flow, but you can change any round.</p>
                     </div>
                     <div class="admin-section-actions">
                         <button type="button" class="button-secondary admin-mini-action-btn" data-create-weekly-schedule>Create Weekly Schedule</button>
@@ -776,17 +577,26 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
                 </div>
                 <p data-weekly-schedule-message>Use round 1 as the template. This fills rounds 2-12 one week apart for both Songs Due and Votes Due.</p>
 
+                <div class="status-banner" data-madlibs-limit-message hidden>Madlibs Winner can only be used once per season.</div>
+
                 <div class="admin-round-list">
                     <?php foreach ($roundSlots as $roundNumber => $slot): ?>
+                        <?php
+                        $originalScheduleSlot = isset($loadedRoundSlots[$roundNumber]) && is_array($loadedRoundSlots[$roundNumber])
+                            ? $loadedRoundSlots[$roundNumber]
+                            : [];
+                        $originalScheduleLeft = trim((string)($originalScheduleSlot['schedule_left'] ?? ''));
+                        $originalScheduleRight = trim((string)($originalScheduleSlot['schedule_right'] ?? ''));
+                        ?>
                         <div class="admin-round-card" data-round-card>
                             <div class="admin-round-card-top">
                                 <div class="admin-category-number">Round <?= $roundNumber ?></div>
                                 <select name="rounds[<?= $roundNumber ?>][round_type]" class="admin-input admin-round-type-select" data-round-type-select>
                                     <option value="" <?= $slot['round_type'] === '' ? 'selected' : '' ?>>Select round type</option>
                                     <option value="fixed" <?= $slot['round_type'] === 'fixed' ? 'selected' : '' ?>>Fixed round</option>
-                                    <option value="q1_ranked_category" <?= $slot['round_type'] === 'q1_ranked_category' ? 'selected' : '' ?>>Q1 ranked category</option>
+                                    <option value="q1_ranked_category" <?= $slot['round_type'] === 'q1_ranked_category' ? 'selected' : '' ?>>User Submitted Round</option>
                                     <option value="q2_madlib" <?= $slot['round_type'] === 'q2_madlib' ? 'selected' : '' ?>>Madlibs winner</option>
-                                    <option value="q3_era" <?= $slot['round_type'] === 'q3_era' ? 'selected' : '' ?>>Era winner</option>
+                                    <option value="q3_era" <?= $slot['round_type'] === 'q3_era' ? 'selected' : '' ?>>Option Vote</option>
                                     <option value="walkman" <?= $slot['round_type'] === 'walkman' ? 'selected' : '' ?>>Walkman</option>
                                 </select>
                             </div>
@@ -817,22 +627,24 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
                                 </div>
 
                                 <div class="admin-round-type-panel" data-round-panel="q1_ranked_category">
-                                    <label class="admin-label">Q1 vote rank</label>
+                                    <label class="admin-label">Finishing position</label>
                                     <select name="rounds[<?= $roundNumber ?>][q1_rank]" class="admin-input" data-round-config-input>
-                                        <option value="">Select a vote rank</option>
+                                        <option value="">Select finishing position</option>
                                         <?php for ($rank = 1; $rank <= $slotCount; $rank++): ?>
                                             <option value="<?= $rank ?>" <?= (string)$slot['q1_rank'] === (string)$rank ? 'selected' : '' ?>><?= mlOrdinalLabel($rank) ?> place</option>
                                         <?php endfor; ?>
                                     </select>
-                                    <p>This round will use whichever Q1 category finishes in this position.</p>
+                                    <p>This round will use whichever User Submitted Round idea finishes in this position.</p>
                                 </div>
 
                                 <div class="admin-round-type-panel" data-round-panel="q2_madlib">
-                                    <p>This slot will use the winning Madlibs result from the Q2 options defined above.</p>
+                                    <p>This slot will use the winning Madlibs result. Its voting options are configured on the next step.</p>
                                 </div>
 
                                 <div class="admin-round-type-panel" data-round-panel="q3_era">
-                                    <p>This slot will use the winning Era result from the Q3 options defined above.</p>
+                                    <label class="admin-label" for="option-vote-question-<?= $roundNumber ?>">Voting question</label>
+                                    <input type="text" id="option-vote-question-<?= $roundNumber ?>" name="rounds[<?= $roundNumber ?>][option_vote_question]" class="admin-input" value="<?= htmlspecialchars($slot['option_vote_question']) ?>" placeholder="Example: Select one of these global scenes" maxlength="255" required data-round-config-input>
+                                    <p>This becomes the main heading players see while voting. The choices themselves are configured on the next step.</p>
                                 </div>
 
                                 <div class="admin-round-type-panel" data-round-panel="walkman">
@@ -843,15 +655,17 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
                             <div class="admin-round-grid admin-round-grid-common">
                                 <div class="admin-schedule-field" data-schedule-field-wrap>
                                     <label class="admin-label">Songs Due</label>
-                                    <input type="datetime-local" name="rounds_display[<?= $roundNumber ?>][schedule_left]" class="admin-input" value="" data-utc-datetime="<?= htmlspecialchars($slot['schedule_left']) ?>" data-schedule-input data-round-number="<?= $roundNumber ?>" data-field-name="schedule_left">
+                                    <input type="datetime-local" name="rounds_display[<?= $roundNumber ?>][schedule_left]" class="admin-input" value="" data-utc-datetime="<?= htmlspecialchars($slot['schedule_left']) ?>" data-original-utc="<?= htmlspecialchars($originalScheduleLeft) ?>" data-schedule-input data-round-number="<?= $roundNumber ?>" data-field-name="schedule_left">
                                     <input type="hidden" name="rounds[<?= $roundNumber ?>][schedule_left]" value="<?= htmlspecialchars($slot['schedule_left']) ?>" data-schedule-submit>
-                                    <input type="hidden" name="rounds_original[<?= $roundNumber ?>][schedule_left]" value="<?= htmlspecialchars($slot['schedule_left']) ?>" data-schedule-original>
+                                    <input type="hidden" name="rounds_original[<?= $roundNumber ?>][schedule_left]" value="<?= htmlspecialchars($originalScheduleLeft) ?>" data-schedule-original>
+                                    <p class="admin-schedule-validation-message" data-schedule-validation-message hidden></p>
                                 </div>
                                 <div class="admin-schedule-field" data-schedule-field-wrap>
                                     <label class="admin-label">Votes Due</label>
-                                    <input type="datetime-local" name="rounds_display[<?= $roundNumber ?>][schedule_right]" class="admin-input" value="" data-utc-datetime="<?= htmlspecialchars($slot['schedule_right']) ?>" data-schedule-input data-round-number="<?= $roundNumber ?>" data-field-name="schedule_right">
+                                    <input type="datetime-local" name="rounds_display[<?= $roundNumber ?>][schedule_right]" class="admin-input" value="" data-utc-datetime="<?= htmlspecialchars($slot['schedule_right']) ?>" data-original-utc="<?= htmlspecialchars($originalScheduleRight) ?>" data-schedule-input data-round-number="<?= $roundNumber ?>" data-field-name="schedule_right">
                                     <input type="hidden" name="rounds[<?= $roundNumber ?>][schedule_right]" value="<?= htmlspecialchars($slot['schedule_right']) ?>" data-schedule-submit>
-                                    <input type="hidden" name="rounds_original[<?= $roundNumber ?>][schedule_right]" value="<?= htmlspecialchars($slot['schedule_right']) ?>" data-schedule-original>
+                                    <input type="hidden" name="rounds_original[<?= $roundNumber ?>][schedule_right]" value="<?= htmlspecialchars($originalScheduleRight) ?>" data-schedule-original>
+                                    <p class="admin-schedule-validation-message" data-schedule-validation-message hidden></p>
                                 </div>
                             </div>
                         </div>
@@ -860,10 +674,7 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
             </section>
 
             <div class="admin-setup-actions">
-                <button type="submit" name="setup_action" value="save_setup" class="button-secondary" <?= !$seasonBuilderReady ? 'disabled' : '' ?>>Save Changes</button>
-                <?php if (!$startVotingDisabled): ?>
-                    <button type="submit" name="setup_action" value="start_voting" class="button-primary"><?= htmlspecialchars($startButtonLabel) ?></button>
-                <?php endif; ?>
+                <button type="submit" name="setup_action" value="save_structure_continue" class="button-primary" <?= !$seasonBuilderReady ? 'disabled' : '' ?>>Save Structure &amp; Continue &rarr;</button>
             </div>
         </form>
     </div>
@@ -915,6 +726,158 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
 
     }
 
+    function addDaysToLocalValue(localValue, dayCount) {
+        if (!localValue) {
+            return '';
+        }
+
+        var date = new Date(localValue);
+        if (isNaN(date.getTime())) {
+            return '';
+        }
+
+        // Advance by calendar days in the admin's local timezone. This keeps
+        // the selected local clock time consistent across daylight-saving
+        // transitions.
+        date.setDate(date.getDate() + dayCount);
+        return formatForDateTimeLocal(date);
+    }
+
+    function setWeeklyScheduleMessage(message, isError) {
+        var node = document.querySelector('[data-weekly-schedule-message]');
+        if (!node) {
+            return;
+        }
+
+        node.textContent = message;
+        node.classList.toggle('error', !!isError);
+    }
+
+    function getScheduleValidationMessage(input) {
+        var wrap = getScheduleWrap(input);
+        return wrap ? wrap.querySelector('[data-schedule-validation-message]') : null;
+    }
+
+    function setScheduleValidationMessage(input, message) {
+        var node = getScheduleValidationMessage(input);
+        if (!node) {
+            return;
+        }
+
+        node.textContent = message || '';
+        node.hidden = !message;
+    }
+
+    function clearScheduleInvalidState(input) {
+        input.classList.remove('is-invalid');
+        input.setCustomValidity('');
+        setScheduleValidationMessage(input, '');
+
+        var wrap = getScheduleWrap(input);
+        if (wrap) {
+            wrap.classList.remove('is-invalid');
+        }
+
+        var card = input.closest('[data-round-card]');
+        if (card && !card.querySelector('[data-schedule-input].is-invalid')) {
+            card.classList.remove('has-invalid-schedule');
+        }
+    }
+
+    function markScheduleInvalid(input, message, blockSubmission) {
+        input.classList.add('is-invalid');
+        input.setCustomValidity(blockSubmission ? message : '');
+        setScheduleValidationMessage(input, message);
+
+        var wrap = getScheduleWrap(input);
+        if (wrap) {
+            wrap.classList.add('is-invalid');
+        }
+
+        var card = input.closest('[data-round-card]');
+        if (card) {
+            card.classList.add('has-invalid-schedule');
+        }
+    }
+
+    function createWeeklySchedule() {
+        var baseSongsInput = document.querySelector('[data-schedule-input][data-round-number="1"][data-field-name="schedule_left"]');
+        var baseVotesInput = document.querySelector('[data-schedule-input][data-round-number="1"][data-field-name="schedule_right"]');
+
+        if (!baseSongsInput || !baseVotesInput) {
+            setWeeklyScheduleMessage('Round 1 deadline inputs could not be found on this page.', true);
+            return;
+        }
+
+        var baseSongs = baseSongsInput.value;
+        var baseVotes = baseVotesInput.value;
+
+        if (!baseSongs || !baseVotes) {
+            setWeeklyScheduleMessage('Set both Round 1 deadlines first, then create the weekly schedule.', true);
+            return;
+        }
+
+        if (isNaN(new Date(baseSongs).getTime()) || isNaN(new Date(baseVotes).getTime())) {
+            setWeeklyScheduleMessage('Enter valid Round 1 deadlines before creating the weekly schedule.', true);
+            return;
+        }
+
+        var overridePastDates = document.body.getAttribute('data-override-dates') === '1';
+        var now = new Date();
+        var updatedFields = 0;
+        var skippedLockedFields = 0;
+        var skippedPastFields = 0;
+
+        for (var roundNumber = 2; roundNumber <= 12; roundNumber++) {
+            var dayOffset = (roundNumber - 1) * 7;
+            var fields = [
+                {
+                    input: document.querySelector('[data-schedule-input][data-round-number="' + roundNumber + '"][data-field-name="schedule_left"]'),
+                    value: addDaysToLocalValue(baseSongs, dayOffset)
+                },
+                {
+                    input: document.querySelector('[data-schedule-input][data-round-number="' + roundNumber + '"][data-field-name="schedule_right"]'),
+                    value: addDaysToLocalValue(baseVotes, dayOffset)
+                }
+            ];
+
+            fields.forEach(function (field) {
+                if (!field.input || !field.value) {
+                    return;
+                }
+
+                if (field.input.disabled) {
+                    skippedLockedFields++;
+                    return;
+                }
+
+                var generatedDate = new Date(field.value);
+                if (!overridePastDates && !isNaN(generatedDate.getTime()) && generatedDate < now) {
+                    skippedPastFields++;
+                    return;
+                }
+
+                field.input.value = field.value;
+                clearScheduleInvalidState(field.input);
+                updatedFields++;
+            });
+        }
+
+        validateEditableScheduleInputs();
+        syncScheduleSubmitValues();
+
+        if (updatedFields === 0 && (skippedLockedFields > 0 || skippedPastFields > 0)) {
+            setWeeklyScheduleMessage('No editable deadlines were changed. Past or locked deadlines were left as they were.', true);
+            return;
+        }
+
+        var message = 'Rounds 2-12 now follow Round 1 on a weekly cadence for both Songs Due and Votes Due.';
+        if (skippedLockedFields > 0 || skippedPastFields > 0) {
+            message += ' Past or locked deadlines were left unchanged.';
+        }
+        setWeeklyScheduleMessage(message, false);
+    }
+
     function clearInputValue(input) {
         if (input.tagName === 'SELECT') {
             input.selectedIndex = 0;
@@ -951,6 +914,43 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
         });
     }
 
+    function syncMadlibsAvailability() {
+        var typeSelects = Array.prototype.slice.call(document.querySelectorAll('[data-round-type-select]'));
+        var madlibsSelections = typeSelects.filter(function (select) {
+            return select.value === 'q2_madlib';
+        });
+        var hasMultipleMadlibs = madlibsSelections.length > 1;
+        var hasOneMadlibs = madlibsSelections.length === 1;
+        var message = document.querySelector('[data-madlibs-limit-message]');
+
+        typeSelects.forEach(function (select) {
+            var madlibsOption = select.querySelector('option[value="q2_madlib"]');
+            if (!madlibsOption) {
+                return;
+            }
+
+            // Keep an existing Madlibs selection editable, but prevent a second
+            // slot from choosing the same season-wide winner.
+            madlibsOption.disabled = hasOneMadlibs && select.value !== 'q2_madlib';
+        });
+
+        if (message) {
+            if (madlibsSelections.length === 0) {
+                message.hidden = true;
+                message.classList.remove('error');
+            } else if (hasMultipleMadlibs) {
+                message.hidden = false;
+                message.classList.add('error');
+                message.textContent = 'Madlibs Winner can only be used once per season. Choose a different round type for all but one Madlibs slot.';
+            } else {
+                var assignedRound = typeSelects.indexOf(madlibsSelections[0]) + 1;
+                message.hidden = false;
+                message.classList.remove('error');
+                message.textContent = 'Madlibs Winner is assigned to Round ' + assignedRound + ' and can only be used once per season.';
+            }
+        }
+    }
+
     function getScheduleWrap(input) {
         return input.closest('[data-schedule-field-wrap]');
     }
@@ -964,22 +964,70 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
         input.classList.toggle('is-locked', isLocked);
     }
 
-    function lockPastScheduleInputs() {
+    function parseStoredUtcValue(value) {
+        if (!value) {
+            return null;
+        }
+
+        var date = new Date(value.replace(' ', 'T') + 'Z');
+        return isNaN(date.getTime()) ? null : date;
+    }
+
+    function applyHistoricalScheduleLocks() {
         var override = document.body.getAttribute('data-override-dates') === '1';
         var now = new Date();
 
         document.querySelectorAll('[data-schedule-input]').forEach(function (input) {
-            var isLocked = false;
-
-            if (!override && input.value) {
-                var inputDate = new Date(input.value);
-                if (!isNaN(inputDate.getTime()) && inputDate < now) {
-                    isLocked = true;
-                }
-            }
+            var originalDate = parseStoredUtcValue(input.getAttribute('data-original-utc') || '');
+            var isLocked = !override && originalDate !== null && originalDate < now;
 
             markScheduleLocked(input, isLocked);
+            if (isLocked) {
+                input.title = 'This saved deadline is in the past. Use override mode to edit historical dates.';
+                clearScheduleInvalidState(input);
+            } else {
+                input.removeAttribute('title');
+            }
         });
+    }
+
+    function validateEditableScheduleInput(input) {
+        var override = document.body.getAttribute('data-override-dates') === '1';
+
+        if (override || input.disabled || !input.value) {
+            clearScheduleInvalidState(input);
+            return true;
+        }
+
+        var inputDate = new Date(input.value);
+        if (isNaN(inputDate.getTime())) {
+            clearScheduleInvalidState(input);
+            return true;
+        }
+
+        if (inputDate < new Date()) {
+            markScheduleInvalid(
+                input,
+                'This deadline is in the past. Choose a future date, or use override mode to edit historical dates.',
+                true
+            );
+            return false;
+        }
+
+        clearScheduleInvalidState(input);
+        return true;
+    }
+
+    function validateEditableScheduleInputs() {
+        var firstInvalid = null;
+
+        document.querySelectorAll('[data-schedule-input]').forEach(function (input) {
+            if (!validateEditableScheduleInput(input) && !firstInvalid) {
+                firstInvalid = input;
+            }
+        });
+
+        return firstInvalid;
     }
 
     function formatUtcForStorage(date) {
@@ -1047,39 +1095,50 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
                 return;
             }
 
-            input.classList.add('is-invalid');
-            var wrap = getScheduleWrap(input);
-            if (wrap) {
-                wrap.classList.add('is-invalid');
-            }
-            var card = input.closest('[data-round-card]');
-            if (card) {
-                card.classList.add('has-invalid-schedule');
-            }
+            markScheduleInvalid(
+                input,
+                'The attempted past deadline was not saved. The previously saved value has been restored.',
+                false
+            );
         });
     }
 
     applyTimezoneMetadata();
     hydrateUtcInputs();
-    lockPastScheduleInputs();
+    applyHistoricalScheduleLocks();
+
+    var weeklyScheduleButton = document.querySelector('[data-create-weekly-schedule]');
+    if (weeklyScheduleButton) {
+        weeklyScheduleButton.addEventListener('click', function () {
+            createWeeklySchedule();
+        });
+    }
     syncScheduleSubmitValues();
+    validateEditableScheduleInputs();
     markInvalidScheduleFields();
 
     document.querySelectorAll('[data-schedule-input]').forEach(function (input) {
         input.addEventListener('input', function () {
-            lockPastScheduleInputs();
+            validateEditableScheduleInput(input);
             syncScheduleSubmitValues();
         });
         input.addEventListener('change', function () {
-            lockPastScheduleInputs();
+            validateEditableScheduleInput(input);
             syncScheduleSubmitValues();
         });
     });
 
     var form = document.querySelector('.admin-season-setup-form');
     if (form) {
-        form.addEventListener('submit', function () {
+        form.addEventListener('submit', function (event) {
+            var firstInvalid = validateEditableScheduleInputs();
             syncScheduleSubmitValues();
+
+            if (firstInvalid) {
+                event.preventDefault();
+                firstInvalid.focus();
+                firstInvalid.reportValidity();
+            }
         });
     }
 
@@ -1090,11 +1149,13 @@ $invalidScheduleFieldsJson = htmlspecialchars(json_encode($invalidScheduleFields
         if (typeSelect) {
             typeSelect.addEventListener('change', function () {
                 syncRoundCard(card);
-                lockPastScheduleInputs();
+                syncMadlibsAvailability();
                 syncScheduleSubmitValues();
             });
         }
     });
+
+    syncMadlibsAvailability();
 })();
 </script>
 </body>

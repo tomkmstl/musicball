@@ -14,9 +14,31 @@ CREATE TABLE IF NOT EXISTS `QA_ML_SeasonQ2Options` LIKE `ML_SeasonQ2Options`;
 CREATE TABLE IF NOT EXISTS `QA_ML_SeasonQ3Options` LIKE `ML_SeasonQ3Options`;
 CREATE TABLE IF NOT EXISTS `QA_ML_SeasonRounds` LIKE `ML_SeasonRounds`;
 CREATE TABLE IF NOT EXISTS `QA_ML_SeasonRoundSlots` LIKE `ML_SeasonRoundSlots`;
+CREATE TABLE IF NOT EXISTS `QA_ML_SeasonRoundOptionChoices` LIKE `ML_SeasonRoundOptionChoices`;
+CREATE TABLE IF NOT EXISTS `QA_ML_SeasonRoundOptionVotes` LIKE `ML_SeasonRoundOptionVotes`;
 CREATE TABLE IF NOT EXISTS `QA_ML_Seasons` LIKE `ML_Seasons`;
 CREATE TABLE IF NOT EXISTS `QA_ML_Settings` LIKE `ML_Settings`;
 CREATE TABLE IF NOT EXISTS `QA_ML_SpotifyTokens` LIKE `ML_SpotifyTokens`;
 CREATE TABLE IF NOT EXISTS `QA_ML_Submissions` LIKE `ML_Submissions`;
 CREATE TABLE IF NOT EXISTS `QA_ML_Users` LIKE `ML_Users`;
 CREATE TABLE IF NOT EXISTS `QA_ML_WalkmanExcluded` LIKE `ML_WalkmanExcluded`;
+
+
+-- Keep an existing QA round-slot table aligned with the live Option Vote fields.
+SET @schema_name = DATABASE();
+SET @sql = (
+    SELECT IF(
+        NOT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = @schema_name
+              AND table_name = 'QA_ML_SeasonRoundSlots'
+              AND column_name = 'OptionVoteQuestion'
+        ),
+        'ALTER TABLE `QA_ML_SeasonRoundSlots` ADD COLUMN `OptionVoteQuestion` VARCHAR(255) NULL AFTER `TagOverride`',
+        'SELECT 1'
+    )
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

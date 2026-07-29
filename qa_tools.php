@@ -28,6 +28,8 @@ $mlQaTables = [
     'ML_SeasonQ3Options',
     'ML_SeasonRounds',
     'ML_SeasonRoundSlots',
+    'ML_SeasonRoundOptionChoices',
+    'ML_SeasonRoundOptionVotes',
     'ML_Seasons',
     'ML_Settings',
     'ML_SpotifyTokens',
