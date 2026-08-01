@@ -4667,6 +4667,103 @@ body.mb-page-loading .standings-season-option {
 .standings-season-option.is-pressed {
     opacity: 0.72;
 }
+
+.statistics-leaders-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 28px;
+}
+
+.statistics-leader-card {
+    min-width: 0;
+}
+
+.statistics-leader-card-header {
+    padding: 0 2px 8px;
+}
+
+.statistics-leader-card-title {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.055em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.statistics-leader-list {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface-2);
+}
+
+.statistics-leader-row {
+    display: grid;
+    grid-template-columns: 2ch 36px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 54px;
+    padding: 8px 12px;
+}
+
+.statistics-leader-row + .statistics-leader-row {
+    border-top: 1px solid var(--line);
+}
+
+.statistics-leader-row.is-current-user {
+    background: var(--brand-soft);
+}
+
+.statistics-leader-rank {
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.statistics-leader-avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+}
+
+.statistics-leader-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: var(--text);
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.statistics-leader-value {
+    color: var(--text);
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    text-align: right;
+}
+
+@media (max-width: 700px) {
+    .statistics-leaders-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 22px;
+    }
+
+    .statistics-leader-row {
+        grid-template-columns: 2ch 34px minmax(0, 1fr) auto;
+        min-height: 50px;
+        padding: 7px 10px;
+    }
+
+    .statistics-leader-avatar {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+    }
+}
 /* =========================================================
    Light-mode voting contrast
    Shared by regular gameplay voting and Season Builder voting.
