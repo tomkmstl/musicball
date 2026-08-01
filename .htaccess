@@ -1,0 +1,4 @@
+# Temporary compatibility for installed PWAs that cached the former asset locations.
+RedirectMatch 302 "^/images/app-icons/(apple-touch-icon\.png|favicon\.ico|favicon-(?:16x16|32x32)\.png|icon-(?:192|512)\.png)$" "/assets/pwa/icons/$1"
+RedirectMatch 302 "^/images/app-icons/(apple-splash-[0-9]+x[0-9]+\.png)$" "/assets/pwa/splash/$1"
+Redirect 302 "/images/app-icons/splash-2048x2732.png" "/assets/pwa/splash/apple-splash-2048x2732.png"
