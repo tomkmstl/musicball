@@ -1790,7 +1790,112 @@ body.theme-light .vote-ballot-album {
 }
 
 .vote-form-actions-simple {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
     margin-top: 22px;
+}
+
+.vote-form-actions-simple .button-primary,
+.vote-form-actions-simple .button-secondary {
+    width: 100%;
+}
+
+.vote-local-draft-status {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.vote-submit-confirm {
+    position: fixed;
+    inset: 0;
+    z-index: 2200;
+    display: grid;
+    justify-items: center;
+    align-items: start;
+    padding: calc(env(safe-area-inset-top, 0px) + 18px) 16px 16px;
+    background: rgba(8, 17, 28, 0.68);
+    backdrop-filter: blur(6px);
+}
+
+.vote-submit-confirm[hidden] {
+    display: none;
+}
+
+.vote-submit-confirm-panel {
+    width: min(420px, 100%);
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background: rgba(8, 12, 24, 0.96);
+    color: var(--text);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
+    backdrop-filter: blur(12px);
+    opacity: 0;
+    transform: translateY(-18px) scale(0.98);
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.vote-submit-confirm.is-open .vote-submit-confirm-panel {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.vote-submit-confirm-kicker {
+    color: var(--brand);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.vote-submit-confirm-panel h2 {
+    margin: 6px 0 8px;
+}
+
+.vote-submit-confirm-panel p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.vote-submit-confirm-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.vote-submit-confirm-actions .button-primary,
+.vote-submit-confirm-actions .button-secondary {
+    width: 100%;
+}
+
+body.vote-submit-confirm-open {
+    overflow: hidden;
+}
+
+body.theme-light .vote-submit-confirm {
+    background: rgba(18, 32, 51, 0.34);
+}
+
+body.theme-light .vote-submit-confirm-panel {
+    background: rgba(255, 255, 255, 0.96);
+}
+
+@media (max-width: 700px) {
+    .vote-form-actions-simple,
+    .vote-submit-confirm-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vote-submit-confirm-panel {
+        transition: none;
+    }
 }
 
 .vote-progress-meta {
