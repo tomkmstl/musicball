@@ -10,3 +10,4 @@ Thumbs.db
 input.txt
 output_errors.txt
 output_partial.txt
+/uploads/profiles/upload_user_*

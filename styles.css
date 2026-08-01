@@ -4204,41 +4204,20 @@ body.theme-light .standings-round-breakdown-table td.is-round-winner.is-current-
     flex: 0 0 auto;
 }
 
-.playlist-cta-link {
-    display: inline-flex;
-}
-
 .playlist-cta-button {
+    display: grid;
     padding: 0;
     border: 0;
     background: transparent;
     appearance: none;
     -webkit-appearance: none;
-    font: inherit;
-    line-height: 0;
     cursor: pointer;
 }
 
-.playlist-cta-button:focus-visible {
-    outline: 2px solid #3dacec;
-    outline-offset: 4px;
-    border-radius: 10px;
-}
-
-.playlist-cta-link.is-disabled {
-    opacity: 0.58;
-    cursor: default;
-}
-
-.playlists-page .playlist-image {
-    width: 50px;
-    height: 50px;
-}
-
-.playlist-image {
-    display: block;
-    height: 34px;
-    width: auto;
+.playlist-interface-icon {
+    background: currentColor;
+    -webkit-mask: url('assets/icons/playlist.svg') center / contain no-repeat;
+    mask: url('assets/icons/playlist.svg') center / contain no-repeat;
 }
 
 @media (max-width: 900px) {
@@ -4257,10 +4236,6 @@ body.theme-light .standings-round-breakdown-table td.is-round-winner.is-current-
     }
 }
 
-
-.playlist-cta-button {
-    transition: opacity 0.14s ease, transform 0.14s ease;
-}
 
 .playlist-cta-button:active {
     transform: scale(0.985);

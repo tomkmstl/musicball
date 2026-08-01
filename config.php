@@ -353,13 +353,6 @@ function mlGetThemeBodyClass(): string
     return mlGetThemeMode() === 'light' ? 'theme-light' : 'theme-dark';
 }
 
-function mlThemeIconPath(string $baseName): string
-{
-    $suffix = mlGetThemeMode() === 'light' ? '_light' : '';
-    return 'images/' . $baseName . $suffix . '.png';
-}
-
-
 function mlUsersHasProfileImageColumn(PDO $pdo): bool
 {
     static $hasColumn = null;
@@ -390,7 +383,7 @@ function mlResolveUserProfileFilename(int $userId, ?string $storedFilename = nul
 
 function mlGetUserProfilePath(int $userId, ?string $storedFilename = null): string
 {
-    return 'images/profiles/' . mlResolveUserProfileFilename($userId, $storedFilename);
+    return 'uploads/profiles/' . mlResolveUserProfileFilename($userId, $storedFilename);
 }
 
 function mlProfileImageIsAnimatedGif(string $path): bool
