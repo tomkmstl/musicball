@@ -11,6 +11,7 @@ require_once __DIR__ . '/seasons.php';
 require_once __DIR__ . '/songs.php';
 require_once __DIR__ . '/votes.php';
 require_once __DIR__ . '/playlists.php';
+require_once __DIR__ . '/playlist_pins.php';
 require_once __DIR__ . '/rounds.php';
 require_once __DIR__ . '/demo_tracks.php';
 require_once __DIR__ . '/standings.php';

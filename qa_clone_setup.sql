@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS `QA_ML_Settings` LIKE `ML_Settings`;
 CREATE TABLE IF NOT EXISTS `QA_ML_SpotifyTokens` LIKE `ML_SpotifyTokens`;
 CREATE TABLE IF NOT EXISTS `QA_ML_Submissions` LIKE `ML_Submissions`;
 CREATE TABLE IF NOT EXISTS `QA_ML_Users` LIKE `ML_Users`;
+CREATE TABLE IF NOT EXISTS `QA_ML_UserSeasonPlaylistPins` LIKE `ML_UserSeasonPlaylistPins`;
 CREATE TABLE IF NOT EXISTS `QA_ML_WalkmanExcluded` LIKE `ML_WalkmanExcluded`;
 
 

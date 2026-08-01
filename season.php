@@ -47,6 +47,11 @@ $seasonList = mlLoadSeasonSummaries($pdo);
 $seasonRow = mlLoadSeasonById($pdo, $selectedSeasonId);
 $rounds = $seasonRow ? mlLoadSeasonRoundsForGameplay($pdo, $selectedSeasonId) : [];
 $presentedRounds = $seasonRow ? mlComputeRoundPresentation($pdo, $rounds, (int)$currentUser['UserID']) : [];
+$privatePlaylistStorageReady = mlPlaylistPinsTableAvailable($pdo);
+$privatePlaylist = $privatePlaylistStorageReady
+    ? mlLoadUserPrivatePlaylist($pdo, (int)$currentUser['UserID'])
+    : null;
+$privatePlaylistUrl = trim((string)($privatePlaylist['PlaylistURL'] ?? ''));
 
 if ($seasonRow && mlMaybeAutoGeneratePlaylists($pdo, $presentedRounds, (int)$currentUser['UserID'])) {
     $_SESSION['ml_season_message'] = 'Playlist generated automatically.';
@@ -138,6 +143,29 @@ $seasonRevealState = $activeRound
 					<?= htmlspecialchars(mlGetLeagueName($pdo)) ?>
 				</h1>
 			</div>
+            <div class="season-page-actions">
+                <?php if ($privatePlaylistUrl !== ''): ?>
+                    <a
+                        href="<?= htmlspecialchars($privatePlaylistUrl) ?>"
+                        class="season-private-playlist-control"
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        aria-label="Open my private playlist"
+                    >
+                        <span class="season-private-playlist-icon" aria-hidden="true"></span>
+                    </a>
+                <?php else: ?>
+                    <button
+                        type="button"
+                        class="season-private-playlist-control is-disabled"
+                        aria-label="Private playlist not set"
+                        aria-controls="season-private-playlist-message"
+                        data-private-playlist-missing
+                    >
+                        <span class="season-private-playlist-icon" aria-hidden="true"></span>
+                    </button>
+                <?php endif; ?>
+
             <?php if (count($seasonList) > 1): ?>
 				<details class="game-season-switcher-menu standings-season-switcher-menu season-page-season-switcher">
 					<summary class="game-season-switcher-toggle standings-season-switcher-toggle" aria-label="Change season">
@@ -160,7 +188,14 @@ $seasonRevealState = $activeRound
 					</div>
 				</details>
 			<?php endif; ?>
+            </div>
         </div>
+
+        <?php if ($privatePlaylistUrl === ''): ?>
+            <div id="season-private-playlist-message" class="status-banner season-private-playlist-message" role="status" tabindex="-1" hidden>
+                No playlist found. Set your private playlist in <a href="settings.php">Settings</a>.
+            </div>
+        <?php endif; ?>
 
         <?php if ($seasonMessage !== ''): ?>
             <div class="status-banner success"><?= htmlspecialchars($seasonMessage) ?></div>
@@ -251,6 +286,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const timezone = detectBrowserTimezone();
+    const missingPlaylistButton = document.querySelector('[data-private-playlist-missing]');
+    const missingPlaylistMessage = document.getElementById('season-private-playlist-message');
+
+    if (missingPlaylistButton && missingPlaylistMessage) {
+        missingPlaylistButton.addEventListener('click', function () {
+            missingPlaylistMessage.hidden = false;
+            missingPlaylistMessage.focus();
+        });
+    }
 
     document.querySelectorAll('[data-utc-schedule-value]').forEach(function (node) {
         const value = node.getAttribute('data-utc-schedule-value') || '';
