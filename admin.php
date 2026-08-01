@@ -606,6 +606,11 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                                 <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
                                                     Edit Setup
                                                 </a>
+                                                <?php if ((string)$seasonRow['HasCommittedRounds'] === '1'): ?>
+                                                    <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                                        Edit Rounds
+                                                    </a>
+                                                <?php endif; ?>
                                                 <a href="<?= htmlspecialchars(mlUrl('season.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
                                                     View
                                                 </a>
