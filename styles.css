@@ -295,6 +295,65 @@ p {
     min-width: 190px;
 }
 
+.season-page-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-self: end;
+}
+
+.season-private-playlist-control {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--brand);
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.season-private-playlist-control:hover:not(.is-disabled) {
+    transform: translateY(-1px);
+}
+
+.season-private-playlist-control:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 3px;
+}
+
+.season-private-playlist-control.is-disabled {
+    color: var(--muted);
+    opacity: 0.3;
+}
+
+.season-private-playlist-icon {
+    display: block;
+    width: 32px;
+    height: 32px;
+    background: currentColor;
+    -webkit-mask: url('assets/icons/playlist.svg') center / contain no-repeat;
+    mask: url('assets/icons/playlist.svg') center / contain no-repeat;
+}
+
+.season-private-playlist-message {
+    margin-top: 16px;
+}
+
+.season-private-playlist-message a {
+    color: var(--brand);
+    font-weight: 700;
+    text-underline-offset: 3px;
+}
+
 .mb-header-subnav-row {
     width: 100%;
     max-width: var(--content-width);

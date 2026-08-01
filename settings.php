@@ -6,6 +6,12 @@ $currentPage = 'settings';
 $message = '';
 $error = '';
 $hasProfileImageColumn = mlUsersHasProfileImageColumn($pdo);
+$privatePlaylistStorageReady = mlPlaylistPinsTableAvailable($pdo);
+$privatePlaylist = $privatePlaylistStorageReady
+    ? mlLoadUserPrivatePlaylist($pdo, (int)$currentUser['UserID'])
+    : null;
+$privatePlaylistUrl = trim((string)($privatePlaylist['PlaylistURL'] ?? ''));
+$privatePlaylistSectionOpen = false;
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -14,6 +20,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'appearance') {
         $themeMode = isset($_POST['theme_mode']) ? (string)$_POST['theme_mode'] : 'dark';
         mlSetThemeMode($themeMode);
+    } elseif ($action === 'private_playlist') {
+        $privatePlaylistSectionOpen = true;
+        $submittedPlaylistUrl = trim((string)($_POST['private_playlist_url'] ?? ''));
+        $privatePlaylistUrl = $submittedPlaylistUrl;
+
+        if (!$privatePlaylistStorageReady) {
+            $error = 'Private playlist storage is not available yet.';
+        } elseif ($submittedPlaylistUrl === '') {
+            try {
+                mlDeleteUserPrivatePlaylist($pdo, (int)$currentUser['UserID']);
+                $privatePlaylistUrl = '';
+                $message = 'Private playlist removed.';
+            } catch (Throwable $e) {
+                $error = 'The private playlist could not be removed. Please try again.';
+            }
+        } else {
+            $playlist = mlValidatePlaylistPinUrl($submittedPlaylistUrl);
+
+            if (empty($playlist['valid'])) {
+                $error = (string)$playlist['error'];
+            } else {
+                try {
+                    mlSaveUserPrivatePlaylist($pdo, (int)$currentUser['UserID'], $playlist);
+                    $privatePlaylistUrl = (string)$playlist['url'];
+                    $message = 'Private playlist saved.';
+                } catch (Throwable $e) {
+                    $error = 'The private playlist could not be saved. Please try again.';
+                }
+            }
+        }
     } elseif ($action === 'profile') {
         $displayName = trim((string)($_POST['display_name'] ?? ''));
         $email = trim((string)($_POST['email'] ?? ''));
@@ -162,6 +198,43 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
 
                         <div class="game-form-actions">
                             <button type="submit" class="button-primary">Save profile</button>
+                        </div>
+                    </div>
+                </details>
+            </form>
+
+            <form method="post" action="settings.php" class="settings-form">
+                <input type="hidden" name="settings_action" value="private_playlist">
+                <details class="settings-section settings-collapse"<?= $privatePlaylistSectionOpen ? ' open' : '' ?>>
+                    <summary class="settings-collapse-summary">
+                        <span class="settings-collapse-title">
+                            <span class="home-shell-kicker">Playlist</span>
+                            <span class="settings-heading">Private playlist</span>
+                        </span>
+                        <span class="settings-collapse-icon" aria-hidden="true"></span>
+                    </summary>
+
+                    <div class="settings-collapse-content">
+                        <p>Save one private playlist shortcut for the playlist button on your Season page.</p>
+
+                        <label class="admin-label" for="private_playlist_url">Direct playlist URL</label>
+                        <input
+                            type="url"
+                            name="private_playlist_url"
+                            id="private_playlist_url"
+                            class="admin-input"
+                            value="<?= htmlspecialchars($privatePlaylistUrl) ?>"
+                            placeholder="https://..."
+                            maxlength="2048"
+                            inputmode="url"
+                            autocomplete="url"
+                            spellcheck="false"
+                            <?= $privatePlaylistStorageReady ? '' : 'disabled' ?>
+                        >
+                        <p>Spotify, Apple Music, YouTube Music, TIDAL, SoundCloud, and Deezer playlist links are supported. Clear the field and save to remove your playlist.</p>
+
+                        <div class="game-form-actions">
+                            <button type="submit" class="button-primary"<?= $privatePlaylistStorageReady ? '' : ' disabled' ?>>Save playlist</button>
                         </div>
                     </div>
                 </details>
