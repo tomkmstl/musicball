@@ -140,7 +140,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
       <div class="marketing-nav-inner">
         <a href="home.php" class="marketing-brand" aria-label="Musicball home">
           <img src="
-											<?= htmlspecialchars(mlAssetUrl('images/musicball_logo_home.png')) ?>" alt="Musicball">
+											<?= htmlspecialchars(mlAssetUrl('assets/images/branding/musicball_logo_home.png')) ?>" alt="Musicball">
         </a>
         <nav class="marketing-links" aria-label="Marketing navigation">
           <a href="#how-it-works">How It Works</a>
@@ -155,7 +155,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
         <div class="hero-copy">
           <div class="hero-brand-mark" aria-label="Musicball">
             <img src="
-													<?= htmlspecialchars(mlAssetUrl('images/musicball_logo_home.png')) ?>" alt="Musicball">
+													<?= htmlspecialchars(mlAssetUrl('assets/images/branding/musicball_logo_home.png')) ?>" alt="Musicball">
           </div>
           <h1>Built for music fans. <br>Designed for friends. </h1>
           <p>Submit songs, vote with friends, and turn every round into a playlist your league built together.</p>
@@ -744,7 +744,7 @@ if (isset($_SESSION['UserID']) || isset($_SESSION['ml_user_id'])) {
             <article>
 <img
   class="spotify-logo"
-  src="<?= htmlspecialchars(mlAssetUrl('images/spotify-logo.svg')) ?>"
+  src="<?= htmlspecialchars(mlAssetUrl('assets/icons/integrations/spotify-logo.svg')) ?>"
   alt="Spotify">
               <div>
                 <h3>Spotify Integration</h3>

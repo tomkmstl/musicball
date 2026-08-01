@@ -113,9 +113,6 @@ if ($hasRequiredTables) {
     }
 }
 
-$playlistImageSrc = 'images/playlist.png';
-$playlistImagePath = __DIR__ . '/images/playlist.png';
-$hasPlaylistImage = is_file($playlistImagePath);
 ?>
 <!DOCTYPE html>
 <html>
@@ -159,12 +156,9 @@ $hasPlaylistImage = is_file($playlistImagePath);
                         <div class="playlist-card-cta-wrap">
                             <form method="post" target="_blank" class="playlist-cta-form">
                                 <input type="hidden" name="playlist_action" value="go_to_scone_ghetto">
-                                <button type="submit" class="mb-next-season-link playlist-cta-link playlist-cta-button" aria-label="Go to Scone Ghetto on Spotify">
-                                    <?php if ($hasPlaylistImage): ?>
-                                        <img src="<?= htmlspecialchars(mlAssetUrl($playlistImageSrc)) ?>" alt="Go to playlist" class="playlist-image">
-                                    <?php else: ?>
-                                        <span class="mb-next-season-text">Playlist</span>
-                                    <?php endif; ?>
+                                <button type="submit" class="playlist-cta-button game-round-action-link" aria-label="Go to Scone Ghetto on Spotify">
+                                    <span class="game-round-action-icon playlist-interface-icon" aria-hidden="true"></span>
+                                    <span class="game-round-action-label">Playlist</span>
                                 </button>
                             </form>
                         </div>
@@ -195,12 +189,9 @@ $hasPlaylistImage = is_file($playlistImagePath);
                                     <form method="post" target="_blank" class="playlist-cta-form">
                                         <input type="hidden" name="playlist_action" value="go_to_player_playlist">
                                         <input type="hidden" name="playlist_user_id" value="<?= (int)$player['user_id'] ?>">
-                                        <button type="submit" class="mb-next-season-link playlist-cta-link playlist-cta-button" aria-label="Go to <?= htmlspecialchars($player['user_name']) ?>'s playlist on Spotify">
-                                            <?php if ($hasPlaylistImage): ?>
-                                                <img src="<?= htmlspecialchars(mlAssetUrl($playlistImageSrc)) ?>" alt="Open playlist" class="playlist-image">
-                                            <?php else: ?>
-                                                <span class="mb-next-season-text">Playlist</span>
-                                            <?php endif; ?>
+                                        <button type="submit" class="playlist-cta-button game-round-action-link" aria-label="Go to <?= htmlspecialchars($player['user_name']) ?>'s playlist on Spotify">
+                                            <span class="game-round-action-icon playlist-interface-icon" aria-hidden="true"></span>
+                                            <span class="game-round-action-label">Playlist</span>
                                         </button>
                                     </form>
                                 </div>

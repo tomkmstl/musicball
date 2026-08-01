@@ -46,7 +46,7 @@ $discordReady = mlDiscordConfigIsReady();
 <div class="wrapper">
     <div class="card login-card login-card-sso">
         <div class="login-logo-wrap">
-            <img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo.png')) ?>" alt="<?= htmlspecialchars(mlGetLeagueName($pdo)) ?>" class="login-logo">
+            <img src="<?= htmlspecialchars(mlAssetUrl('assets/images/branding/musicball_logo.png')) ?>" alt="<?= htmlspecialchars(mlGetLeagueName($pdo)) ?>" class="login-logo">
         </div>
 
         <div class="login-intro-copy">
@@ -64,7 +64,7 @@ $discordReady = mlDiscordConfigIsReady();
             <div class="buttons login-buttons login-buttons-sso">
                 <a href="<?= htmlspecialchars(mlUrl('integrations/discord/login.php')) ?>" class="discord-sso-button">
                     <span class="discord-sso-icon" aria-hidden="true">
-                        <img src="<?= htmlspecialchars(mlAssetUrl('images/Discord-Symbol-White.svg')) ?>" alt="">
+                        <img src="<?= htmlspecialchars(mlAssetUrl('assets/icons/integrations/discord.svg')) ?>" alt="">
                     </span>
                     <span>Continue with Discord</span>
                 </a>

@@ -19,8 +19,8 @@ $headerUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : (isset($
 $isAdminUser = mlIsAdminUserId($pdo, $headerUserId);
 $mlIsQaMode = function_exists('mlIsQaMode') && mlIsQaMode();
 $showAdminToolsBanner = !$mlIsQaMode && $headerScriptName === 'admin.php';
-$nextSeasonImageSrc = 'images/next_season.png';
-$nextSeasonImagePath = __DIR__ . '/images/next_season.png';
+$nextSeasonImageSrc = 'assets/images/navigation/next_season.png';
+$nextSeasonImagePath = __DIR__ . '/assets/images/navigation/next_season.png';
 $hasNextSeasonImage = is_file($nextSeasonImagePath);
 $isPrimaryNavPage = ($headerActivePrimaryPage !== '');
 $headerNextSeason = isset($nextSeason) && is_array($nextSeason) ? $nextSeason : mlGetNextSeason($pdo);
@@ -49,8 +49,8 @@ if ($headerNextSeason) {
             $headerNextSeasonHref = mlUrl('final.php');
             $headerNextSeasonLabel = 'View Next Season';
             $headerNextSeasonAria = 'View Next Season';
-            $nextSeasonImageSrc = 'images/view_next_season.png';
-            $nextSeasonImagePath = __DIR__ . '/images/view_next_season.png';
+            $nextSeasonImageSrc = 'assets/images/navigation/view_next_season.png';
+            $nextSeasonImagePath = __DIR__ . '/assets/images/navigation/view_next_season.png';
             $hasNextSeasonImage = is_file($nextSeasonImagePath);
         }
     }
@@ -160,7 +160,7 @@ if ($headerNextSeason) {
         }
     </style>
     <div class="mb-header-inner">
-        <img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo.png')) ?>" alt="<?= htmlspecialchars(mlGetLeagueName($pdo)) ?>" class="mb-brand-logo<?= $headerShowNextSeasonButton ? ' mb-brand-logo-action-visible' : '' ?>">
+        <img src="<?= htmlspecialchars(mlAssetUrl('assets/images/branding/musicball_logo.png')) ?>" alt="<?= htmlspecialchars(mlGetLeagueName($pdo)) ?>" class="mb-brand-logo<?= $headerShowNextSeasonButton ? ' mb-brand-logo-action-visible' : '' ?>">
 
         <div class="mb-header-actions" aria-label="Utility navigation">
             <?php if ($headerShowNextSeasonButton): ?>

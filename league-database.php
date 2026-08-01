@@ -26,7 +26,7 @@ $currentPage = 'league-database';
         </div>
 
         <section class="admin-panel admin-panel-full song-database-shell">
-            <img src="/images/leagues/scone-ghetto.jpg" alt="" class="song-database-badge" aria-hidden="true">
+            <img src="<?= htmlspecialchars(mlAssetUrl('assets/images/leagues/scone-ghetto.jpg')) ?>" alt="" class="song-database-badge" aria-hidden="true">
             <div class="song-database-label">League Archive</div>
             <h2><?= htmlspecialchars(mlGetLeagueName($pdo), ENT_QUOTES, 'UTF-8') ?> Song Database</h2>
             <p class="song-database-intro">Search past rounds before picking your song. Results only appear for songs or artists that have already been used in completed rounds.</p>

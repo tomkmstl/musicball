@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } elseif ($imageInfo === false) {
                         $error = 'The uploaded file is not a valid image.';
                     } else {
-                        $profileDir = __DIR__ . '/images/profiles';
+                        $profileDir = __DIR__ . '/uploads/profiles';
                         if (!is_dir($profileDir)) {
                             @mkdir($profileDir, 0775, true);
                         }
@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (!is_dir($profileDir) || !is_writable($profileDir)) {
                             $error = 'The profile photo folder is not writable.';
                         } else {
-                            $uploadedFilename = 'user_' . (int)$currentUser['UserID'] . '_' . date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+                            $uploadedFilename = 'upload_user_' . (int)$currentUser['UserID'] . '_' . date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
                             $destination = $profileDir . '/' . $uploadedFilename;
                             $resizeError = '';
 
