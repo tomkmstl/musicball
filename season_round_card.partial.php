@@ -5,6 +5,10 @@ $hasChosenSong = !empty($round['song_saved'])
     && in_array((string)($round['round_state'] ?? ''), ['submission', 'upcoming'], true)
     && trim((string)($roundSongDraft['title'] ?? '')) !== ''
     && trim((string)($roundSongDraft['artist'] ?? '')) !== '';
+$chosenSongSpotifyTrackId = trim((string)($roundSongDraft['id'] ?? ''));
+$chosenSongSpotifyUrl = $hasChosenSong && preg_match('/^[A-Za-z0-9]{22}$/', $chosenSongSpotifyTrackId)
+    ? 'https://open.spotify.com/track/' . rawurlencode($chosenSongSpotifyTrackId)
+    : '';
 ?>
 <section class="game-round-card<?= !empty($activeRound) && (int)$round['SeasonRoundID'] === (int)$activeRound['SeasonRoundID'] ? ' game-round-card-active' : '' ?><?= ($round['status_key'] ?? '') === 'closed' ? ' game-round-card-completed' : '' ?>">
     <div class="game-round-card-top">
@@ -172,9 +176,23 @@ $hasChosenSong = !empty($round['song_saved'])
 
     <?php if ($hasChosenSong): ?>
         <div class="game-round-chosen-song" aria-label="Your chosen song">
-            <span class="game-round-chosen-song-title"><?= htmlspecialchars((string)$roundSongDraft['title']) ?></span>
-            <span class="game-round-chosen-song-separator">&nbsp;&middot;&nbsp;</span>
-            <span class="game-round-chosen-song-artist"><?= htmlspecialchars((string)$roundSongDraft['artist']) ?></span>
+            <?php if ($chosenSongSpotifyUrl !== ''): ?>
+                <a
+                    href="<?= htmlspecialchars($chosenSongSpotifyUrl, ENT_QUOTES, 'UTF-8') ?>"
+                    class="game-round-chosen-song-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open <?= htmlspecialchars((string)$roundSongDraft['title'], ENT_QUOTES, 'UTF-8') ?> by <?= htmlspecialchars((string)$roundSongDraft['artist'], ENT_QUOTES, 'UTF-8') ?> in Spotify"
+                >
+                    <span class="game-round-chosen-song-title"><?= htmlspecialchars((string)$roundSongDraft['title']) ?></span>
+                    <span class="game-round-chosen-song-separator">&nbsp;&middot;&nbsp;</span>
+                    <span class="game-round-chosen-song-artist"><?= htmlspecialchars((string)$roundSongDraft['artist']) ?></span>
+                </a>
+            <?php else: ?>
+                <span class="game-round-chosen-song-title"><?= htmlspecialchars((string)$roundSongDraft['title']) ?></span>
+                <span class="game-round-chosen-song-separator">&nbsp;&middot;&nbsp;</span>
+                <span class="game-round-chosen-song-artist"><?= htmlspecialchars((string)$roundSongDraft['artist']) ?></span>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 </section>
