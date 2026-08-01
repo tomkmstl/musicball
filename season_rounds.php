@@ -351,8 +351,8 @@ $seasonActionLabel = $canStartSeasonHere
                                     <input type="text" id="season-round-title-<?= $roundNumber ?>" name="rounds[<?= $roundNumber ?>][title]" class="admin-input" value="<?= htmlspecialchars($roundRow['title']) ?>" required>
                                 </div>
                                 <div>
-                                    <label class="admin-label" for="season-round-tag-<?= $roundNumber ?>">Tag</label>
-                                    <input type="text" id="season-round-tag-<?= $roundNumber ?>" name="rounds[<?= $roundNumber ?>][tag]" class="admin-input" value="<?= htmlspecialchars($roundRow['tag']) ?>">
+                                    <label class="admin-label" for="season-round-tag-<?= $roundNumber ?>">Description (optional)</label>
+                                    <textarea id="season-round-tag-<?= $roundNumber ?>" name="rounds[<?= $roundNumber ?>][tag]" class="admin-input admin-textarea" rows="3"><?= htmlspecialchars($roundRow['tag']) ?></textarea>
                                 </div>
                             </div>
 
