@@ -66,7 +66,7 @@ if ($headerNextSeason) {
         ADMIN TOOLS &nbsp;|&nbsp; <a href="<?= htmlspecialchars(mlUrl('season.php?testing=live')) ?>" style="color:#fff;text-decoration:underline;">Return Home</a>
     </div>
 <?php endif; ?>
-<header class="mb-header<?= $headerShowNextSeasonButton ? ' mb-header-has-next-season-action' : '' ?>">
+<header class="mb-header">
     <style>
         .mb-account-menu {
             position: relative;
@@ -150,9 +150,17 @@ if ($headerNextSeason) {
             margin: 8px 4px;
             background: var(--line);
         }
+
+        @media (max-width: 430px) {
+            .mb-brand-logo.mb-brand-logo-action-visible {
+                width: clamp(108px, 30vw, 128px);
+                height: auto;
+                flex: 0 0 auto;
+            }
+        }
     </style>
     <div class="mb-header-inner">
-        <img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo.png')) ?>" alt="<?= htmlspecialchars(mlGetLeagueName($pdo)) ?>" class="mb-brand-logo">
+        <img src="<?= htmlspecialchars(mlAssetUrl('images/musicball_logo.png')) ?>" alt="<?= htmlspecialchars(mlGetLeagueName($pdo)) ?>" class="mb-brand-logo<?= $headerShowNextSeasonButton ? ' mb-brand-logo-action-visible' : '' ?>">
 
         <div class="mb-header-actions" aria-label="Utility navigation">
             <?php if ($headerShowNextSeasonButton): ?>
