@@ -66,7 +66,7 @@ if ($headerNextSeason) {
         ADMIN TOOLS &nbsp;|&nbsp; <a href="<?= htmlspecialchars(mlUrl('season.php?testing=live')) ?>" style="color:#fff;text-decoration:underline;">Return Home</a>
     </div>
 <?php endif; ?>
-<header class="mb-header">
+<header class="mb-header<?= $headerShowNextSeasonButton ? ' mb-header-has-next-season-action' : '' ?>">
     <style>
         .mb-account-menu {
             position: relative;
