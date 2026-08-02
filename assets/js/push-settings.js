@@ -6,6 +6,8 @@
 
     var statusNode = root.querySelector('[data-push-status]');
     var toggleButton = root.querySelector('[data-push-toggle]');
+    var testPanel = root.querySelector('[data-push-test-panel]');
+    var testTypeSelect = root.querySelector('[data-push-test-type]');
     var testButton = root.querySelector('[data-push-test]');
     var registration = null;
     var browserSubscription = null;
@@ -24,6 +26,7 @@
     function setBusy(nextBusy) {
         busy = nextBusy;
         if (toggleButton) toggleButton.disabled = busy || !config.ready;
+        if (testTypeSelect) testTypeSelect.disabled = busy || !serverSubscribed;
         if (testButton) testButton.disabled = busy || !serverSubscribed;
         root.classList.toggle('is-busy', busy);
     }
@@ -35,8 +38,8 @@
         if (toggleButton) {
             toggleButton.textContent = enabled ? 'Turn off reminders' : 'Turn on reminders';
         }
-        if (testButton) {
-            testButton.hidden = !enabled;
+        if (testPanel) {
+            testPanel.hidden = !enabled;
         }
 
         if (!busy) {
@@ -111,7 +114,7 @@
         if (!config.ready) {
             setStatus('Not available yet', 'unavailable');
             if (toggleButton) toggleButton.disabled = true;
-            if (testButton) testButton.hidden = true;
+            if (testPanel) testPanel.hidden = true;
             return;
         }
 
@@ -123,7 +126,7 @@
                 'unsupported'
             );
             if (toggleButton) toggleButton.disabled = true;
-            if (testButton) testButton.hidden = true;
+            if (testPanel) testPanel.hidden = true;
             return;
         }
 
@@ -227,7 +230,10 @@
             if (busy || !browserSubscription || !serverSubscribed) return;
 
             setBusy(true);
-            request('test', { endpoint: browserSubscription.endpoint }).then(function () {
+            request('test', {
+                endpoint: browserSubscription.endpoint,
+                notification_type: testTypeSelect ? testTypeSelect.value : 'connection_test'
+            }).then(function () {
                 setBusy(false);
                 setStatus('Test sent', 'on');
                 window.setTimeout(render, 2500);

@@ -81,6 +81,61 @@ function mlPushServerReady(PDO $pdo): bool
         && class_exists('Minishlink\\WebPush\\Subscription');
 }
 
+function mlPushTestNotificationOptions(): array
+{
+    return [
+        'connection_test' => 'Connection test',
+        'song_24h' => 'Song reminder — 24 hours',
+        'song_3h' => 'Song reminder — 3 hours',
+        'vote_24h' => 'Voting reminder — 24 hours',
+        'vote_3h' => 'Voting reminder — 3 hours',
+    ];
+}
+
+function mlPushBuildNotificationCopy(
+    string $notificationType,
+    int $roundNumber = 1,
+    string $roundTitle = ''
+): array {
+    $roundNumber = max(1, $roundNumber);
+    $roundTitle = trim($roundTitle);
+    $roundLabel = 'Round ' . $roundNumber . ($roundTitle !== '' ? ': ' . $roundTitle : '');
+
+    switch ($notificationType) {
+        case 'connection_test':
+            return [
+                'title' => 'REMINDERS ARE ON',
+                'body' => 'Test Notification Successful.',
+            ];
+
+        case 'song_24h':
+            return [
+                'title' => 'Choose your song',
+                'body' => $roundLabel . ' is due in about 24 hours.',
+            ];
+
+        case 'song_3h':
+            return [
+                'title' => 'SONG DEADLINE APPROACHING',
+                'body' => 'Round ' . $roundNumber . ' songs due in 3 hours!',
+            ];
+
+        case 'vote_24h':
+            return [
+                'title' => 'Finish your votes',
+                'body' => $roundLabel . ' closes in about 24 hours.',
+            ];
+
+        case 'vote_3h':
+            return [
+                'title' => 'VOTING DEADLINE APPROACHING',
+                'body' => 'Round ' . $roundNumber . ' votes are due in 3 hours!',
+            ];
+    }
+
+    throw new InvalidArgumentException('Unsupported notification type.');
+}
+
 function mlPushEndpointHostAllowed(string $endpoint): bool
 {
     if (strlen($endpoint) > 2048 || filter_var($endpoint, FILTER_VALIDATE_URL) === false) {

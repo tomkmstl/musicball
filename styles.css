@@ -4858,3 +4858,33 @@ body.theme-light .vote-points-btn:focus-visible {
     align-items: center;
     flex-wrap: wrap;
 }
+
+.settings-push-test {
+    display: grid;
+    gap: 8px;
+}
+
+.settings-push-test[hidden] {
+    display: none;
+}
+
+.settings-push-test-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.settings-push-test-select {
+    min-width: 0;
+}
+
+@media (max-width: 640px) {
+    .settings-push-test-row {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-push-test-row .button-secondary {
+        width: 100%;
+    }
+}
