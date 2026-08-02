@@ -160,108 +160,101 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
         </div>
 
         <?php if ($message !== ''): ?>
-            <div class="status-banner success"><?= htmlspecialchars($message) ?></div>
+            <div class="status-banner success settings-feedback" role="status" data-settings-feedback><?= htmlspecialchars($message) ?></div>
         <?php endif; ?>
         <?php if ($error !== ''): ?>
-            <div class="status-banner error"><?= htmlspecialchars($error) ?></div>
+            <div class="status-banner error settings-feedback" role="alert" data-settings-feedback><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
 
-        <div class="settings-stack">
-            <form method="post" action="settings.php" class="settings-form settings-form-wide" enctype="multipart/form-data">
+        <div class="settings-sheet">
+            <form method="post" action="settings.php" class="settings-sheet-section" enctype="multipart/form-data">
                 <input type="hidden" name="settings_action" value="profile">
-                <section class="settings-section">
-                    <h2 class="settings-heading">Profile</h2>
-                    <p>Update your display name, email, and profile photo.</p>
+                <h2 class="settings-heading">Profile</h2>
 
-                    <div class="settings-profile-grid">
-                        <div class="settings-profile-photo-block">
-                            <img src="<?= htmlspecialchars($currentProfileImage) ?>" alt="<?= htmlspecialchars($currentUser['UserName']) ?>" class="profile-avatar profile-avatar-settings">
-                            <label class="admin-label" for="profile_photo">Change photo</label>
-                            <input type="file" name="profile_photo" id="profile_photo" class="admin-input settings-file-input" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif">
-                            <p>JPG, PNG, WEBP, or GIF. Max 5 MB.</p>
-                        </div>
+                <div class="settings-profile-grid">
+                    <div class="settings-profile-photo-block">
+                        <img src="<?= htmlspecialchars($currentProfileImage) ?>" alt="<?= htmlspecialchars($currentUser['UserName']) ?>" class="profile-avatar profile-avatar-settings">
+                        <input type="file" name="profile_photo" id="profile_photo" class="settings-photo-input" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif" data-settings-photo-input>
+                        <label class="button-secondary settings-photo-picker" for="profile_photo">Change Photo</label>
+                        <span class="settings-photo-name" data-settings-photo-name>No photo selected</span>
+                    </div>
 
-                        <div class="settings-profile-fields">
+                    <div class="settings-profile-fields">
+                        <div class="settings-field">
                             <label class="admin-label" for="display_name">Display Name</label>
                             <input type="text" name="display_name" id="display_name" class="admin-input" value="<?= htmlspecialchars((string)$currentUser['UserName']) ?>" maxlength="100" required>
+                        </div>
 
+                        <div class="settings-field">
                             <label class="admin-label" for="email">Email</label>
                             <input type="email" name="email" id="email" class="admin-input" value="<?= htmlspecialchars((string)$currentUser['Email']) ?>" maxlength="255" required>
-
-                            <?php if (!$hasProfileImageColumn): ?>
-                                <p>Photo uploads will start working after the <code>ProfileImageFilename</code> column is added to <code>ML_Users</code>.</p>
-                            <?php endif; ?>
                         </div>
                     </div>
+                </div>
 
-                    <div class="game-form-actions">
-                        <button type="submit" class="button-primary">Save profile</button>
-                    </div>
-                </section>
+                <?php if (!$hasProfileImageColumn): ?>
+                    <p class="settings-inline-message">Photo uploads are not available yet.</p>
+                <?php endif; ?>
+
+                <div class="game-form-actions settings-sheet-actions">
+                    <button type="submit" class="button-secondary">Save Profile</button>
+                </div>
             </form>
 
-            <form method="post" action="settings.php" class="settings-form">
+            <form method="post" action="settings.php" class="settings-sheet-section">
                 <input type="hidden" name="settings_action" value="private_playlist">
-                <section class="settings-section">
-                    <h2 class="settings-heading">Playlist Link</h2>
-                    <p>Save one private playlist shortcut for the playlist button on your Season page.</p>
+                <h2 class="settings-heading">Playlist Link</h2>
 
-                    <label class="admin-label" for="private_playlist_url">Direct playlist URL</label>
-                    <input
-                        type="url"
-                        name="private_playlist_url"
-                        id="private_playlist_url"
-                        class="admin-input"
-                        value="<?= htmlspecialchars($privatePlaylistUrl) ?>"
-                        placeholder="https://..."
-                        maxlength="2048"
-                        inputmode="url"
-                        autocomplete="url"
-                        spellcheck="false"
-                        <?= $privatePlaylistStorageReady ? '' : 'disabled' ?>
-                    >
-                    <p>Spotify, Apple Music, YouTube Music, TIDAL, SoundCloud, and Deezer playlist links are supported. Clear the field and save to remove your playlist.</p>
-
-                    <div class="game-form-actions">
-                        <button type="submit" class="button-primary"<?= $privatePlaylistStorageReady ? '' : ' disabled' ?>>Save playlist</button>
+                <div class="settings-inline-form">
+                    <div class="settings-field">
+                        <label class="admin-label" for="private_playlist_url">Playlist URL</label>
+                        <input
+                            type="url"
+                            name="private_playlist_url"
+                            id="private_playlist_url"
+                            class="admin-input"
+                            value="<?= htmlspecialchars($privatePlaylistUrl) ?>"
+                            placeholder="https://..."
+                            maxlength="2048"
+                            inputmode="url"
+                            autocomplete="url"
+                            spellcheck="false"
+                            <?= $privatePlaylistStorageReady ? '' : 'disabled' ?>
+                        >
                     </div>
-                </section>
+                    <button type="submit" class="button-secondary"<?= $privatePlaylistStorageReady ? '' : ' disabled' ?>>Save Link</button>
+                </div>
+
+                <?php if (!$privatePlaylistStorageReady): ?>
+                    <p class="settings-inline-message">Playlist links are not available yet.</p>
+                <?php endif; ?>
             </form>
 
-            <div class="settings-form">
-                <section class="settings-section">
+            <section class="settings-sheet-section settings-control-row" data-push-settings>
+                <div class="settings-control-copy">
                     <h2 class="settings-heading">Push Notifications</h2>
-                    <p>Get a reminder when your song or votes are still unfinished.</p>
-
-                    <div class="settings-push-control" data-push-settings>
-                        <div class="settings-push-status" data-push-status>Checking this device...</div>
-                        <div class="game-form-actions settings-push-actions">
-                            <button type="button" class="button-primary" data-push-toggle<?= $pushReady ? '' : ' disabled' ?>>Turn on reminders</button>
-                        </div>
-                    </div>
+                    <div class="settings-push-status" data-push-status>Checking this device...</div>
 
                     <?php if (!$pushStorageReady): ?>
-                        <p>Reminder storage must be installed before this setting can be used.</p>
+                        <p class="settings-inline-message">Push notifications are not available yet.</p>
                     <?php endif; ?>
-                </section>
-            </div>
+                </div>
+                <div class="game-form-actions settings-push-actions">
+                    <button type="button" class="button-primary" data-push-toggle<?= $pushReady ? '' : ' disabled' ?>>Turn on reminders</button>
+                </div>
+            </section>
 
-            <form method="post" action="settings.php" class="settings-form settings-form-wide">
+            <form method="post" action="settings.php" class="settings-sheet-section settings-control-row">
                 <input type="hidden" name="settings_action" value="appearance">
-                <section class="settings-section">
+                <div class="settings-control-copy">
                     <h2 class="settings-heading">Appearance</h2>
-                    <div class="theme-toggle-row">
-                        <div class="theme-toggle-copy">
-                            <span class="theme-toggle-label">Light <span aria-hidden="true">↔</span> Dark</span>
-                            <span class="theme-toggle-note">Use the switch to choose your mode.</span>
-                        </div>
-                        <label class="theme-switch" for="theme_mode_toggle" aria-label="Toggle light and dark mode">
-                            <input type="hidden" name="theme_mode" value="<?= $currentThemeMode === 'dark' ? 'dark' : 'light' ?>">
-                            <input type="checkbox" id="theme_mode_toggle" name="theme_mode_toggle" value="dark" <?= $currentThemeMode === 'dark' ? 'checked' : '' ?> onchange="this.form.theme_mode.value = this.checked ? 'dark' : 'light'; this.form.submit();">
-                            <span class="theme-switch-track"></span>
-                        </label>
-                    </div>
-                </section>
+                    <span class="theme-toggle-label">Light <span aria-hidden="true">↔</span> Dark</span>
+                </div>
+                <label class="theme-switch" for="theme_mode_toggle" aria-label="Toggle light and dark mode">
+                    <input type="hidden" name="theme_mode" value="<?= $currentThemeMode === 'dark' ? 'dark' : 'light' ?>">
+                    <input type="checkbox" id="theme_mode_toggle" name="theme_mode_toggle" value="dark" <?= $currentThemeMode === 'dark' ? 'checked' : '' ?> onchange="this.form.theme_mode.value = this.checked ? 'dark' : 'light'; this.form.submit();">
+                    <span class="theme-switch-track"></span>
+                </label>
             </form>
         </div>
     </div>
@@ -274,6 +267,7 @@ window.ML_PUSH_SETTINGS = <?= json_encode([
     'csrfToken' => $pushCsrfToken,
 ], JSON_UNESCAPED_SLASHES) ?>;
 </script>
+<script src="<?= htmlspecialchars(mlAssetUrl('assets/js/settings-page.js')) ?>" defer></script>
 <script src="<?= htmlspecialchars(mlAssetUrl('assets/js/push-settings.js')) ?>" defer></script>
 </body>
 </html>
