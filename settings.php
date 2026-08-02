@@ -201,6 +201,19 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
                 </div>
             </form>
 
+            <form method="post" action="settings.php" class="settings-sheet-section settings-control-row">
+                <input type="hidden" name="settings_action" value="appearance">
+                <div class="settings-control-copy">
+                    <h2 class="settings-heading">Appearance</h2>
+                    <span class="theme-toggle-label">Light <span aria-hidden="true">↔</span> Dark</span>
+                </div>
+                <label class="theme-switch" for="theme_mode_toggle" aria-label="Toggle light and dark mode">
+                    <input type="hidden" name="theme_mode" value="<?= $currentThemeMode === 'dark' ? 'dark' : 'light' ?>">
+                    <input type="checkbox" id="theme_mode_toggle" name="theme_mode_toggle" value="dark" <?= $currentThemeMode === 'dark' ? 'checked' : '' ?> onchange="this.form.theme_mode.value = this.checked ? 'dark' : 'light'; this.form.submit();">
+                    <span class="theme-switch-track"></span>
+                </label>
+            </form>
+
             <form method="post" action="settings.php" class="settings-sheet-section">
                 <input type="hidden" name="settings_action" value="private_playlist">
                 <h2 class="settings-heading">Playlist Link</h2>
@@ -230,32 +243,17 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
                 <?php endif; ?>
             </form>
 
-            <section class="settings-sheet-section settings-control-row" data-push-settings>
+            <?php if ($pushReady): ?>
+            <section class="settings-sheet-section settings-control-row" data-push-settings hidden>
                 <div class="settings-control-copy">
                     <h2 class="settings-heading">Push Notifications</h2>
-                    <div class="settings-push-status" data-push-status>Checking this device...</div>
-
-                    <?php if (!$pushStorageReady): ?>
-                        <p class="settings-inline-message">Push notifications are not available yet.</p>
-                    <?php endif; ?>
+                    <div class="settings-push-status" data-push-status hidden></div>
                 </div>
                 <div class="game-form-actions settings-push-actions">
-                    <button type="button" class="button-primary" data-push-toggle<?= $pushReady ? '' : ' disabled' ?>>Turn on reminders</button>
+                    <button type="button" class="button-secondary settings-push-toggle" data-push-toggle aria-pressed="false" aria-label="Turn on push notifications" disabled>Off</button>
                 </div>
             </section>
-
-            <form method="post" action="settings.php" class="settings-sheet-section settings-control-row">
-                <input type="hidden" name="settings_action" value="appearance">
-                <div class="settings-control-copy">
-                    <h2 class="settings-heading">Appearance</h2>
-                    <span class="theme-toggle-label">Light <span aria-hidden="true">↔</span> Dark</span>
-                </div>
-                <label class="theme-switch" for="theme_mode_toggle" aria-label="Toggle light and dark mode">
-                    <input type="hidden" name="theme_mode" value="<?= $currentThemeMode === 'dark' ? 'dark' : 'light' ?>">
-                    <input type="checkbox" id="theme_mode_toggle" name="theme_mode_toggle" value="dark" <?= $currentThemeMode === 'dark' ? 'checked' : '' ?> onchange="this.form.theme_mode.value = this.checked ? 'dark' : 'light'; this.form.submit();">
-                    <span class="theme-switch-track"></span>
-                </label>
-            </form>
+            <?php endif; ?>
         </div>
     </div>
 </div>

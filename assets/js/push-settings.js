@@ -17,6 +17,7 @@
         if (!statusNode) return;
         statusNode.textContent = message;
         statusNode.dataset.state = state || '';
+        statusNode.hidden = !message;
     }
 
     function setBusy(nextBusy) {
@@ -30,7 +31,11 @@
 
         root.classList.toggle('is-enabled', enabled);
         if (toggleButton) {
-            toggleButton.textContent = enabled ? 'Turn off reminders' : 'Turn on reminders';
+            toggleButton.textContent = enabled ? 'On' : 'Off';
+            toggleButton.classList.toggle('button-primary', enabled);
+            toggleButton.classList.toggle('button-secondary', !enabled);
+            toggleButton.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+            toggleButton.setAttribute('aria-label', enabled ? 'Turn off push notifications' : 'Turn on push notifications');
         }
 
         if (!busy) {
@@ -38,12 +43,12 @@
         }
 
         if (enabled) {
-            setStatus('On for this device', 'on');
+            setStatus('', 'on');
         } else if (Notification.permission === 'denied') {
-            setStatus('Blocked in this device\'s notification settings', 'blocked');
+            setStatus('Blocked in Settings', 'blocked');
             if (toggleButton) toggleButton.disabled = true;
         } else {
-            setStatus('Off for this device', 'off');
+            setStatus('', 'off');
         }
     }
 
@@ -103,22 +108,19 @@
 
     function initialize() {
         if (!config.ready) {
-            setStatus('Not available yet', 'unavailable');
-            if (toggleButton) toggleButton.disabled = true;
             return;
         }
 
         if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-            setStatus(
-                isIosBrowserTab()
-                    ? 'Add Musicball to your Home Screen to use reminders'
-                    : 'Push notifications are not supported on this device',
-                'unsupported'
-            );
+            if (isIosBrowserTab()) {
+                root.hidden = false;
+                setStatus('Add to Home Screen', 'unsupported');
+            }
             if (toggleButton) toggleButton.disabled = true;
             return;
         }
 
+        root.hidden = false;
         navigator.serviceWorker.ready.then(function (readyRegistration) {
             registration = readyRegistration;
             return registration.pushManager.getSubscription();
@@ -137,7 +139,7 @@
             });
         }).catch(function () {
             setBusy(false);
-            setStatus('Reminder status could not be checked', 'error');
+            setStatus('Could not check status', 'error');
         });
     }
 
@@ -147,12 +149,12 @@
         setBusy(true);
         Promise.resolve().then(function () {
             if (Notification.permission === 'denied') {
-                throw new Error('Notifications are blocked in this device\'s settings.');
+                throw new Error('Blocked in Settings');
             }
             if (Notification.permission === 'default') {
                 return Notification.requestPermission().then(function (permission) {
                     if (permission !== 'granted') {
-                        throw new Error('Notification permission was not granted.');
+                        throw new Error('Permission was not granted');
                     }
                 });
             }
@@ -181,7 +183,7 @@
             }
             serverSubscribed = false;
             setBusy(false);
-            setStatus(error.message || 'Reminders could not be turned on', 'error');
+            setStatus(error.message || 'Could not turn notifications on', 'error');
         });
     }
 
@@ -198,7 +200,7 @@
             render();
         }).catch(function (error) {
             setBusy(false);
-            setStatus(error.message || 'Reminders could not be turned off', 'error');
+            setStatus(error.message || 'Could not turn notifications off', 'error');
         });
     }
 

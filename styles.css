@@ -2497,6 +2497,10 @@ body.theme-light .standings-table-expanded tr.is-current-user td:nth-child(2) {
     border-top: 1px solid var(--line);
 }
 
+.settings-sheet-section[hidden] {
+    display: none;
+}
+
 .settings-heading {
     margin: 0 0 14px;
 }
@@ -2675,6 +2679,10 @@ body.theme-light .standings-table-expanded tr.is-current-user td:nth-child(2) {
 
 .settings-control-copy .settings-heading {
     margin-bottom: 4px;
+}
+
+.settings-push-toggle {
+    min-width: 64px;
 }
 
 .settings-feedback {
