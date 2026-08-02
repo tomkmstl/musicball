@@ -1,6 +1,6 @@
 const swUrl = new URL(self.location.href);
 const DEV_MODE = swUrl.searchParams.get('dev_mode') === '1';
-const CACHE_NAME = DEV_MODE ? 'musicball-dev-cache' : 'musicball-static-v4';
+const CACHE_NAME = DEV_MODE ? 'musicball-dev-cache' : 'musicball-static-v5';
 
 const APP_SHELL = [
     '/',
@@ -137,4 +137,67 @@ self.addEventListener('fetch', function (event) {
             })
         );
     }
+});
+
+self.addEventListener('push', function (event) {
+    let payload = {};
+
+    if (event.data) {
+        try {
+            payload = event.data.json();
+        } catch (error) {
+            payload = { body: event.data.text() };
+        }
+    }
+
+    const title = payload.title || 'Musicball';
+    const options = {
+        body: payload.body || 'You have an unfinished Musicball deadline.',
+        icon: 'assets/pwa/icons/icon-192.png',
+        badge: 'assets/pwa/icons/icon-192.png',
+        tag: payload.tag || 'musicball-deadline-reminder',
+        renotify: true,
+        data: {
+            url: payload.url || 'season.php'
+        }
+    };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', function (event) {
+    event.notification.close();
+
+    let targetUrl;
+    try {
+        targetUrl = new URL(event.notification.data && event.notification.data.url
+            ? event.notification.data.url
+            : 'season.php', self.location.origin);
+    } catch (error) {
+        targetUrl = new URL('season.php', self.location.origin);
+    }
+
+    if (targetUrl.origin !== self.location.origin) {
+        targetUrl = new URL('season.php', self.location.origin);
+    }
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
+            for (const client of clientList) {
+                if (new URL(client.url).origin !== self.location.origin) {
+                    continue;
+                }
+
+                if ('navigate' in client) {
+                    return client.navigate(targetUrl.href).then(function () {
+                        return client.focus();
+                    });
+                }
+
+                return client.focus();
+            }
+
+            return self.clients.openWindow(targetUrl.href);
+        })
+    );
 });

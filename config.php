@@ -155,6 +155,19 @@ function mlGetLivePdo(): PDO
     return $GLOBALS['ml_live_pdo'];
 }
 
+function mlGetPdoDataMode(PDO $pdo): string
+{
+    if ($pdo instanceof MlQAPdoProxy) {
+        return 'qa';
+    }
+
+    if (isset($GLOBALS['ml_live_pdo']) && $pdo === $GLOBALS['ml_live_pdo']) {
+        return 'live';
+    }
+
+    return 'unknown';
+}
+
 function mlGetSeasonConfig(PDO $pdo, int $seasonId, string $configKey, $default = null) {
     $stmt = $pdo->prepare("\n        SELECT ConfigValue\n        FROM ML_Config\n        WHERE SeasonID = ?\n          AND ConfigKey = ?\n        LIMIT 1\n    ");
     $stmt->execute([$seasonId, $configKey]);

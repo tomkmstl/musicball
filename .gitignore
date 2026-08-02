@@ -2,7 +2,9 @@ config/spotify_config.php
 config/connections/
 config/local_env.php
 config/discord_sso_secrets.php
+config/push_secrets.php
 _sessions/
+/vendor/
 *.log
 .env
 Thumbs.db

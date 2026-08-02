@@ -8,9 +8,11 @@ require_once __DIR__ . '/integrations/discord/discord.php';
 
 $currentUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : 0;
 if (!mlIsAdminUserId($pdo, $currentUserId)) {
-    header('Location: index.php');
+    header('Location: ' . mlUrl('index.php'));
     exit;
 }
+
+$discordDataMode = mlDiscordGetDataMode($pdo);
 
 $adminMessage = isset($_SESSION['ml_admin_message']) ? (string)$_SESSION['ml_admin_message'] : '';
 unset($_SESSION['ml_admin_message']);
@@ -39,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             mlSetSeasonConfig($pdo, (int)$targetVotingSeason['SeasonID'], 'voting_open', '0');
             $_SESSION['ml_admin_message'] = 'Voting for ' . $targetVotingSeason['SeasonName'] . ' is now closed early. You can still review the partial results and start the season when ready.';
-            header('Location: admin.php');
+            header('Location: ' . mlUrl('admin.php'));
             exit;
         }
 
@@ -82,42 +84,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->commit();
 
             $_SESSION['ml_admin_message'] = $previousSeasonRow['SeasonName'] . ' has been restored as the current season.';
-            header('Location: admin.php');
+            header('Location: ' . mlUrl('admin.php'));
             exit;
         }
 
         if ($action === 'save_discord_settings') {
             $discordEnabled = isset($_POST['discord_enabled']) && $_POST['discord_enabled'] === '1';
-            $discordWebhookUrl = trim((string)($_POST['discord_webhook_url'] ?? ''));
-            $discordUsername = trim((string)($_POST['discord_username'] ?? ''));
-            $discordEveryWebhookUrl = trim((string)($_POST['discord_every_webhook_url'] ?? ''));
-            $discordEveryUsername = trim((string)($_POST['discord_every_username'] ?? ''));
-            $discordQaWebhookUrl = trim((string)($_POST['discord_qa_webhook_url'] ?? ''));
-            $discordQaUsername = trim((string)($_POST['discord_qa_username'] ?? ''));
-            $discordSettingsPdo = mlGetLivePdo();
+            if ($discordDataMode === 'qa') {
+                $discordQaWebhookUrl = trim((string)($_POST['discord_qa_webhook_url'] ?? ''));
+                $discordQaUsername = trim((string)($_POST['discord_qa_username'] ?? ''));
 
-            if ($discordWebhookUrl !== '' && !mlDiscordIsWebhookUrlAllowed($discordWebhookUrl)) {
-                throw new RuntimeException('Enter a valid Essential webhook URL that starts with https://discord.com/api/webhooks/.');
+                if ($discordQaWebhookUrl !== '' && !mlDiscordIsWebhookUrlAllowed($discordQaWebhookUrl)) {
+                    throw new RuntimeException('Enter a valid QA webhook URL that starts with https://discord.com/api/webhooks/.');
+                }
+
+                if ($discordQaWebhookUrl !== '') {
+                    mlSetSettingValue($pdo, 'discord_qa_webhook_url', $discordQaWebhookUrl);
+                }
+                mlSetSettingValue($pdo, 'discord_qa_username', $discordQaUsername !== '' ? $discordQaUsername : null);
+            } elseif ($discordDataMode === 'live') {
+                $discordWebhookUrl = trim((string)($_POST['discord_webhook_url'] ?? ''));
+                $discordUsername = trim((string)($_POST['discord_username'] ?? ''));
+                $discordEveryWebhookUrl = trim((string)($_POST['discord_every_webhook_url'] ?? ''));
+                $discordEveryUsername = trim((string)($_POST['discord_every_username'] ?? ''));
+
+                if ($discordWebhookUrl !== '' && !mlDiscordIsWebhookUrlAllowed($discordWebhookUrl)) {
+                    throw new RuntimeException('Enter a valid Essential webhook URL that starts with https://discord.com/api/webhooks/.');
+                }
+
+                if ($discordEveryWebhookUrl !== '' && !mlDiscordIsWebhookUrlAllowed($discordEveryWebhookUrl)) {
+                    throw new RuntimeException('Enter a valid Every webhook URL that starts with https://discord.com/api/webhooks/.');
+                }
+
+                if ($discordWebhookUrl !== '') {
+                    mlSetSettingValue($pdo, 'discord_webhook_url', $discordWebhookUrl);
+                }
+                mlSetSettingValue($pdo, 'discord_username', $discordUsername !== '' ? $discordUsername : null);
+                if ($discordEveryWebhookUrl !== '') {
+                    mlSetSettingValue($pdo, 'discord_every_webhook_url', $discordEveryWebhookUrl);
+                }
+                mlSetSettingValue($pdo, 'discord_every_username', $discordEveryUsername !== '' ? $discordEveryUsername : null);
+            } else {
+                throw new RuntimeException('Discord settings were not saved because the live/QA data mode could not be verified.');
             }
 
-            if ($discordEveryWebhookUrl !== '' && !mlDiscordIsWebhookUrlAllowed($discordEveryWebhookUrl)) {
-                throw new RuntimeException('Enter a valid Every webhook URL that starts with https://discord.com/api/webhooks/.');
-            }
-
-            if ($discordQaWebhookUrl !== '' && !mlDiscordIsWebhookUrlAllowed($discordQaWebhookUrl)) {
-                throw new RuntimeException('Enter a valid QA webhook URL that starts with https://discord.com/api/webhooks/.');
-            }
-
-            mlSetSettingValue($discordSettingsPdo, 'discord_enabled', $discordEnabled ? '1' : '0');
-            mlSetSettingValue($discordSettingsPdo, 'discord_webhook_url', $discordWebhookUrl !== '' ? $discordWebhookUrl : null);
-            mlSetSettingValue($discordSettingsPdo, 'discord_username', $discordUsername !== '' ? $discordUsername : null);
-            mlSetSettingValue($discordSettingsPdo, 'discord_every_webhook_url', $discordEveryWebhookUrl !== '' ? $discordEveryWebhookUrl : null);
-            mlSetSettingValue($discordSettingsPdo, 'discord_every_username', $discordEveryUsername !== '' ? $discordEveryUsername : null);
-            mlSetSettingValue($discordSettingsPdo, 'discord_qa_webhook_url', $discordQaWebhookUrl !== '' ? $discordQaWebhookUrl : null);
-            mlSetSettingValue($discordSettingsPdo, 'discord_qa_username', $discordQaUsername !== '' ? $discordQaUsername : null);
+            mlSetSettingValue(mlDiscordGetMasterSettingsPdo($pdo), 'discord_enabled', $discordEnabled ? '1' : '0');
 
             $_SESSION['ml_admin_message'] = 'Discord settings saved.';
-            header('Location: admin.php');
+            header('Location: ' . mlUrl('admin.php'));
             exit;
         }
 
@@ -146,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['ml_admin_error'] = 'Discord test failed' . $statusPart . ($errorPart !== '' ? ': ' . $errorPart : '.');
             }
 
-            header('Location: admin.php');
+            header('Location: ' . mlUrl('admin.php'));
             exit;
         }
 
@@ -156,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['ml_admin_message'] = $devModeEnabled
                 ? 'Dev mode is on. App caching is now minimized for development.'
                 : 'Dev mode is off. Standard app caching is active again.';
-            header('Location: admin.php');
+            header('Location: ' . mlUrl('admin.php'));
             exit;
         }
 
@@ -179,7 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mlSetSettingValue($pdo, 'vote_max_per_song', (string)$maxVotesPerSong);
 
             $_SESSION['ml_admin_message'] = 'Voting settings saved.';
-            header('Location: admin.php');
+            header('Location: ' . mlUrl('admin.php'));
             exit;
         }
 
@@ -191,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             mlSetSettingValue($pdo, 'playlist_build_mode', $playlistBuildMode);
             $_SESSION['ml_admin_message'] = 'Playlist timing saved.';
-            header('Location: admin.php');
+            header('Location: ' . mlUrl('admin.php'));
             exit;
         }
 
@@ -205,7 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['ml_admin_message'] = 'Playlist generated for ' . $playlistResult['title'] . '.';
             }
 
-            header('Location: admin.php');
+            header('Location: ' . mlUrl('admin.php'));
             exit;
         }
 
@@ -242,7 +256,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->rollBack();
         }
         $_SESSION['ml_admin_error'] = $e->getMessage();
-        header('Location: admin.php');
+        header('Location: ' . mlUrl('admin.php'));
         exit;
     }
 }
@@ -254,7 +268,63 @@ $voteMaxPerSongSettingRaw = mlGetIntSetting($pdo, 'vote_max_per_song', 0);
 $voteMaxPerSongUnlimited = ($voteMaxPerSongSettingRaw <= 0);
 $voteMaxPerSongSetting = $voteMaxPerSongUnlimited ? $votesPerRoundSetting : min($voteMaxPerSongSettingRaw, $votesPerRoundSetting);
 $devModeEnabled = mlIsDevMode($pdo);
-$discordStatus = mlDiscordGetConfigStatus(mlGetLivePdo());
+$discordStatus = mlDiscordGetConfigStatus($pdo);
+$discordHealthClass = '';
+$discordHealthMessage = '';
+
+if ($discordStatus['enabled_setting']) {
+    $discordHealthIssues = [];
+    if (!$discordStatus['event_log_ready']) {
+        $discordHealthIssues[] = 'Musicball cannot record which notifications have been sent';
+    }
+
+    if ($discordDataMode === 'qa') {
+        $qaProfile = $discordStatus['profiles']['qa'];
+        if (!$qaProfile['webhook_present']) {
+            $discordHealthIssues[] = 'the QA webhook URL is missing';
+        } elseif (!$qaProfile['webhook_valid']) {
+            $discordHealthIssues[] = 'the QA webhook URL is invalid';
+        }
+
+        if (!$discordHealthIssues) {
+            $discordHealthClass = 'success';
+            $discordHealthMessage = 'Discord notifications are on. The QA webhook is ready.';
+        }
+    } else {
+        $connectedProfiles = [];
+        $missingProfiles = [];
+        foreach (['essential', 'every'] as $profileKey) {
+            $profile = $discordStatus['profiles'][$profileKey];
+            $profileLabel = $profileKey === 'essential' ? 'Essential' : 'Every';
+            if ($profile['webhook_present'] && !$profile['webhook_valid']) {
+                $discordHealthIssues[] = $profileLabel . ' has an invalid webhook URL';
+            } elseif ($profile['webhook_valid']) {
+                $connectedProfiles[] = $profileLabel;
+            } else {
+                $missingProfiles[] = $profileLabel;
+            }
+        }
+
+        if (!$connectedProfiles && !$discordHealthIssues) {
+            $discordHealthIssues[] = 'no live webhook URL is configured';
+        }
+
+        if (!$discordHealthIssues) {
+            $discordHealthClass = 'success';
+            if (!$missingProfiles) {
+                $discordHealthMessage = 'Discord notifications are on. Essential and Every are ready.';
+            } else {
+                $discordHealthMessage = 'Discord notifications are on. ' . implode(' and ', $connectedProfiles) . ' is connected; ' . implode(' and ', $missingProfiles) . ' is not configured.';
+            }
+        }
+    }
+
+    if ($discordHealthIssues) {
+        $discordHealthClass = 'error';
+        $discordHealthMessage = 'Discord notifications need attention: ' . implode('; ', $discordHealthIssues) . '.';
+    }
+}
+
 $discordTestEventOptions = mlDiscordGetTestEventOptions();
 $discordTrackedEvents = mlDiscordGetTrackedEventLabels();
 $discordRecentEvents = mlDiscordGetRecentEventLog($pdo, 20);
@@ -400,7 +470,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                         </div>
 
                         <div class="admin-roku-mobile-panel" data-admin-mobile-panel="discord">
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="discord-webhook-notifications">Discord webhook notifications</button>
+                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="discord-webhook-notifications">Discord Notifications</button>
                             <button type="button" class="admin-roku-mobile-link" data-admin-nav="discord-notification-status">Discord notification status</button>
                         </div>
 
@@ -430,7 +500,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
 
                     <div class="admin-roku-group">
                         <div class="admin-roku-group-title">Discord</div>
-                        <button type="button" class="admin-roku-link" data-admin-nav="discord-webhook-notifications">Discord webhook notifications</button>
+                        <button type="button" class="admin-roku-link" data-admin-nav="discord-webhook-notifications">Discord Notifications</button>
                         <button type="button" class="admin-roku-link" data-admin-nav="discord-notification-status">Discord notification status</button>
                     </div>
 
@@ -692,33 +762,36 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
 
                 <section class="admin-panel admin-admin-view" data-admin-view="discord-webhook-notifications">
                     <div class="home-shell-kicker">Discord</div>
-                    <h2>Discord webhook notifications</h2>
-                    <p>
-                        Control Musicball's Discord webhook connections, display names, and send a safe test message before relying on live notifications.
-                    </p>
+                    <h2>Discord Notifications</h2>
 
                     <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-form-stack" id="discord-settings-form">
                         <input type="hidden" name="admin_action" value="save_discord_settings">
 
                         <div class="theme-toggle-row admin-theme-toggle-row discord-toggle-row">
                             <div class="theme-toggle-copy">
-                                <span class="theme-toggle-label" id="discord-toggle-label">Discord Notifications <?= $discordStatus['enabled_setting'] ? 'On' : 'Off' ?></span>
-                                <span class="theme-toggle-note">Turn outbound Discord messages on or off without removing your saved webhooks.</span>
-                                <span class="theme-toggle-note discord-toggle-warning">Warning: changing this setting affects live Discord alerts for the whole app and requires confirmation.</span>
+                                <span class="theme-toggle-label">Notifications</span>
+                                <span class="theme-toggle-note" id="discord-toggle-label"><?= $discordStatus['enabled_setting'] ? 'On' : 'Off' ?></span>
                             </div>
-                            <label class="theme-switch" for="discord_enabled_toggle" aria-label="Toggle Discord notifications">
+                            <label class="theme-switch" for="discord_enabled_toggle" aria-label="Turn Discord notifications on or off">
                                 <input type="checkbox" id="discord_enabled_toggle" name="discord_enabled_toggle" value="1" <?= $discordStatus['enabled_setting'] ? 'checked' : '' ?>>
                                 <input type="hidden" name="discord_enabled" id="discord_enabled_hidden" value="<?= $discordStatus['enabled_setting'] ? '1' : '0' ?>">
                                 <span class="theme-switch-track"></span>
                             </label>
                         </div>
 
+                        <?php if ($discordHealthMessage !== ''): ?>
+                            <div class="status-banner<?= $discordHealthClass !== '' ? ' ' . htmlspecialchars($discordHealthClass) : '' ?>">
+                                <?= htmlspecialchars($discordHealthMessage) ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if ($discordDataMode === 'live'): ?>
                         <div class="admin-section-divider">
                             <h3>Essential notifications</h3>
-                            <p class="note admin-note-top-xs">New round opens, voting opens, all votes submitted, and round closes.</p>
+                            <p class="note admin-note-top-xs">Round openings, voting, results, and season events.</p>
 
                             <div>
-                                <label class="admin-label" for="discord_username">Webhook display name</label>
+                                <label class="admin-label" for="discord_username">Display name (optional)</label>
                                 <input
                                     type="text"
                                     name="discord_username"
@@ -728,35 +801,45 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                     value="<?= htmlspecialchars($discordStatus['profiles']['essential']['display_name']) ?>"
                                     placeholder="Musicball"
                                 >
-                                <p class="note admin-note-top-xs">Leave blank to store a null value and let Discord use the default display name.</p>
                             </div>
 
-                            <div>
-                                <label class="admin-label" for="discord_webhook_url">Webhook URL</label>
-                                <input
-                                    type="url"
-                                    name="discord_webhook_url"
-                                    id="discord_webhook_url"
-                                    class="admin-input"
-                                    value="<?= htmlspecialchars($discordStatus['profiles']['essential']['webhook_url']) ?>"
-                                    placeholder="https://discord.com/api/webhooks/..."
-                                    inputmode="url"
-                                    autocomplete="off"
-                                >
-                                <?php if ($discordStatus['profiles']['essential']['webhook_present']): ?>
-                                    <p>Saved value: <code><?= htmlspecialchars($discordStatus['profiles']['essential']['webhook_masked']) ?></code></p>
-                                <?php else: ?>
-                                    <p>No Essential webhook URL has been saved yet.</p>
-                                <?php endif; ?>
+                            <?php $essentialWebhookConfigured = $discordStatus['profiles']['essential']['webhook_valid']; ?>
+                            <div data-discord-webhook-control>
+                                <div class="admin-section-actions discord-webhook-credential-status">
+                                    <span class="admin-discord-mini-badge <?= $essentialWebhookConfigured ? 'sent' : 'pending' ?>">
+                                        <?= $essentialWebhookConfigured ? 'Configured' : ($discordStatus['profiles']['essential']['webhook_present'] ? 'Needs attention' : 'Not configured') ?>
+                                    </span>
+                                    <?php if ($essentialWebhookConfigured): ?>
+                                        <button type="button" class="button-secondary" data-discord-webhook-replace aria-expanded="false">Replace webhook</button>
+                                    <?php endif; ?>
+                                </div>
+                                <div data-discord-webhook-editor <?= $essentialWebhookConfigured ? 'hidden' : '' ?>>
+                                    <label class="admin-label" for="discord_webhook_url">Webhook URL</label>
+                                    <input
+                                        type="url"
+                                        name="discord_webhook_url"
+                                        id="discord_webhook_url"
+                                        class="admin-input"
+                                        value=""
+                                        placeholder="https://discord.com/api/webhooks/..."
+                                        inputmode="url"
+                                        autocomplete="new-password"
+                                    >
+                                    <?php if ($essentialWebhookConfigured): ?>
+                                        <div class="admin-section-actions admin-form-top-sm">
+                                            <button type="button" class="button-secondary" data-discord-webhook-cancel>Cancel</button>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
 
                         <div class="admin-section-divider">
                             <h3>Every notification</h3>
-                            <p class="note admin-note-top-xs">Receives everything in Essential plus song submitted, song changed, and votes submitted.</p>
+                            <p class="note admin-note-top-xs">All Essential alerts plus song and vote activity.</p>
 
                             <div>
-                                <label class="admin-label" for="discord_every_username">Webhook display name</label>
+                                <label class="admin-label" for="discord_every_username">Display name (optional)</label>
                                 <input
                                     type="text"
                                     name="discord_every_username"
@@ -766,35 +849,47 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                     value="<?= htmlspecialchars($discordStatus['profiles']['every']['display_name']) ?>"
                                     placeholder="Musicball"
                                 >
-                                <p class="note admin-note-top-xs">Leave blank to store a null value and let Discord use the default display name.</p>
                             </div>
 
-                            <div>
-                                <label class="admin-label" for="discord_every_webhook_url">Webhook URL</label>
-                                <input
-                                    type="url"
-                                    name="discord_every_webhook_url"
-                                    id="discord_every_webhook_url"
-                                    class="admin-input"
-                                    value="<?= htmlspecialchars($discordStatus['profiles']['every']['webhook_url']) ?>"
-                                    placeholder="https://discord.com/api/webhooks/..."
-                                    inputmode="url"
-                                    autocomplete="off"
-                                >
-                                <?php if ($discordStatus['profiles']['every']['webhook_present']): ?>
-                                    <p>Saved value: <code><?= htmlspecialchars($discordStatus['profiles']['every']['webhook_masked']) ?></code></p>
-                                <?php else: ?>
-                                    <p>No Every webhook URL has been saved yet.</p>
-                                <?php endif; ?>
+                            <?php $everyWebhookConfigured = $discordStatus['profiles']['every']['webhook_valid']; ?>
+                            <div data-discord-webhook-control>
+                                <div class="admin-section-actions discord-webhook-credential-status">
+                                    <span class="admin-discord-mini-badge <?= $everyWebhookConfigured ? 'sent' : 'pending' ?>">
+                                        <?= $everyWebhookConfigured ? 'Configured' : ($discordStatus['profiles']['every']['webhook_present'] ? 'Needs attention' : 'Not configured') ?>
+                                    </span>
+                                    <?php if ($everyWebhookConfigured): ?>
+                                        <button type="button" class="button-secondary" data-discord-webhook-replace aria-expanded="false">Replace webhook</button>
+                                    <?php endif; ?>
+                                </div>
+                                <div data-discord-webhook-editor <?= $everyWebhookConfigured ? 'hidden' : '' ?>>
+                                    <label class="admin-label" for="discord_every_webhook_url">Webhook URL</label>
+                                    <input
+                                        type="url"
+                                        name="discord_every_webhook_url"
+                                        id="discord_every_webhook_url"
+                                        class="admin-input"
+                                        value=""
+                                        placeholder="https://discord.com/api/webhooks/..."
+                                        inputmode="url"
+                                        autocomplete="new-password"
+                                    >
+                                    <?php if ($everyWebhookConfigured): ?>
+                                        <div class="admin-section-actions admin-form-top-sm">
+                                            <button type="button" class="button-secondary" data-discord-webhook-cancel>Cancel</button>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
+                        <?php endif; ?>
 
+                        <?php if ($discordDataMode === 'qa'): ?>
                         <div class="admin-section-divider">
                             <h3>QA notifications</h3>
-                            <p class="note admin-note-top-xs">Receives all notification events, but only while the app is running in QA mode.</p>
+                            <p class="note admin-note-top-xs">Every notification event from QA mode.</p>
 
                             <div>
-                                <label class="admin-label" for="discord_qa_username">Webhook display name</label>
+                                <label class="admin-label" for="discord_qa_username">Display name (optional)</label>
                                 <input
                                     type="text"
                                     name="discord_qa_username"
@@ -804,45 +899,45 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                     value="<?= htmlspecialchars($discordStatus['profiles']['qa']['display_name']) ?>"
                                     placeholder="Musicball QA"
                                 >
-                                <p class="note admin-note-top-xs">Leave blank to store a null value and let Discord use the default display name.</p>
                             </div>
 
-                            <div>
-                                <label class="admin-label" for="discord_qa_webhook_url">Webhook URL</label>
-                                <input
-                                    type="url"
-                                    name="discord_qa_webhook_url"
-                                    id="discord_qa_webhook_url"
-                                    class="admin-input"
-                                    value="<?= htmlspecialchars($discordStatus['profiles']['qa']['webhook_url']) ?>"
-                                    placeholder="https://discord.com/api/webhooks/..."
-                                    inputmode="url"
-                                    autocomplete="off"
-                                >
-                                <?php if ($discordStatus['profiles']['qa']['webhook_present']): ?>
-                                    <p>Saved value: <code><?= htmlspecialchars($discordStatus['profiles']['qa']['webhook_masked']) ?></code></p>
-                                <?php else: ?>
-                                    <p>No QA webhook URL has been saved yet.</p>
-                                <?php endif; ?>
+                            <?php $qaWebhookConfigured = $discordStatus['profiles']['qa']['webhook_valid']; ?>
+                            <div data-discord-webhook-control>
+                                <div class="admin-section-actions discord-webhook-credential-status">
+                                    <span class="admin-discord-mini-badge <?= $qaWebhookConfigured ? 'sent' : 'pending' ?>">
+                                        <?= $qaWebhookConfigured ? 'Configured' : ($discordStatus['profiles']['qa']['webhook_present'] ? 'Needs attention' : 'Not configured') ?>
+                                    </span>
+                                    <?php if ($qaWebhookConfigured): ?>
+                                        <button type="button" class="button-secondary" data-discord-webhook-replace aria-expanded="false">Replace webhook</button>
+                                    <?php endif; ?>
+                                </div>
+                                <div data-discord-webhook-editor <?= $qaWebhookConfigured ? 'hidden' : '' ?>>
+                                    <label class="admin-label" for="discord_qa_webhook_url">Webhook URL</label>
+                                    <input
+                                        type="url"
+                                        name="discord_qa_webhook_url"
+                                        id="discord_qa_webhook_url"
+                                        class="admin-input"
+                                        value=""
+                                        placeholder="https://discord.com/api/webhooks/..."
+                                        inputmode="url"
+                                        autocomplete="new-password"
+                                    >
+                                    <?php if ($qaWebhookConfigured): ?>
+                                        <div class="admin-section-actions admin-form-top-sm">
+                                            <button type="button" class="button-secondary" data-discord-webhook-cancel>Cancel</button>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
-
-                        <div class="admin-stat-list">
-                            <div class="admin-stat-line"><strong>Enabled setting:</strong> <?= $discordStatus['enabled_setting'] ? 'Yes' : 'No' ?></div>
-                            <div class="admin-stat-line"><strong>Essential webhook URL present:</strong> <?= $discordStatus['profiles']['essential']['webhook_present'] ? 'Yes' : 'No' ?></div>
-                            <div class="admin-stat-line"><strong>Essential webhook URL valid:</strong> <?= $discordStatus['profiles']['essential']['webhook_valid'] ? 'Yes' : 'No' ?></div>
-                            <div class="admin-stat-line"><strong>Every webhook URL present:</strong> <?= $discordStatus['profiles']['every']['webhook_present'] ? 'Yes' : 'No' ?></div>
-                            <div class="admin-stat-line"><strong>Every webhook URL valid:</strong> <?= $discordStatus['profiles']['every']['webhook_valid'] ? 'Yes' : 'No' ?></div>
-                            <div class="admin-stat-line"><strong>QA webhook URL present:</strong> <?= $discordStatus['profiles']['qa']['webhook_present'] ? 'Yes' : 'No' ?></div>
-                            <div class="admin-stat-line"><strong>QA webhook URL valid:</strong> <?= $discordStatus['profiles']['qa']['webhook_valid'] ? 'Yes' : 'No' ?></div>
-                            <div class="admin-stat-line"><strong>Discord event log table ready:</strong> <?= $discordStatus['event_log_ready'] ? 'Yes' : 'No' ?></div>
-                        </div>
+                        <?php endif; ?>
 
                         <button type="submit" class="button-primary">Save Discord Settings</button>
                     </form>
 
                     <div class="admin-section-divider">
-                        <p>Use the test area to send one of your real notification types. Musicball routes the test to the same webhook level that the live event would use.</p>
+                        <h3>Test notification</h3>
                         <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-inline-form admin-inline-form-wrap admin-form-top-sm">
                             <input type="hidden" name="admin_action" value="test_discord_webhook">
                             <div class="admin-inline-field">
@@ -853,9 +948,8 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <button type="submit" class="button-secondary">Send Test Message</button>
+                            <button type="submit" class="button-secondary" <?= !$discordStatus['enabled_setting'] ? 'disabled' : '' ?>>Send <?= $discordDataMode === 'qa' ? 'QA' : 'Live' ?> Test Message</button>
                         </form>
-                        <p class="note admin-note-top-xs">If a live webhook send fails, Musicball writes a concise Discord error to the PHP error log without interrupting gameplay.</p>
                     </div>
                 </section>
 
@@ -941,37 +1035,50 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
 </div>
 <script>
 (function () {
-    var form = document.getElementById('discord-settings-form');
     var toggle = document.getElementById('discord_enabled_toggle');
     var hidden = document.getElementById('discord_enabled_hidden');
     var label = document.getElementById('discord-toggle-label');
-    if (!form || !toggle || !hidden || !label) {
+    if (!toggle || !hidden || !label) {
         return;
     }
 
-    var initialChecked = toggle.checked;
-
     function syncDiscordToggleUi() {
         hidden.value = toggle.checked ? '1' : '0';
-        label.textContent = 'Discord Notifications ' + (toggle.checked ? 'On' : 'Off');
+        label.textContent = toggle.checked ? 'On' : 'Off';
     }
 
     syncDiscordToggleUi();
+    toggle.addEventListener('change', syncDiscordToggleUi);
+})();
+</script>
 
-    toggle.addEventListener('change', function () {
-        syncDiscordToggleUi();
+<script>
+(function () {
+    document.querySelectorAll('[data-discord-webhook-control]').forEach(function (control) {
+        var replaceButton = control.querySelector('[data-discord-webhook-replace]');
+        var cancelButton = control.querySelector('[data-discord-webhook-cancel]');
+        var editor = control.querySelector('[data-discord-webhook-editor]');
+        var input = editor ? editor.querySelector('input[type="url"]') : null;
 
-        var confirmMessage = toggle.checked
-            ? 'Turn Discord notifications ON for the whole app? Live Discord alerts will be allowed again.'
-            : 'Turn Discord notifications OFF for the whole app? Live Discord alerts will stop until you turn them back on.';
-
-        if (!window.confirm(confirmMessage)) {
-            toggle.checked = initialChecked;
-            syncDiscordToggleUi();
+        if (!replaceButton || !editor || !input) {
             return;
         }
 
-        form.submit();
+        replaceButton.addEventListener('click', function () {
+            editor.hidden = false;
+            replaceButton.hidden = true;
+            replaceButton.setAttribute('aria-expanded', 'true');
+            input.focus();
+        });
+
+        if (cancelButton) {
+            cancelButton.addEventListener('click', function () {
+                input.value = '';
+                editor.hidden = true;
+                replaceButton.hidden = false;
+                replaceButton.setAttribute('aria-expanded', 'false');
+            });
+        }
     });
 })();
 </script>
@@ -1052,7 +1159,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'create-next-season': { group: 'season-setup', label: 'Create the next season', groupLabel: 'Season setup' },
         'manage-existing-seasons': { group: 'season-setup', label: 'Manage existing seasons', groupLabel: 'Season setup' },
         'playlist-account': { group: 'spotify', label: 'Playlist Account', groupLabel: 'Spotify' },
-        'discord-webhook-notifications': { group: 'discord', label: 'Discord webhook notifications', groupLabel: 'Discord' },
+        'discord-webhook-notifications': { group: 'discord', label: 'Discord Notifications', groupLabel: 'Discord' },
         'discord-notification-status': { group: 'discord', label: 'Discord notification status', groupLabel: 'Discord' },
         'pwa-dev-mode': { group: 'pwa', label: 'PWA Dev Mode', groupLabel: 'PWA' }
     };

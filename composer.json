@@ -1,0 +1,8 @@
+{
+    "name": "musicball/musicball",
+    "description": "Musicball league gameplay application.",
+    "license": "proprietary",
+    "require": {
+        "minishlink/web-push": "^10.1"
+    }
+}

@@ -33,13 +33,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdminUser) {
             }
 
             $redirectSeasonId = $requestedSeasonId > 0 ? $requestedSeasonId : $seasonId;
-            header('Location: season.php?season_id=' . $redirectSeasonId);
+            header('Location: ' . mlUrl('season.php?season_id=' . $redirectSeasonId));
             exit;
         }
     } catch (Throwable $e) {
         $_SESSION['ml_season_error'] = $e->getMessage();
         $redirectSeasonId = $requestedSeasonId > 0 ? $requestedSeasonId : $seasonId;
-        header('Location: season.php?season_id=' . $redirectSeasonId);
+        header('Location: ' . mlUrl('season.php?season_id=' . $redirectSeasonId));
         exit;
     }
 }
@@ -55,7 +55,7 @@ $privatePlaylistUrl = trim((string)($privatePlaylist['PlaylistURL'] ?? ''));
 
 if ($seasonRow && mlMaybeAutoGeneratePlaylists($pdo, $presentedRounds, (int)$currentUser['UserID'])) {
     $_SESSION['ml_season_message'] = 'Playlist generated automatically.';
-    header('Location: season.php?season_id=' . $selectedSeasonId);
+    header('Location: ' . mlUrl('season.php?season_id=' . $selectedSeasonId));
     exit;
 }
 
@@ -179,7 +179,7 @@ $seasonRevealState = $activeRound
 
 					<div class="game-season-switcher-panel standings-season-options-panel">
 						<?php foreach ($seasonList as $seasonOption): ?>
-							<a href="season.php?season_id=<?= (int)$seasonOption['SeasonID'] ?>" class="standings-season-option" data-mb-nav>
+							<a href="<?= htmlspecialchars(mlUrl('season.php?season_id=' . (int)$seasonOption['SeasonID'])) ?>" class="standings-season-option" data-mb-nav>
 								<span class="standings-season-switcher-season">
 									<?= htmlspecialchars($seasonOption['SeasonName']) ?><?= ((int)$seasonOption['RoundCount'] > 0) ? '' : ' - no rounds yet' ?>
 								</span>
@@ -193,7 +193,7 @@ $seasonRevealState = $activeRound
 
         <?php if ($privatePlaylistUrl === ''): ?>
             <div id="season-private-playlist-message" class="status-banner season-private-playlist-message" role="status" tabindex="-1" hidden>
-                No playlist found. Set your private playlist in <a href="settings.php">Settings</a>.
+                No playlist found. Set your private playlist in <a href="<?= htmlspecialchars(mlUrl('settings.php')) ?>">Settings</a>.
             </div>
         <?php endif; ?>
 
