@@ -347,7 +347,7 @@ p {
 .season-private-playlist-bubble {
     position: fixed;
     left: 50%;
-    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    top: calc(18px + env(safe-area-inset-top, 0px));
     z-index: 2100;
     width: max-content;
     max-width: calc(100vw - 32px);
