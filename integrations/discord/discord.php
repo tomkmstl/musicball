@@ -1,10 +1,6 @@
 <?php
 // discord.php
-// Phase 1 Discord webhook helpers for Musicball.
-//musicball-testing
-//https://discordapp.com/api/webhooks/1490354992681455636/IIg37_xaYKwzM5WpTvuf2W0EKImy4p-wDZGWl2iA9LzcNnqrTvRMNQNJ8OwBbxnroRHe
-//private channel
-//https://discordapp.com/api/webhooks/1490347619795599511/p46cTMgaBp7OkaDD2xG2WUFsS2TU0ht890jLpsM1MeEaaDS-ds8TZ5IQ_5x5ofKNJR-9
+// Discord webhook helpers for Musicball.
 
 require_once dirname(__DIR__, 2) . '/config.php';
 
@@ -41,7 +37,7 @@ function mlDiscordGetProfileDefinitions(): array
         ],
         'qa' => [
             'label' => 'QA notifications',
-            'description' => 'All notification events, used only when the app is in QA mode.',
+            'description' => 'Every notification event from QA data, delivered only to the QA webhook.',
             'display_name_setting' => 'discord_qa_username',
             'webhook_url_setting' => 'discord_qa_webhook_url',
         ],
@@ -51,10 +47,15 @@ function mlDiscordGetProfileDefinitions(): array
 function mlDiscordGetProfileDefinition(string $profileKey): array
 {
     $definitions = mlDiscordGetProfileDefinitions();
-    return $definitions[$profileKey] ?? $definitions['essential'];
+    return $definitions[$profileKey] ?? [];
 }
 
 function mlDiscordGetSettingsPdo(PDO $pdo): PDO
+{
+    return $pdo;
+}
+
+function mlDiscordGetMasterSettingsPdo(PDO $pdo): PDO
 {
     if (function_exists('mlGetLivePdo')) {
         return mlGetLivePdo();
@@ -63,9 +64,36 @@ function mlDiscordGetSettingsPdo(PDO $pdo): PDO
     return $pdo;
 }
 
+function mlDiscordGetDataMode(PDO $pdo): string
+{
+    if (!function_exists('mlGetPdoDataMode')) {
+        return 'unknown';
+    }
+
+    return mlGetPdoDataMode($pdo);
+}
+
+function mlDiscordGetAllowedProfileKeys(PDO $pdo): array
+{
+    $dataMode = mlDiscordGetDataMode($pdo);
+    if ($dataMode === 'qa') {
+        return ['qa'];
+    }
+
+    if ($dataMode === 'live') {
+        return ['essential', 'every'];
+    }
+
+    return [];
+}
+
 function mlDiscordGetWebhookUrl(PDO $pdo, string $profileKey = 'essential'): string
 {
     $definition = mlDiscordGetProfileDefinition($profileKey);
+    if (empty($definition) || !in_array($profileKey, mlDiscordGetAllowedProfileKeys($pdo), true)) {
+        return '';
+    }
+
     $settingsPdo = mlDiscordGetSettingsPdo($pdo);
     $url = mlGetSettingValue($settingsPdo, $definition['webhook_url_setting'], null);
     return trim((string)($url ?? ''));
@@ -74,6 +102,10 @@ function mlDiscordGetWebhookUrl(PDO $pdo, string $profileKey = 'essential'): str
 function mlDiscordGetRawDisplayName(PDO $pdo, string $profileKey = 'essential'): ?string
 {
     $definition = mlDiscordGetProfileDefinition($profileKey);
+    if (empty($definition) || !in_array($profileKey, mlDiscordGetAllowedProfileKeys($pdo), true)) {
+        return null;
+    }
+
     $settingsPdo = mlDiscordGetSettingsPdo($pdo);
     $name = mlGetSettingValue($settingsPdo, $definition['display_name_setting'], null);
     if ($name === null) {
@@ -86,19 +118,9 @@ function mlDiscordGetRawDisplayName(PDO $pdo, string $profileKey = 'essential'):
 
 function mlDiscordIsEnabled(PDO $pdo): bool
 {
-    $settingsPdo = mlDiscordGetSettingsPdo($pdo);
+    $settingsPdo = mlDiscordGetMasterSettingsPdo($pdo);
     $enabled = trim((string)mlGetSettingValue($settingsPdo, 'discord_enabled', '1'));
-    if ($enabled === '0') {
-        return false;
-    }
-
-    foreach (array_keys(mlDiscordGetProfileDefinitions()) as $profileKey) {
-        if (mlDiscordGetWebhookUrl($pdo, $profileKey) !== '') {
-            return true;
-        }
-    }
-
-    return false;
+    return $enabled !== '0';
 }
 
 function mlDiscordGetDisplayName(PDO $pdo, string $profileKey = 'essential'): string
@@ -110,26 +132,35 @@ function mlDiscordGetDisplayName(PDO $pdo, string $profileKey = 'essential'): st
 function mlDiscordGetDeliveryProfileLabel(string $profileKey): string
 {
     $definition = mlDiscordGetProfileDefinition($profileKey);
-    return (string)($definition['label'] ?? 'Discord');
+    return (string)($definition['label'] ?? 'Unknown Discord destination');
 }
 
-function mlDiscordGetEventDeliveryProfiles(string $eventKey): array
+function mlDiscordGetEventDeliveryProfiles(PDO $pdo, string $eventKey): array
 {
     $baseEventKey = mlDiscordGetBaseEventKey($eventKey);
     if ($baseEventKey === '') {
         return [];
     }
 
-    if (function_exists('mlIsQaMode') && mlIsQaMode()) {
+    $essentialEvents = ['submission_open', 'voting_open', 'all_votes_in', 'round_closed', 'builder_voting_complete', 'season_started'];
+    $everyOnlyEvents = ['song_submitted', 'song_changed', 'votes_submitted'];
+    if (!in_array($baseEventKey, array_merge($essentialEvents, $everyOnlyEvents), true)) {
+        return [];
+    }
+
+    $dataMode = mlDiscordGetDataMode($pdo);
+    if ($dataMode === 'qa') {
         return ['qa'];
     }
 
-    $essentialEvents = ['submission_open', 'voting_open', 'all_votes_in', 'round_closed', 'builder_voting_complete', 'season_started'];
+    if ($dataMode !== 'live') {
+        return [];
+    }
+
     if (in_array($baseEventKey, $essentialEvents, true)) {
         return ['essential', 'every'];
     }
 
-    $everyOnlyEvents = ['song_submitted', 'song_changed', 'votes_submitted'];
     if (in_array($baseEventKey, $everyOnlyEvents, true)) {
         return ['every'];
     }
@@ -251,7 +282,7 @@ function mlDiscordGetConfigStatus(PDO $pdo): array
 
     return [
         'enabled' => mlDiscordIsEnabled($pdo),
-        'enabled_setting' => trim((string)mlGetSettingValue(mlDiscordGetSettingsPdo($pdo), 'discord_enabled', '1')) === '1',
+        'enabled_setting' => trim((string)mlGetSettingValue(mlDiscordGetMasterSettingsPdo($pdo), 'discord_enabled', '1')) === '1',
         'profiles' => $profiles,
         'webhook_url' => $essentialProfile['webhook_url'],
         'webhook_masked' => $essentialProfile['webhook_masked'],
@@ -264,6 +295,17 @@ function mlDiscordGetConfigStatus(PDO $pdo): array
 
 function mlDiscordSendTestMessage(PDO $pdo, string $eventKey = 'submission_open'): array
 {
+    if (!mlDiscordIsEnabled($pdo)) {
+        return [
+            'sent' => false,
+            'reason' => 'discord_disabled',
+            'status_code' => 0,
+            'error' => 'All Discord notifications are off.',
+            'event_key' => mlDiscordNormalizeEventKey($eventKey),
+            'profile_results' => []
+        ];
+    }
+
     $eventKey = mlDiscordNormalizeEventKey($eventKey);
     $messageText = mlDiscordBuildTestMessageText($eventKey);
     if ($messageText === '') {
@@ -275,9 +317,21 @@ function mlDiscordSendTestMessage(PDO $pdo, string $eventKey = 'submission_open'
         ];
     }
 
-    $deliveryProfiles = mlDiscordGetEventDeliveryProfiles($eventKey);
-    $profileKey = $deliveryProfiles[0] ?? 'every';
+    $deliveryProfiles = mlDiscordGetEventDeliveryProfiles($pdo, $eventKey);
+    $profileKey = $deliveryProfiles[0] ?? '';
     $profileResults = [];
+
+    if ($profileKey === '') {
+        return [
+            'sent' => false,
+            'reason' => 'blocked_data_mode',
+            'status_code' => 0,
+            'error' => 'Discord test blocked because the live/QA data mode could not be verified.',
+            'event_key' => $eventKey,
+            'profile_results' => []
+        ];
+    }
+
     $webhookUrl = mlDiscordGetWebhookUrl($pdo, $profileKey);
 
     if ($webhookUrl === '') {
@@ -386,20 +440,34 @@ function mlDiscordBuildTestMessageText(string $eventKey): string
 
 function mlDiscordEventLogTableExists(PDO $pdo): bool
 {
-    static $exists = null;
+    static $existsByConnection = [];
 
-    if ($exists !== null) {
-        return $exists;
+    $dataMode = mlDiscordGetDataMode($pdo);
+    if ($dataMode !== 'live' && $dataMode !== 'qa') {
+        return false;
+    }
+
+    $cacheKey = spl_object_id($pdo) . ':' . $dataMode;
+
+    if (array_key_exists($cacheKey, $existsByConnection)) {
+        return $existsByConnection[$cacheKey];
     }
 
     try {
-        $stmt = $pdo->query("SHOW TABLES LIKE 'ML_DiscordEventLog'");
-        $exists = (bool)$stmt->fetchColumn();
+        $tableName = $dataMode === 'qa' ? 'QA_ML_DiscordEventLog' : 'ML_DiscordEventLog';
+        $stmt = $pdo->prepare('
+            SELECT COUNT(*)
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name = ?
+        ');
+        $stmt->execute([$tableName]);
+        $existsByConnection[$cacheKey] = ((int)$stmt->fetchColumn() > 0);
     } catch (Throwable $e) {
-        $exists = false;
+        $existsByConnection[$cacheKey] = false;
     }
 
-    return $exists;
+    return $existsByConnection[$cacheKey];
 }
 
 function mlDiscordNormalizeEventKey(string $eventKey): string
@@ -459,6 +527,10 @@ function mlDiscordMarkEventSent(PDO $pdo, int $seasonRoundId, string $eventKey, 
 function mlDiscordBuildPayload(PDO $pdo, string $messageText, array $options = []): array
 {
     $profileKey = isset($options['profile_key']) ? (string)$options['profile_key'] : 'essential';
+    if (mlDiscordGetDataMode($pdo) === 'qa' && strpos($messageText, '[QA] ') !== 0) {
+        $messageText = '[QA] ' . $messageText;
+    }
+
     $payload = [
         'content' => $messageText,
         'username' => (string)($options['username'] ?? mlDiscordGetDisplayName($pdo, $profileKey))
@@ -763,7 +835,18 @@ function mlDiscordSendMessageOnce(PDO $pdo, int $seasonRoundId, string $eventKey
         return $result;
     }
 
-    $deliveryProfiles = mlDiscordGetEventDeliveryProfiles($eventKey);
+    $dataMode = mlDiscordGetDataMode($pdo);
+    if ($dataMode !== 'live' && $dataMode !== 'qa') {
+        $result['reason'] = 'blocked_data_mode';
+        $result['error'] = 'Discord send blocked because the live/QA data mode could not be verified.';
+        mlDiscordLog('Blocked send because data mode could not be verified.', [
+            'season_round_id' => $seasonRoundId,
+            'event_key' => $eventKey
+        ]);
+        return $result;
+    }
+
+    $deliveryProfiles = mlDiscordGetEventDeliveryProfiles($pdo, $eventKey);
     if (empty($deliveryProfiles)) {
         $result['reason'] = 'invalid_event_key';
         return $result;

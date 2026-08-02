@@ -2,6 +2,7 @@
   "name": "Musicball",
   "short_name": "Musicball",
   "description": "Musicball season play, voting, standings, and results.",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

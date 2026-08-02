@@ -7,7 +7,7 @@ require_once __DIR__ . '/integrations/discord/discord.php';
 
 $currentUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : 0;
 if (!mlIsAdminUserId($pdo, $currentUserId)) {
-    header('Location: index.php');
+    header('Location: ' . mlUrl('index.php'));
     exit;
 }
 
@@ -19,7 +19,7 @@ if (isset($_GET['season_id'])) {
 }
 
 if ($targetSeasonId <= 0) {
-    header('Location: admin.php');
+    header('Location: ' . mlUrl('admin.php'));
     exit;
 }
 
@@ -70,7 +70,7 @@ $seasonStmt->execute([$targetSeasonId]);
 $seasonRow = $seasonStmt->fetch(PDO::FETCH_ASSOC);
 if (!$seasonRow) {
     $_SESSION['ml_admin_error'] = 'That season could not be found.';
-    header('Location: admin.php');
+    header('Location: ' . mlUrl('admin.php'));
     exit;
 }
 
@@ -273,7 +273,7 @@ $seasonActionLabel = $canStartSeasonHere
                     <?php endif; ?>
                 </p>
             </div>
-            <a href="admin.php" class="button-secondary admin-back-link">&laquo; Back to Admin</a>
+            <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="button-secondary admin-back-link">&laquo; Back to Admin</a>
         </div>
 
         <?php if ($adminMessage !== ''): ?>
@@ -321,7 +321,7 @@ $seasonActionLabel = $canStartSeasonHere
             </section>
         </div>
 
-        <form method="post" action="season_rounds.php?season_id=<?= (int)$targetSeasonId ?>" class="admin-season-setup-form">
+        <form method="post" action="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . (int)$targetSeasonId)) ?>" class="admin-season-setup-form">
             <input type="hidden" name="season_id" value="<?= (int)$targetSeasonId ?>">
             <input type="hidden" name="browser_timezone" value="" data-browser-timezone>
 

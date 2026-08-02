@@ -11,7 +11,7 @@ $seasonRoundId = isset($_GET['season_round_id']) ? (int)$_GET['season_round_id']
 $round = $seasonRoundId > 0 ? mlFindRoundById($pdo, $seasonRoundId) : null;
 
 if (!$round) {
-    header('Location: season.php');
+    header('Location: ' . mlUrl('season.php'));
     exit;
 }
 
@@ -19,7 +19,7 @@ $presentation = mlComputeRoundPresentation($pdo, [$round], $currentUserId);
 $roundView = $presentation[0];
 
 if (mlMaybeAutoGeneratePlaylists($pdo, [$roundView], $currentUserId)) {
-    header('Location: season.php?season_id=' . (int)$round['SeasonID']);
+    header('Location: ' . mlUrl('season.php?season_id=' . (int)$round['SeasonID']));
     exit;
 }
 
@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $roundView = $presentation[0];
 
     if (mlMaybeAutoGeneratePlaylists($pdo, [$roundView], $currentUserId)) {
-        header('Location: season.php?season_id=' . (int)$round['SeasonID']);
+        header('Location: ' . mlUrl('season.php?season_id=' . (int)$round['SeasonID']));
         exit;
     }
 }
@@ -238,7 +238,7 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                     </div>
                 </div>
                 <div class="song-duplicate-actions">
-                    <form method="post" action="song.php?season_round_id=<?= (int)$seasonRoundId ?>">
+                    <form method="post" action="<?= htmlspecialchars(mlUrl('song.php?season_round_id=' . (int)$seasonRoundId)) ?>">
                         <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
                         <input type="hidden" name="song_action" value="save_track">
                         <input type="hidden" name="confirm_selection" value="1">
@@ -257,7 +257,7 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                         <input type="hidden" name="song_comment" value="<?= htmlspecialchars((string)($pendingSelectedTrack['comment'] ?? '')) ?>">
                         <button class="button-primary button-danger">Proceed Anyway</button>
                     </form>
-                    <a href="song.php?season_round_id=<?= (int)$seasonRoundId ?>" class="button-secondary">Cancel</a>
+                    <a href="<?= htmlspecialchars(mlUrl('song.php?season_round_id=' . (int)$seasonRoundId)) ?>" class="button-secondary">Cancel</a>
                 </div>
             </section>
         <?php endif; ?>
@@ -281,7 +281,7 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                     </div>
                 </div>
                 <div class="song-duplicate-actions">
-                    <form method="post" action="song.php?season_round_id=<?= (int)$seasonRoundId ?>">
+                    <form method="post" action="<?= htmlspecialchars(mlUrl('song.php?season_round_id=' . (int)$seasonRoundId)) ?>">
                         <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
                         <input type="hidden" name="song_action" value="save_track">
                         <input type="hidden" name="confirm_selection" value="1">
@@ -294,7 +294,7 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                         <input type="hidden" name="song_comment" value="<?= htmlspecialchars((string)($pendingSelectedTrack['comment'] ?? '')) ?>">
                         <button type="submit" class="button-primary">Confirm Song</button>
                     </form>
-                    <a href="song.php?season_round_id=<?= (int)$seasonRoundId ?>" class="button-secondary">Cancel</a>
+                    <a href="<?= htmlspecialchars(mlUrl('song.php?season_round_id=' . (int)$seasonRoundId)) ?>" class="button-secondary">Cancel</a>
                 </div>
             </section>
         <?php endif; ?>
@@ -316,7 +316,7 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                     </div>
                 </div>
 
-                <form method="post" action="song.php?season_round_id=<?= (int)$seasonRoundId ?>" class="song-comment-form">
+                <form method="post" action="<?= htmlspecialchars(mlUrl('song.php?season_round_id=' . (int)$seasonRoundId)) ?>" class="song-comment-form">
                     <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
                     <input type="hidden" name="song_action" value="save_comment">
                     <label class="admin-label" for="saved_song_comment">Optional comment</label>
@@ -326,7 +326,7 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                     </div>
                 </form>
 
-                <form method="post" action="song.php?season_round_id=<?= (int)$seasonRoundId ?>" class="song-current-pick-actions" id="remove_song_form">
+                <form method="post" action="<?= htmlspecialchars(mlUrl('song.php?season_round_id=' . (int)$seasonRoundId)) ?>" class="song-current-pick-actions" id="remove_song_form">
                     <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
                     <input type="hidden" name="song_action" value="remove_track">
                     <button type="button" id="show_remove_song_confirm_button" class="button-secondary" aria-controls="remove_song_confirm_panel" aria-expanded="false" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>>Remove Song</button>
@@ -402,7 +402,7 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                     </div>
                 </div>
 
-                <form method="post" action="song.php?season_round_id=<?= (int)$seasonRoundId ?>" id="spotify_track_save_form" class="spotify-track-save-form">
+                <form method="post" action="<?= htmlspecialchars(mlUrl('song.php?season_round_id=' . (int)$seasonRoundId)) ?>" id="spotify_track_save_form" class="spotify-track-save-form">
                     <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
                     <input type="hidden" name="song_action" value="save_track">
                     <input type="hidden" name="confirm_selection" value="1">

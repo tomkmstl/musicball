@@ -1,5 +1,7 @@
 CREATE TABLE IF NOT EXISTS `QA_ML_Config` LIKE `ML_Config`;
 CREATE TABLE IF NOT EXISTS `QA_ML_DiscordEventLog` LIKE `ML_DiscordEventLog`;
+CREATE TABLE IF NOT EXISTS `QA_ML_PushDeliveryLog` LIKE `ML_PushDeliveryLog`;
+CREATE TABLE IF NOT EXISTS `QA_ML_PushSubscriptions` LIKE `ML_PushSubscriptions`;
 CREATE TABLE IF NOT EXISTS `QA_ML_FixedRounds` LIKE `ML_FixedRounds`;
 CREATE TABLE IF NOT EXISTS `QA_ML_Q1Categories` LIKE `ML_Q1Categories`;
 CREATE TABLE IF NOT EXISTS `QA_ML_Q1Votes` LIKE `ML_Q1Votes`;
@@ -23,6 +25,8 @@ CREATE TABLE IF NOT EXISTS `QA_ML_Submissions` LIKE `ML_Submissions`;
 CREATE TABLE IF NOT EXISTS `QA_ML_Users` LIKE `ML_Users`;
 CREATE TABLE IF NOT EXISTS `QA_ML_UserSeasonPlaylistPins` LIKE `ML_UserSeasonPlaylistPins`;
 CREATE TABLE IF NOT EXISTS `QA_ML_WalkmanExcluded` LIKE `ML_WalkmanExcluded`;
+
+-- Push subscriptions are device credentials. Create QA storage, but never copy live rows into it.
 
 
 -- Keep an existing QA round-slot table aligned with the live Option Vote fields.

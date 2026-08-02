@@ -3484,6 +3484,11 @@ body.ml-pull-refreshing .wrapper {
     background: rgba(255, 214, 102, 0.08);
 }
 
+.discord-webhook-credential-status {
+    align-items: center;
+    margin-bottom: 12px;
+}
+
 .admin-discord-log-simple {
     display: grid;
     gap: 8px;
@@ -4829,4 +4834,27 @@ body.theme-light .vote-points-btn[disabled] {
 body.theme-light .vote-points-btn:focus-visible {
     outline: 3px solid rgba(61, 172, 236, 0.22);
     outline-offset: 2px;
+}
+.settings-push-control {
+    display: grid;
+    gap: 14px;
+}
+
+.settings-push-status {
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+.settings-push-status[data-state="on"] {
+    color: var(--brand);
+}
+
+.settings-push-status[data-state="blocked"],
+.settings-push-status[data-state="error"] {
+    color: var(--danger);
+}
+
+.settings-push-actions {
+    align-items: center;
+    flex-wrap: wrap;
 }

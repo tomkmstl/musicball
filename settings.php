@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/gameplay/bootstrap.php';
+require_once __DIR__ . '/integrations/push/push.php';
 
 $currentUser = mlRequireAuthenticatedUser($pdo);
 $currentPage = 'settings';
@@ -12,6 +13,13 @@ $privatePlaylist = $privatePlaylistStorageReady
     : null;
 $privatePlaylistUrl = trim((string)($privatePlaylist['PlaylistURL'] ?? ''));
 $privatePlaylistSectionOpen = false;
+$pushStorageReady = mlPushStorageReady($pdo);
+$pushReady = mlPushServerReady($pdo);
+
+if (empty($_SESSION['ml_push_csrf']) || !is_string($_SESSION['ml_push_csrf'])) {
+    $_SESSION['ml_push_csrf'] = bin2hex(random_bytes(24));
+}
+$pushCsrfToken = (string)$_SESSION['ml_push_csrf'];
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -240,6 +248,34 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
                 </details>
             </form>
 
+            <div class="settings-form">
+                <details class="settings-section settings-collapse">
+                    <summary class="settings-collapse-summary">
+                        <span class="settings-collapse-title">
+                            <span class="home-shell-kicker">Notifications</span>
+                            <span class="settings-heading">Deadline reminders</span>
+                        </span>
+                        <span class="settings-collapse-icon" aria-hidden="true"></span>
+                    </summary>
+
+                    <div class="settings-collapse-content">
+                        <p>Get a reminder when your song or votes are still unfinished.</p>
+
+                        <div class="settings-push-control" data-push-settings>
+                            <div class="settings-push-status" data-push-status>Checking this device...</div>
+                            <div class="game-form-actions settings-push-actions">
+                                <button type="button" class="button-primary" data-push-toggle<?= $pushReady ? '' : ' disabled' ?>>Turn on reminders</button>
+                                <button type="button" class="button-secondary" data-push-test hidden>Send test</button>
+                            </div>
+                        </div>
+
+                        <?php if (!$pushStorageReady): ?>
+                            <p>Reminder storage must be installed before this setting can be used.</p>
+                        <?php endif; ?>
+                    </div>
+                </details>
+            </div>
+
             <form method="post" action="settings.php" class="settings-form">
                 <input type="hidden" name="settings_action" value="appearance">
                 <div class="settings-section">
@@ -261,5 +297,14 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
         </div>
     </div>
 </div>
+<script>
+window.ML_PUSH_SETTINGS = <?= json_encode([
+    'ready' => $pushReady,
+    'publicKey' => $pushReady ? mlPushVapidPublicKey() : '',
+    'endpoint' => mlUrl('integrations/push/subscription.php'),
+    'csrfToken' => $pushCsrfToken,
+], JSON_UNESCAPED_SLASHES) ?>;
+</script>
+<script src="<?= htmlspecialchars(mlAssetUrl('assets/js/push-settings.js')) ?>" defer></script>
 </body>
 </html>
