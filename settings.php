@@ -12,7 +12,6 @@ $privatePlaylist = $privatePlaylistStorageReady
     ? mlLoadUserPrivatePlaylist($pdo, (int)$currentUser['UserID'])
     : null;
 $privatePlaylistUrl = trim((string)($privatePlaylist['PlaylistURL'] ?? ''));
-$privatePlaylistSectionOpen = false;
 $pushStorageReady = mlPushStorageReady($pdo);
 $pushReady = mlPushServerReady($pdo);
 
@@ -29,7 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $themeMode = isset($_POST['theme_mode']) ? (string)$_POST['theme_mode'] : 'dark';
         mlSetThemeMode($themeMode);
     } elseif ($action === 'private_playlist') {
-        $privatePlaylistSectionOpen = true;
         $submittedPlaylistUrl = trim((string)($_POST['private_playlist_url'] ?? ''));
         $privatePlaylistUrl = $submittedPlaylistUrl;
 
@@ -156,7 +154,7 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
 <body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?>">
 <?php include 'header.php'; ?>
 <div class="wrapper">
-    <div class="card game-card game-card-narrow">
+    <div class="settings-page-shell">
         <div class="settings-page-intro">
             <h1>Settings</h1>
         </div>
@@ -169,129 +167,101 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
         <?php endif; ?>
 
         <div class="settings-stack">
-            <form method="post" action="settings.php" class="settings-form" enctype="multipart/form-data">
+            <form method="post" action="settings.php" class="settings-form settings-form-wide" enctype="multipart/form-data">
                 <input type="hidden" name="settings_action" value="profile">
-                <details class="settings-section settings-collapse">
-                    <summary class="settings-collapse-summary">
-                        <span class="settings-collapse-title">
-                            <span class="home-shell-kicker">Profile</span>
-                            <span class="settings-heading">Your info</span>
-                        </span>
-                        <span class="settings-collapse-icon" aria-hidden="true"></span>
-                    </summary>
+                <section class="settings-section">
+                    <h2 class="settings-heading">Profile</h2>
+                    <p>Update your display name, email, and profile photo.</p>
 
-                    <div class="settings-collapse-content">
-                        <p>Update your display name, email, and profile photo.</p>
-
-                        <div class="settings-profile-grid">
-                            <div class="settings-profile-photo-block">
-                                <img src="<?= htmlspecialchars($currentProfileImage) ?>" alt="<?= htmlspecialchars($currentUser['UserName']) ?>" class="profile-avatar profile-avatar-settings">
-                                <label class="admin-label" for="profile_photo">Change photo</label>
-                                <input type="file" name="profile_photo" id="profile_photo" class="admin-input settings-file-input" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif">
-                                <p>JPG, PNG, WEBP, or GIF. Max 5 MB.</p>
-                            </div>
-
-                            <div class="settings-profile-fields">
-                                <label class="admin-label" for="display_name">Display Name</label>
-                                <input type="text" name="display_name" id="display_name" class="admin-input" value="<?= htmlspecialchars((string)$currentUser['UserName']) ?>" maxlength="100" required>
-
-                                <label class="admin-label" for="email">Email</label>
-                                <input type="email" name="email" id="email" class="admin-input" value="<?= htmlspecialchars((string)$currentUser['Email']) ?>" maxlength="255" required>
-
-                                <?php if (!$hasProfileImageColumn): ?>
-                                    <p>Photo uploads will start working after the <code>ProfileImageFilename</code> column is added to <code>ML_Users</code>.</p>
-                                <?php endif; ?>
-                            </div>
+                    <div class="settings-profile-grid">
+                        <div class="settings-profile-photo-block">
+                            <img src="<?= htmlspecialchars($currentProfileImage) ?>" alt="<?= htmlspecialchars($currentUser['UserName']) ?>" class="profile-avatar profile-avatar-settings">
+                            <label class="admin-label" for="profile_photo">Change photo</label>
+                            <input type="file" name="profile_photo" id="profile_photo" class="admin-input settings-file-input" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif">
+                            <p>JPG, PNG, WEBP, or GIF. Max 5 MB.</p>
                         </div>
 
-                        <div class="game-form-actions">
-                            <button type="submit" class="button-primary">Save profile</button>
+                        <div class="settings-profile-fields">
+                            <label class="admin-label" for="display_name">Display Name</label>
+                            <input type="text" name="display_name" id="display_name" class="admin-input" value="<?= htmlspecialchars((string)$currentUser['UserName']) ?>" maxlength="100" required>
+
+                            <label class="admin-label" for="email">Email</label>
+                            <input type="email" name="email" id="email" class="admin-input" value="<?= htmlspecialchars((string)$currentUser['Email']) ?>" maxlength="255" required>
+
+                            <?php if (!$hasProfileImageColumn): ?>
+                                <p>Photo uploads will start working after the <code>ProfileImageFilename</code> column is added to <code>ML_Users</code>.</p>
+                            <?php endif; ?>
                         </div>
                     </div>
-                </details>
+
+                    <div class="game-form-actions">
+                        <button type="submit" class="button-primary">Save profile</button>
+                    </div>
+                </section>
             </form>
 
             <form method="post" action="settings.php" class="settings-form">
                 <input type="hidden" name="settings_action" value="private_playlist">
-                <details class="settings-section settings-collapse"<?= $privatePlaylistSectionOpen ? ' open' : '' ?>>
-                    <summary class="settings-collapse-summary">
-                        <span class="settings-collapse-title">
-                            <span class="home-shell-kicker">Playlist</span>
-                            <span class="settings-heading">Private playlist</span>
-                        </span>
-                        <span class="settings-collapse-icon" aria-hidden="true"></span>
-                    </summary>
+                <section class="settings-section">
+                    <h2 class="settings-heading">Playlist Link</h2>
+                    <p>Save one private playlist shortcut for the playlist button on your Season page.</p>
 
-                    <div class="settings-collapse-content">
-                        <p>Save one private playlist shortcut for the playlist button on your Season page.</p>
+                    <label class="admin-label" for="private_playlist_url">Direct playlist URL</label>
+                    <input
+                        type="url"
+                        name="private_playlist_url"
+                        id="private_playlist_url"
+                        class="admin-input"
+                        value="<?= htmlspecialchars($privatePlaylistUrl) ?>"
+                        placeholder="https://..."
+                        maxlength="2048"
+                        inputmode="url"
+                        autocomplete="url"
+                        spellcheck="false"
+                        <?= $privatePlaylistStorageReady ? '' : 'disabled' ?>
+                    >
+                    <p>Spotify, Apple Music, YouTube Music, TIDAL, SoundCloud, and Deezer playlist links are supported. Clear the field and save to remove your playlist.</p>
 
-                        <label class="admin-label" for="private_playlist_url">Direct playlist URL</label>
-                        <input
-                            type="url"
-                            name="private_playlist_url"
-                            id="private_playlist_url"
-                            class="admin-input"
-                            value="<?= htmlspecialchars($privatePlaylistUrl) ?>"
-                            placeholder="https://..."
-                            maxlength="2048"
-                            inputmode="url"
-                            autocomplete="url"
-                            spellcheck="false"
-                            <?= $privatePlaylistStorageReady ? '' : 'disabled' ?>
-                        >
-                        <p>Spotify, Apple Music, YouTube Music, TIDAL, SoundCloud, and Deezer playlist links are supported. Clear the field and save to remove your playlist.</p>
-
-                        <div class="game-form-actions">
-                            <button type="submit" class="button-primary"<?= $privatePlaylistStorageReady ? '' : ' disabled' ?>>Save playlist</button>
-                        </div>
+                    <div class="game-form-actions">
+                        <button type="submit" class="button-primary"<?= $privatePlaylistStorageReady ? '' : ' disabled' ?>>Save playlist</button>
                     </div>
-                </details>
+                </section>
             </form>
 
             <div class="settings-form">
-                <details class="settings-section settings-collapse">
-                    <summary class="settings-collapse-summary">
-                        <span class="settings-collapse-title">
-                            <span class="home-shell-kicker">Notifications</span>
-                            <span class="settings-heading">Deadline reminders</span>
-                        </span>
-                        <span class="settings-collapse-icon" aria-hidden="true"></span>
-                    </summary>
+                <section class="settings-section">
+                    <h2 class="settings-heading">Push Notifications</h2>
+                    <p>Get a reminder when your song or votes are still unfinished.</p>
 
-                    <div class="settings-collapse-content">
-                        <p>Get a reminder when your song or votes are still unfinished.</p>
-
-                        <div class="settings-push-control" data-push-settings>
-                            <div class="settings-push-status" data-push-status>Checking this device...</div>
-                            <div class="game-form-actions settings-push-actions">
-                                <button type="button" class="button-primary" data-push-toggle<?= $pushReady ? '' : ' disabled' ?>>Turn on reminders</button>
-                            </div>
-
-                            <div class="settings-push-test" data-push-test-panel hidden>
-                                <label class="admin-label" for="push_test_notification">Test notification</label>
-                                <div class="settings-push-test-row">
-                                    <select id="push_test_notification" class="admin-input settings-push-test-select" data-push-test-type>
-                                        <?php foreach (mlPushTestNotificationOptions() as $notificationType => $notificationLabel): ?>
-                                            <option value="<?= htmlspecialchars($notificationType) ?>"><?= htmlspecialchars($notificationLabel) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <button type="button" class="button-secondary" data-push-test>Send test</button>
-                                </div>
-                            </div>
+                    <div class="settings-push-control" data-push-settings>
+                        <div class="settings-push-status" data-push-status>Checking this device...</div>
+                        <div class="game-form-actions settings-push-actions">
+                            <button type="button" class="button-primary" data-push-toggle<?= $pushReady ? '' : ' disabled' ?>>Turn on reminders</button>
                         </div>
 
-                        <?php if (!$pushStorageReady): ?>
-                            <p>Reminder storage must be installed before this setting can be used.</p>
-                        <?php endif; ?>
+                        <div class="settings-push-test" data-push-test-panel hidden>
+                            <label class="admin-label" for="push_test_notification">Test notification</label>
+                            <div class="settings-push-test-row">
+                                <select id="push_test_notification" class="admin-input settings-push-test-select" data-push-test-type>
+                                    <?php foreach (mlPushTestNotificationOptions() as $notificationType => $notificationLabel): ?>
+                                        <option value="<?= htmlspecialchars($notificationType) ?>"><?= htmlspecialchars($notificationLabel) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button type="button" class="button-secondary" data-push-test>Send test</button>
+                            </div>
+                        </div>
                     </div>
-                </details>
+
+                    <?php if (!$pushStorageReady): ?>
+                        <p>Reminder storage must be installed before this setting can be used.</p>
+                    <?php endif; ?>
+                </section>
             </div>
 
-            <form method="post" action="settings.php" class="settings-form">
+            <form method="post" action="settings.php" class="settings-form settings-form-wide">
                 <input type="hidden" name="settings_action" value="appearance">
-                <div class="settings-section">
-                    <div class="home-shell-kicker">Appearance</div>
-                    <h2>Color mode</h2>
+                <section class="settings-section">
+                    <h2 class="settings-heading">Appearance</h2>
                     <div class="theme-toggle-row">
                         <div class="theme-toggle-copy">
                             <span class="theme-toggle-label">Light <span aria-hidden="true">↔</span> Dark</span>
@@ -303,7 +273,7 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
                             <span class="theme-switch-track"></span>
                         </label>
                     </div>
-                </div>
+                </section>
             </form>
         </div>
     </div>

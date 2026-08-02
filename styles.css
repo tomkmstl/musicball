@@ -2472,8 +2472,14 @@ body.theme-light .standings-table-expanded tr.is-current-user td:nth-child(2) {
     background: rgba(61, 172, 236, 0.12);
 }
 
+.settings-page-shell {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+}
+
 .settings-form {
-    margin-top: 20px;
+    min-width: 0;
 }
 
 .settings-section {
@@ -2484,73 +2490,7 @@ body.theme-light .standings-table-expanded tr.is-current-user td:nth-child(2) {
 }
 
 .settings-heading {
-    margin-bottom: 6px;
-}
-
-.settings-collapse {
-    padding: 0;
-    overflow: hidden;
-}
-
-.settings-collapse-summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 18px;
-    cursor: pointer;
-    list-style: none;
-}
-
-.settings-collapse-summary::-webkit-details-marker {
-    display: none;
-}
-
-.settings-collapse-title {
-    display: grid;
-    gap: 4px;
-}
-
-.settings-collapse-icon {
-    position: relative;
-    width: 30px;
-    height: 30px;
-    flex: 0 0 30px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: var(--surface);
-    transition: transform 0.12s ease, border-color 0.12s ease, background-color 0.12s ease;
-}
-
-.settings-collapse-icon::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 8px;
-    height: 8px;
-    border-right: 2px solid var(--muted);
-    border-bottom: 2px solid var(--muted);
-    transform: translate(-50%, -65%) rotate(45deg);
-    transition: border-color 0.12s ease;
-}
-
-.settings-collapse-summary:hover .settings-collapse-icon {
-    background: var(--surface-3);
-    border-color: var(--line-strong);
-}
-
-.settings-collapse[open] .settings-collapse-icon {
-    transform: rotate(180deg);
-}
-
-.settings-collapse[open] .settings-collapse-summary:hover .settings-collapse-icon {
-    background: var(--surface-3);
-}
-
-.settings-collapse-content {
-    padding: 0 18px 18px;
-    border-top: 1px solid var(--line);
+    margin-bottom: 12px;
 }
 
 .theme-toggle-row {
@@ -2630,7 +2570,19 @@ body.theme-light .standings-table-expanded tr.is-current-user td:nth-child(2) {
 
 .settings-stack {
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px;
+    margin-top: 20px;
+    align-items: stretch;
+}
+
+.settings-form-wide {
+    grid-column: 1 / -1;
+}
+
+.settings-form > .settings-section {
+    height: 100%;
+    box-sizing: border-box;
 }
 
 .settings-profile-grid {
@@ -2663,6 +2615,14 @@ body.theme-light .standings-table-expanded tr.is-current-user td:nth-child(2) {
 }
 
 @media (max-width: 700px) {
+    .settings-stack {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-form-wide {
+        grid-column: auto;
+    }
+
     .settings-profile-photo-block {
         justify-items: center;
     }
