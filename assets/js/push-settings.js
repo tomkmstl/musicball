@@ -6,25 +6,28 @@
 
     var statusNode = root.querySelector('[data-push-status]');
     var toggleButton = root.querySelector('[data-push-toggle]');
-    var testButton = root.querySelector('[data-push-test]');
+    var disableConfirm = document.querySelector('[data-push-disable-confirm]');
+    var disableConfirmPanel = disableConfirm ? disableConfirm.querySelector('.vote-submit-confirm-panel') : null;
+    var disableCancelButton = disableConfirm ? disableConfirm.querySelector('[data-push-disable-cancel]') : null;
+    var disableConfirmButton = disableConfirm ? disableConfirm.querySelector('[data-push-disable-confirm-button]') : null;
     var registration = null;
     var browserSubscription = null;
     var serverSubscribed = false;
     var busy = false;
+    var disableConfirmPreviousFocus = null;
 
     if (toggleButton) toggleButton.disabled = true;
-    if (testButton) testButton.disabled = true;
 
     function setStatus(message, state) {
         if (!statusNode) return;
         statusNode.textContent = message;
         statusNode.dataset.state = state || '';
+        statusNode.hidden = !message;
     }
 
     function setBusy(nextBusy) {
         busy = nextBusy;
         if (toggleButton) toggleButton.disabled = busy || !config.ready;
-        if (testButton) testButton.disabled = busy || !serverSubscribed;
         root.classList.toggle('is-busy', busy);
     }
 
@@ -33,10 +36,11 @@
 
         root.classList.toggle('is-enabled', enabled);
         if (toggleButton) {
-            toggleButton.textContent = enabled ? 'Turn off reminders' : 'Turn on reminders';
-        }
-        if (testButton) {
-            testButton.hidden = !enabled;
+            toggleButton.textContent = enabled ? 'On' : 'Off';
+            toggleButton.classList.toggle('button-primary', enabled);
+            toggleButton.classList.toggle('button-secondary', !enabled);
+            toggleButton.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+            toggleButton.setAttribute('aria-label', enabled ? 'Turn off push notifications' : 'Turn on push notifications');
         }
 
         if (!busy) {
@@ -44,12 +48,12 @@
         }
 
         if (enabled) {
-            setStatus('On for this device', 'on');
+            setStatus('', 'on');
         } else if (Notification.permission === 'denied') {
-            setStatus('Blocked in this device\'s notification settings', 'blocked');
+            setStatus('Blocked in Settings', 'blocked');
             if (toggleButton) toggleButton.disabled = true;
         } else {
-            setStatus('Off for this device', 'off');
+            setStatus('', 'off');
         }
     }
 
@@ -109,24 +113,19 @@
 
     function initialize() {
         if (!config.ready) {
-            setStatus('Not available yet', 'unavailable');
-            if (toggleButton) toggleButton.disabled = true;
-            if (testButton) testButton.hidden = true;
             return;
         }
 
         if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-            setStatus(
-                isIosBrowserTab()
-                    ? 'Add Musicball to your Home Screen to use reminders'
-                    : 'Push notifications are not supported on this device',
-                'unsupported'
-            );
+            if (isIosBrowserTab()) {
+                root.hidden = false;
+                setStatus('Add to Home Screen', 'unsupported');
+            }
             if (toggleButton) toggleButton.disabled = true;
-            if (testButton) testButton.hidden = true;
             return;
         }
 
+        root.hidden = false;
         navigator.serviceWorker.ready.then(function (readyRegistration) {
             registration = readyRegistration;
             return registration.pushManager.getSubscription();
@@ -145,7 +144,7 @@
             });
         }).catch(function () {
             setBusy(false);
-            setStatus('Reminder status could not be checked', 'error');
+            setStatus('Could not check status', 'error');
         });
     }
 
@@ -155,12 +154,12 @@
         setBusy(true);
         Promise.resolve().then(function () {
             if (Notification.permission === 'denied') {
-                throw new Error('Notifications are blocked in this device\'s settings.');
+                throw new Error('Blocked in Settings');
             }
             if (Notification.permission === 'default') {
                 return Notification.requestPermission().then(function (permission) {
                     if (permission !== 'granted') {
-                        throw new Error('Notification permission was not granted.');
+                        throw new Error('Permission was not granted');
                     }
                 });
             }
@@ -189,8 +188,33 @@
             }
             serverSubscribed = false;
             setBusy(false);
-            setStatus(error.message || 'Reminders could not be turned on', 'error');
+            setStatus(error.message || 'Could not turn notifications on', 'error');
         });
+    }
+
+    function openDisableConfirm() {
+        if (!disableConfirm || !disableCancelButton || busy) return;
+
+        disableConfirmPreviousFocus = document.activeElement;
+        disableConfirm.hidden = false;
+        document.body.classList.add('vote-submit-confirm-open');
+
+        window.requestAnimationFrame(function () {
+            disableConfirm.classList.add('is-open');
+            disableCancelButton.focus();
+        });
+    }
+
+    function closeDisableConfirm(restoreFocus) {
+        if (!disableConfirm) return;
+
+        disableConfirm.classList.remove('is-open');
+        disableConfirm.hidden = true;
+        document.body.classList.remove('vote-submit-confirm-open');
+
+        if (restoreFocus && disableConfirmPreviousFocus && typeof disableConfirmPreviousFocus.focus === 'function') {
+            disableConfirmPreviousFocus.focus();
+        }
     }
 
     function disableReminders() {
@@ -206,7 +230,7 @@
             render();
         }).catch(function (error) {
             setBusy(false);
-            setStatus(error.message || 'Reminders could not be turned off', 'error');
+            setStatus(error.message || 'Could not turn notifications off', 'error');
         });
     }
 
@@ -215,26 +239,59 @@
             if (busy || !registration) return;
 
             if (browserSubscription && serverSubscribed) {
-                disableReminders();
+                openDisableConfirm();
             } else {
                 enableReminders();
             }
         });
     }
 
-    if (testButton) {
-        testButton.addEventListener('click', function () {
-            if (busy || !browserSubscription || !serverSubscribed) return;
+    if (disableCancelButton) {
+        disableCancelButton.addEventListener('click', function () {
+            closeDisableConfirm(true);
+        });
+    }
 
-            setBusy(true);
-            request('test', { endpoint: browserSubscription.endpoint }).then(function () {
-                setBusy(false);
-                setStatus('Test sent', 'on');
-                window.setTimeout(render, 2500);
-            }).catch(function (error) {
-                setBusy(false);
-                setStatus(error.message || 'The test could not be sent', 'error');
-            });
+    if (disableConfirmButton) {
+        disableConfirmButton.addEventListener('click', function () {
+            closeDisableConfirm(true);
+            disableReminders();
+        });
+    }
+
+    if (disableConfirm) {
+        disableConfirm.addEventListener('click', function (event) {
+            if (event.target === disableConfirm) {
+                closeDisableConfirm(true);
+            }
+        });
+
+        disableConfirm.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeDisableConfirm(true);
+                return;
+            }
+
+            if (event.key !== 'Tab' || !disableConfirmPanel) return;
+
+            var focusable = Array.from(disableConfirmPanel.querySelectorAll('button:not([disabled])'));
+            if (!focusable.length) {
+                event.preventDefault();
+                disableConfirmPanel.focus();
+                return;
+            }
+
+            var firstFocusable = focusable[0];
+            var lastFocusable = focusable[focusable.length - 1];
+
+            if (event.shiftKey && document.activeElement === firstFocusable) {
+                event.preventDefault();
+                lastFocusable.focus();
+            } else if (!event.shiftKey && document.activeElement === lastFocusable) {
+                event.preventDefault();
+                firstFocusable.focus();
+            }
         });
     }
 

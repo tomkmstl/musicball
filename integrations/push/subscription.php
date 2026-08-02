@@ -63,6 +63,10 @@ try {
     }
 
     if ($action === 'test') {
+        if (!mlIsAdminUserId($pdo, $userId)) {
+            mlPushApiRespond(403, ['ok' => false, 'error' => 'Administrator access is required.']);
+        }
+
         if (!mlPushServerReady($pdo)) {
             mlPushApiRespond(503, ['ok' => false, 'error' => 'Deadline reminders are not available yet.']);
         }
@@ -73,13 +77,19 @@ try {
             mlPushApiRespond(404, ['ok' => false, 'error' => 'Turn on reminders for this device first.']);
         }
 
+        $notificationType = strtolower(trim((string)($request['notification_type'] ?? 'connection_test')));
+        if (!array_key_exists($notificationType, mlPushTestNotificationOptions())) {
+            mlPushApiRespond(400, ['ok' => false, 'error' => 'Choose a supported test notification.']);
+        }
+
+        $notificationCopy = mlPushBuildNotificationCopy($notificationType, 12, 'Notification Test');
         mlCloseSessionReadOnly();
         $client = mlPushCreateWebPushClient();
         $result = mlPushSendNotification($client, $subscriptionRow, [
-            'title' => 'Musicball reminders are on',
-            'body' => 'This device is ready for unfinished song and voting reminders.',
+            'title' => $notificationCopy['title'],
+            'body' => $notificationCopy['body'],
             'url' => mlUrl('season.php'),
-            'tag' => 'musicball-reminder-test',
+            'tag' => 'musicball-reminder-test-' . $notificationType,
         ]);
 
         if (!empty($result['expired'])) {

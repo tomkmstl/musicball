@@ -64,11 +64,11 @@ function mlPushResolveReminderWindow(DateTimeImmutable $dueAt, DateTimeImmutable
         return null;
     }
 
-    if ($remainingSeconds <= 10800) {
-        return ['key' => '3h', 'label' => 'about 3 hours'];
+    if ($remainingSeconds <= 7200) {
+        return ['key' => '2h'];
     }
 
-    return ['key' => '24h', 'label' => 'about 24 hours'];
+    return ['key' => '24h'];
 }
 
 function mlPushLoadIncompleteSubscriptions(PDO $pdo, int $seasonRoundId, string $task): array
@@ -145,7 +145,6 @@ try {
         $seasonRoundId = (int)$round['SeasonRoundID'];
         $roundNumber = (int)$round['RoundNumber'];
         $roundTitle = trim((string)$round['Title']);
-        $roundLabel = 'Round ' . $roundNumber . ($roundTitle !== '' ? ': ' . $roundTitle : '');
         $tasks = [];
 
         if ((int)$round['HasPlaylist'] === 0) {
@@ -153,12 +152,19 @@ try {
             if ($songsDue instanceof DateTimeImmutable) {
                 $window = mlPushResolveReminderWindow($songsDue, $now);
                 if ($window !== null) {
+                    $isUrgent = $window['key'] === '2h';
+                    $notificationType = $isUrgent ? 'song_2h' : 'song_24h';
+                    $notificationCopy = mlPushBuildNotificationCopy(
+                        $notificationType,
+                        $roundNumber,
+                        $roundTitle
+                    );
                     $tasks[] = [
                         'type' => 'song',
                         'due_at' => $songsDue,
                         'window' => $window,
-                        'title' => 'Song deadline approaching',
-                        'body' => $roundLabel . ' is due in ' . $window['label'] . '. Choose your song.',
+                        'title' => $notificationCopy['title'],
+                        'body' => $notificationCopy['body'],
                         'url' => mlUrl('song.php?season_round_id=' . $seasonRoundId),
                     ];
                 }
@@ -170,12 +176,19 @@ try {
             if ($votesDue instanceof DateTimeImmutable) {
                 $window = mlPushResolveReminderWindow($votesDue, $now);
                 if ($window !== null) {
+                    $isUrgent = $window['key'] === '2h';
+                    $notificationType = $isUrgent ? 'vote_2h' : 'vote_24h';
+                    $notificationCopy = mlPushBuildNotificationCopy(
+                        $notificationType,
+                        $roundNumber,
+                        $roundTitle
+                    );
                     $tasks[] = [
                         'type' => 'vote',
                         'due_at' => $votesDue,
                         'window' => $window,
-                        'title' => 'Voting deadline approaching',
-                        'body' => $roundLabel . ' closes in ' . $window['label'] . '. Finish your votes.',
+                        'title' => $notificationCopy['title'],
+                        'body' => $notificationCopy['body'],
                         'url' => mlUrl('vote.php?season_round_id=' . $seasonRoundId),
                     ];
                 }
