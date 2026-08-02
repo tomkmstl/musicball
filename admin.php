@@ -5,12 +5,20 @@ require_once __DIR__ . '/season-builder/sb_season_builder.php';
 require_once __DIR__ . '/gameplay/bootstrap.php';
 require_once __DIR__ . '/integrations/spotify/client.php';
 require_once __DIR__ . '/integrations/discord/discord.php';
+require_once __DIR__ . '/integrations/push/push.php';
 
 $currentUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : 0;
 if (!mlIsAdminUserId($pdo, $currentUserId)) {
     header('Location: ' . mlUrl('index.php'));
     exit;
 }
+
+$pushStorageReady = mlPushStorageReady($pdo);
+$pushReady = mlPushServerReady($pdo);
+if (empty($_SESSION['ml_push_csrf']) || !is_string($_SESSION['ml_push_csrf'])) {
+    $_SESSION['ml_push_csrf'] = bin2hex(random_bytes(24));
+}
+$pushCsrfToken = (string)$_SESSION['ml_push_csrf'];
 
 $discordDataMode = mlDiscordGetDataMode($pdo);
 
@@ -475,6 +483,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                         </div>
 
                         <div class="admin-roku-mobile-panel" data-admin-mobile-panel="pwa">
+                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="push-notification-tests">Push Notification Tests</button>
                             <button type="button" class="admin-roku-mobile-link" data-admin-nav="pwa-dev-mode">PWA Dev Mode</button>
                         </div>
                     </div>
@@ -506,6 +515,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
 
                     <div class="admin-roku-group">
                         <div class="admin-roku-group-title">PWA</div>
+                        <button type="button" class="admin-roku-link" data-admin-nav="push-notification-tests">Push Notification Tests</button>
                         <button type="button" class="admin-roku-link" data-admin-nav="pwa-dev-mode">PWA Dev Mode</button>
                     </div>
                 </nav>
@@ -1007,6 +1017,33 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                     <?php endif; ?>
                 </section>
 
+                <section class="admin-panel admin-admin-view" data-admin-view="push-notification-tests">
+                    <div class="home-shell-kicker">PWA</div>
+                    <h2>Push Notification Tests</h2>
+                    <p>
+                        Send any supported notification to this admin device. Push Notifications must be on for this device in Settings.
+                    </p>
+
+                    <div class="admin-push-test-control" data-push-admin-test>
+                        <div class="admin-push-test-status" data-push-admin-status>Checking this device...</div>
+                        <div class="admin-inline-form admin-inline-form-wrap">
+                            <div class="admin-inline-field">
+                                <label class="admin-label" for="admin_push_test_notification">Notification type</label>
+                                <select id="admin_push_test_notification" class="admin-input admin-select-compact" data-push-admin-type>
+                                    <?php foreach (mlPushTestNotificationOptions() as $notificationType => $notificationLabel): ?>
+                                        <option value="<?= htmlspecialchars($notificationType) ?>"><?= htmlspecialchars($notificationLabel) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <button type="button" class="button-secondary" data-push-admin-send disabled>Send Test</button>
+                        </div>
+                    </div>
+
+                    <?php if (!$pushStorageReady): ?>
+                        <p class="admin-form-top-sm">Push notification storage is not ready yet.</p>
+                    <?php endif; ?>
+                </section>
+
                 <section class="admin-panel admin-admin-view" data-admin-view="pwa-dev-mode">
                     <div class="home-shell-kicker">PWA</div>
                     <h2>PWA Dev Mode</h2>
@@ -1161,6 +1198,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'playlist-account': { group: 'spotify', label: 'Playlist Account', groupLabel: 'Spotify' },
         'discord-webhook-notifications': { group: 'discord', label: 'Discord Notifications', groupLabel: 'Discord' },
         'discord-notification-status': { group: 'discord', label: 'Discord notification status', groupLabel: 'Discord' },
+        'push-notification-tests': { group: 'pwa', label: 'Push Notification Tests', groupLabel: 'PWA' },
         'pwa-dev-mode': { group: 'pwa', label: 'PWA Dev Mode', groupLabel: 'PWA' }
     };
 
@@ -1263,5 +1301,13 @@ document.addEventListener('DOMContentLoaded', function () {
     activateAdminView(initialView);
 });
 </script>
+<script>
+window.ML_PUSH_ADMIN_TEST = <?= json_encode([
+    'ready' => $pushReady,
+    'endpoint' => mlUrl('integrations/push/subscription.php'),
+    'csrfToken' => $pushCsrfToken,
+], JSON_UNESCAPED_SLASHES) ?>;
+</script>
+<script src="<?= htmlspecialchars(mlAssetUrl('assets/js/push-admin-test.js')) ?>" defer></script>
 </body>
 </html>

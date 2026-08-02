@@ -4819,32 +4819,22 @@ body.theme-light .vote-points-btn:focus-visible {
     flex-wrap: wrap;
 }
 
-.settings-push-test {
+.admin-push-test-control {
     display: grid;
-    gap: 8px;
+    gap: 14px;
+    margin-top: 14px;
 }
 
-.settings-push-test[hidden] {
-    display: none;
+.admin-push-test-status {
+    color: var(--muted);
+    font-size: 0.95rem;
 }
 
-.settings-push-test-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: center;
+.admin-push-test-status[data-state="ready"],
+.admin-push-test-status[data-state="sent"] {
+    color: var(--brand);
 }
 
-.settings-push-test-select {
-    min-width: 0;
-}
-
-@media (max-width: 640px) {
-    .settings-push-test-row {
-        grid-template-columns: 1fr;
-    }
-
-    .settings-push-test-row .button-secondary {
-        width: 100%;
-    }
+.admin-push-test-status[data-state="error"] {
+    color: var(--danger);
 }

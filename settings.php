@@ -238,18 +238,6 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
                         <div class="game-form-actions settings-push-actions">
                             <button type="button" class="button-primary" data-push-toggle<?= $pushReady ? '' : ' disabled' ?>>Turn on reminders</button>
                         </div>
-
-                        <div class="settings-push-test" data-push-test-panel hidden>
-                            <label class="admin-label" for="push_test_notification">Test notification</label>
-                            <div class="settings-push-test-row">
-                                <select id="push_test_notification" class="admin-input settings-push-test-select" data-push-test-type>
-                                    <?php foreach (mlPushTestNotificationOptions() as $notificationType => $notificationLabel): ?>
-                                        <option value="<?= htmlspecialchars($notificationType) ?>"><?= htmlspecialchars($notificationLabel) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <button type="button" class="button-secondary" data-push-test>Send test</button>
-                            </div>
-                        </div>
                     </div>
 
                     <?php if (!$pushStorageReady): ?>

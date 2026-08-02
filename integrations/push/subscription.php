@@ -63,6 +63,10 @@ try {
     }
 
     if ($action === 'test') {
+        if (!mlIsAdminUserId($pdo, $userId)) {
+            mlPushApiRespond(403, ['ok' => false, 'error' => 'Administrator access is required.']);
+        }
+
         if (!mlPushServerReady($pdo)) {
             mlPushApiRespond(503, ['ok' => false, 'error' => 'Deadline reminders are not available yet.']);
         }

@@ -6,16 +6,12 @@
 
     var statusNode = root.querySelector('[data-push-status]');
     var toggleButton = root.querySelector('[data-push-toggle]');
-    var testPanel = root.querySelector('[data-push-test-panel]');
-    var testTypeSelect = root.querySelector('[data-push-test-type]');
-    var testButton = root.querySelector('[data-push-test]');
     var registration = null;
     var browserSubscription = null;
     var serverSubscribed = false;
     var busy = false;
 
     if (toggleButton) toggleButton.disabled = true;
-    if (testButton) testButton.disabled = true;
 
     function setStatus(message, state) {
         if (!statusNode) return;
@@ -26,8 +22,6 @@
     function setBusy(nextBusy) {
         busy = nextBusy;
         if (toggleButton) toggleButton.disabled = busy || !config.ready;
-        if (testTypeSelect) testTypeSelect.disabled = busy || !serverSubscribed;
-        if (testButton) testButton.disabled = busy || !serverSubscribed;
         root.classList.toggle('is-busy', busy);
     }
 
@@ -37,9 +31,6 @@
         root.classList.toggle('is-enabled', enabled);
         if (toggleButton) {
             toggleButton.textContent = enabled ? 'Turn off reminders' : 'Turn on reminders';
-        }
-        if (testPanel) {
-            testPanel.hidden = !enabled;
         }
 
         if (!busy) {
@@ -114,7 +105,6 @@
         if (!config.ready) {
             setStatus('Not available yet', 'unavailable');
             if (toggleButton) toggleButton.disabled = true;
-            if (testPanel) testPanel.hidden = true;
             return;
         }
 
@@ -126,7 +116,6 @@
                 'unsupported'
             );
             if (toggleButton) toggleButton.disabled = true;
-            if (testPanel) testPanel.hidden = true;
             return;
         }
 
@@ -222,25 +211,6 @@
             } else {
                 enableReminders();
             }
-        });
-    }
-
-    if (testButton) {
-        testButton.addEventListener('click', function () {
-            if (busy || !browserSubscription || !serverSubscribed) return;
-
-            setBusy(true);
-            request('test', {
-                endpoint: browserSubscription.endpoint,
-                notification_type: testTypeSelect ? testTypeSelect.value : 'connection_test'
-            }).then(function () {
-                setBusy(false);
-                setStatus('Test sent', 'on');
-                window.setTimeout(render, 2500);
-            }).catch(function (error) {
-                setBusy(false);
-                setStatus(error.message || 'The test could not be sent', 'error');
-            });
         });
     }
 
