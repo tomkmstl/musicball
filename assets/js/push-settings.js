@@ -6,10 +6,15 @@
 
     var statusNode = root.querySelector('[data-push-status]');
     var toggleButton = root.querySelector('[data-push-toggle]');
+    var disableConfirm = document.querySelector('[data-push-disable-confirm]');
+    var disableConfirmPanel = disableConfirm ? disableConfirm.querySelector('.vote-submit-confirm-panel') : null;
+    var disableCancelButton = disableConfirm ? disableConfirm.querySelector('[data-push-disable-cancel]') : null;
+    var disableConfirmButton = disableConfirm ? disableConfirm.querySelector('[data-push-disable-confirm-button]') : null;
     var registration = null;
     var browserSubscription = null;
     var serverSubscribed = false;
     var busy = false;
+    var disableConfirmPreviousFocus = null;
 
     if (toggleButton) toggleButton.disabled = true;
 
@@ -187,6 +192,31 @@
         });
     }
 
+    function openDisableConfirm() {
+        if (!disableConfirm || !disableCancelButton || busy) return;
+
+        disableConfirmPreviousFocus = document.activeElement;
+        disableConfirm.hidden = false;
+        document.body.classList.add('vote-submit-confirm-open');
+
+        window.requestAnimationFrame(function () {
+            disableConfirm.classList.add('is-open');
+            disableCancelButton.focus();
+        });
+    }
+
+    function closeDisableConfirm(restoreFocus) {
+        if (!disableConfirm) return;
+
+        disableConfirm.classList.remove('is-open');
+        disableConfirm.hidden = true;
+        document.body.classList.remove('vote-submit-confirm-open');
+
+        if (restoreFocus && disableConfirmPreviousFocus && typeof disableConfirmPreviousFocus.focus === 'function') {
+            disableConfirmPreviousFocus.focus();
+        }
+    }
+
     function disableReminders() {
         if (!browserSubscription) return;
 
@@ -209,9 +239,58 @@
             if (busy || !registration) return;
 
             if (browserSubscription && serverSubscribed) {
-                disableReminders();
+                openDisableConfirm();
             } else {
                 enableReminders();
+            }
+        });
+    }
+
+    if (disableCancelButton) {
+        disableCancelButton.addEventListener('click', function () {
+            closeDisableConfirm(true);
+        });
+    }
+
+    if (disableConfirmButton) {
+        disableConfirmButton.addEventListener('click', function () {
+            closeDisableConfirm(true);
+            disableReminders();
+        });
+    }
+
+    if (disableConfirm) {
+        disableConfirm.addEventListener('click', function (event) {
+            if (event.target === disableConfirm) {
+                closeDisableConfirm(true);
+            }
+        });
+
+        disableConfirm.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeDisableConfirm(true);
+                return;
+            }
+
+            if (event.key !== 'Tab' || !disableConfirmPanel) return;
+
+            var focusable = Array.from(disableConfirmPanel.querySelectorAll('button:not([disabled])'));
+            if (!focusable.length) {
+                event.preventDefault();
+                disableConfirmPanel.focus();
+                return;
+            }
+
+            var firstFocusable = focusable[0];
+            var lastFocusable = focusable[focusable.length - 1];
+
+            if (event.shiftKey && document.activeElement === firstFocusable) {
+                event.preventDefault();
+                lastFocusable.focus();
+            } else if (!event.shiftKey && document.activeElement === lastFocusable) {
+                event.preventDefault();
+                firstFocusable.focus();
             }
         });
     }

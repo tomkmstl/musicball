@@ -253,6 +253,25 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
                     <button type="button" class="button-secondary settings-push-toggle" data-push-toggle aria-pressed="false" aria-label="Turn on push notifications" disabled>Off</button>
                 </div>
             </section>
+
+            <div class="vote-submit-confirm settings-push-confirm" data-push-disable-confirm hidden>
+                <section
+                    class="vote-submit-confirm-panel"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="push-disable-confirm-title"
+                    aria-describedby="push-disable-confirm-copy"
+                    tabindex="-1"
+                >
+                    <div class="vote-submit-confirm-kicker">Push Notifications</div>
+                    <h2 id="push-disable-confirm-title">Turn off notifications?</h2>
+                    <p id="push-disable-confirm-copy">You won’t receive deadline reminders on this device.</p>
+                    <div class="vote-submit-confirm-actions">
+                        <button type="button" class="button-secondary" data-push-disable-cancel>Keep On</button>
+                        <button type="button" class="button-primary button-danger" data-push-disable-confirm-button>Turn Off</button>
+                    </div>
+                </section>
+            </div>
             <?php endif; ?>
         </div>
     </div>
