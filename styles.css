@@ -344,14 +344,39 @@ p {
     mask: url('assets/icons/playlist.svg') center / contain no-repeat;
 }
 
-.season-private-playlist-message {
-    margin-top: 16px;
+.season-private-playlist-bubble {
+    position: fixed;
+    left: 50%;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    z-index: 2100;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    padding: 12px 16px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--surface-3);
+    color: var(--text);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.98);
+    transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
-.season-private-playlist-message a {
-    color: var(--brand);
-    font-weight: 700;
-    text-underline-offset: 3px;
+.season-private-playlist-bubble[hidden] {
+    display: none;
+}
+
+.season-private-playlist-bubble.is-visible {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .season-private-playlist-bubble {
+        transition: none;
+    }
 }
 
 .mb-header-subnav-row {

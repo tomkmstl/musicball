@@ -192,8 +192,8 @@ $seasonRevealState = $activeRound
         </div>
 
         <?php if ($privatePlaylistUrl === ''): ?>
-            <div id="season-private-playlist-message" class="status-banner season-private-playlist-message" role="status" tabindex="-1" hidden>
-                No playlist found. Set your private playlist in <a href="<?= htmlspecialchars(mlUrl('settings.php')) ?>">Settings</a>.
+            <div id="season-private-playlist-message" class="season-private-playlist-bubble" role="status" aria-live="polite" hidden>
+                No playlist link found. Add playlist link in Settings
             </div>
         <?php endif; ?>
 
@@ -288,11 +288,26 @@ document.addEventListener('DOMContentLoaded', function () {
     const timezone = detectBrowserTimezone();
     const missingPlaylistButton = document.querySelector('[data-private-playlist-missing]');
     const missingPlaylistMessage = document.getElementById('season-private-playlist-message');
+    let missingPlaylistTimer = null;
 
     if (missingPlaylistButton && missingPlaylistMessage) {
         missingPlaylistButton.addEventListener('click', function () {
+            if (missingPlaylistTimer !== null) {
+                window.clearTimeout(missingPlaylistTimer);
+            }
+
             missingPlaylistMessage.hidden = false;
-            missingPlaylistMessage.focus();
+            window.requestAnimationFrame(function () {
+                missingPlaylistMessage.classList.add('is-visible');
+            });
+
+            missingPlaylistTimer = window.setTimeout(function () {
+                missingPlaylistMessage.classList.remove('is-visible');
+                missingPlaylistTimer = window.setTimeout(function () {
+                    missingPlaylistMessage.hidden = true;
+                    missingPlaylistTimer = null;
+                }, 200);
+            }, 3400);
         });
     }
 
