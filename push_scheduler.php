@@ -64,8 +64,8 @@ function mlPushResolveReminderWindow(DateTimeImmutable $dueAt, DateTimeImmutable
         return null;
     }
 
-    if ($remainingSeconds <= 10800) {
-        return ['key' => '3h'];
+    if ($remainingSeconds <= 7200) {
+        return ['key' => '2h'];
     }
 
     return ['key' => '24h'];
@@ -152,8 +152,8 @@ try {
             if ($songsDue instanceof DateTimeImmutable) {
                 $window = mlPushResolveReminderWindow($songsDue, $now);
                 if ($window !== null) {
-                    $isUrgent = $window['key'] === '3h';
-                    $notificationType = $isUrgent ? 'song_3h' : 'song_24h';
+                    $isUrgent = $window['key'] === '2h';
+                    $notificationType = $isUrgent ? 'song_2h' : 'song_24h';
                     $notificationCopy = mlPushBuildNotificationCopy(
                         $notificationType,
                         $roundNumber,
@@ -176,8 +176,8 @@ try {
             if ($votesDue instanceof DateTimeImmutable) {
                 $window = mlPushResolveReminderWindow($votesDue, $now);
                 if ($window !== null) {
-                    $isUrgent = $window['key'] === '3h';
-                    $notificationType = $isUrgent ? 'vote_3h' : 'vote_24h';
+                    $isUrgent = $window['key'] === '2h';
+                    $notificationType = $isUrgent ? 'vote_2h' : 'vote_24h';
                     $notificationCopy = mlPushBuildNotificationCopy(
                         $notificationType,
                         $roundNumber,

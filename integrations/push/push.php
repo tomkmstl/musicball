@@ -86,9 +86,9 @@ function mlPushTestNotificationOptions(): array
     return [
         'connection_test' => 'Connection test',
         'song_24h' => 'Song reminder — 24 hours',
-        'song_3h' => 'Song reminder — 3 hours',
+        'song_2h' => 'Song reminder — 2 hours',
         'vote_24h' => 'Voting reminder — 24 hours',
-        'vote_3h' => 'Voting reminder — 3 hours',
+        'vote_2h' => 'Voting reminder — 2 hours',
     ];
 }
 
@@ -110,26 +110,26 @@ function mlPushBuildNotificationCopy(
 
         case 'song_24h':
             return [
-                'title' => 'Choose your song',
+                'title' => 'Choose Your Song',
                 'body' => $roundLabel . ' is due in about 24 hours.',
             ];
 
-        case 'song_3h':
+        case 'song_2h':
             return [
-                'title' => 'SONG DEADLINE APPROACHING',
-                'body' => 'Round ' . $roundNumber . ' songs due in 3 hours!',
+                'title' => 'SONGS ARE DUE',
+                'body' => $roundLabel . ' songs due in 2 hours!',
             ];
 
         case 'vote_24h':
             return [
-                'title' => 'Finish your votes',
+                'title' => 'Finish Your Votes',
                 'body' => $roundLabel . ' closes in about 24 hours.',
             ];
 
-        case 'vote_3h':
+        case 'vote_2h':
             return [
-                'title' => 'VOTING DEADLINE APPROACHING',
-                'body' => 'Round ' . $roundNumber . ' votes are due in 3 hours!',
+                'title' => 'VOTES ARE DUE',
+                'body' => $roundLabel . ' votes are due in 2 hours!',
             ];
     }
 
