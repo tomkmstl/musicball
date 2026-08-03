@@ -368,9 +368,7 @@ $seasonListStmt = $pdo->query("
     SELECT s.SeasonID,
            s.SeasonName,
            s.IsActive,
-           COALESCE(cfg.ConfigValue, '0') AS VotingOpenValue,
-           (SELECT COUNT(*) FROM ML_Q1Categories c WHERE c.SeasonID = s.SeasonID) AS CategoryCount,
-           (SELECT COUNT(DISTINCT sub.UserID) FROM ML_Submissions sub WHERE sub.SeasonID = s.SeasonID) AS SubmissionCount
+           COALESCE(cfg.ConfigValue, '0') AS VotingOpenValue
     FROM ML_Seasons s
     LEFT JOIN ML_Config cfg
       ON cfg.SeasonID = s.SeasonID
@@ -379,20 +377,10 @@ $seasonListStmt = $pdo->query("
 ");
 $seasonList = $seasonListStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$totalUsersStmt = $pdo->query('SELECT COUNT(*) FROM ML_Users');
-$totalUsers = (int)$totalUsersStmt->fetchColumn();
-
-$activeSubmissionStmt = $pdo->prepare('SELECT COUNT(DISTINCT UserID) FROM ML_Submissions WHERE SeasonID = ?');
-$activeSubmissionStmt->execute([$seasonId]);
-$activeSubmissionCount = (int)$activeSubmissionStmt->fetchColumn();
-
 $currentSeasonRow = mlGetCurrentSeason($pdo);
 $currentSeasonId = $currentSeasonRow ? (int)$currentSeasonRow['SeasonID'] : 0;
 $nextSeasonRow = mlGetNextSeason($pdo);
 $nextSeasonRowId = $nextSeasonRow ? (int)$nextSeasonRow['SeasonID'] : 0;
-$nextSeasonVotingOpen = $nextSeasonRow ? mlIsSeasonVotingOpen($pdo, $nextSeasonRowId) : false;
-$nextSeasonVotingComplete = $nextSeasonRow ? mlIsSeasonVotingComplete($pdo, $nextSeasonRowId) : false;
-$nextSeasonSubmissionCount = $nextSeasonRow ? mlGetSeasonSubmissionCount($pdo, $nextSeasonRowId) : 0;
 $canRevertCurrentSeason = $currentSeasonId > 0 ? mlCanRevertToPreviousSeason($pdo, $currentSeasonId) : false;
 
 $seasonList = array_values(array_filter(
@@ -631,98 +619,78 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                         Manage the current season and any next season being prepared.
                     </p>
 
-                    <div class="admin-season-table-wrap">
-                        <table class="admin-season-table">
-                            <thead>
-                                <tr>
-                                    <th>Season</th>
-                                    <th>Status</th>
-                                    <th>Categories</th>
-                                    <th>Submissions</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($seasonList as $seasonRow): ?>
-                                    <?php
-                                    $rowSeasonId = (int)$seasonRow['SeasonID'];
-                                    $rowType = $rowSeasonId === $currentSeasonId ? 'Current' : 'Next';
-                                    $rowVotingOpen = ((string)$seasonRow['VotingOpenValue'] === '1');
-                                    $rowVotingComplete = mlIsSeasonVotingComplete($pdo, $rowSeasonId);
-                                    ?>
-                                    <tr>
-                                        <td>
-                                            <strong><?= htmlspecialchars($seasonRow['SeasonName']) ?></strong><br>
-                                            <span class="note">Season ID <?= $rowSeasonId ?></span>
-                                        </td>
-                                        <td>
-                                            <?php if ($rowType === 'Current'): ?>
-                                                <span class="pill pill-open">Current</span>
-                                            <?php elseif ($rowType === 'Next'): ?>
-                                                <span class="pill pill-neutral">Next</span>
-                                                <div class="note admin-note-top-xs">
-                                                    <?= $rowVotingOpen ? ($rowVotingComplete ? 'Voting complete' : 'Voting open') : ($rowVotingComplete ? 'Voting complete' : ($rowSeasonId === $nextSeasonRowId && mlWasSeasonVotingClosedEarly($pdo, $rowSeasonId) ? 'Voting closed early' : 'Setup in progress')) ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><?= (int)$seasonRow['CategoryCount'] ?></td>
-                                        <td><?= (int)$seasonRow['SubmissionCount'] ?> / <?= $totalUsers ?></td>
-                                        <td>
-                                            <div class="admin-season-table-actions">
-                                            <?php if ($rowType === 'Current'): ?>
-                                                <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
-                                                    Edit Setup
-                                                </a>
-                                                <?php if ((string)$seasonRow['HasCommittedRounds'] === '1'): ?>
-                                                    <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
-                                                        Edit Rounds
-                                                    </a>
-                                                <?php endif; ?>
-                                                <a href="<?= htmlspecialchars(mlUrl('season.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
-                                                    View
-                                                </a>
-                                                <?php if ($canRevertCurrentSeason): ?>
-                                                    <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-inline-form">
-                                                        <input type="hidden" name="admin_action" value="revert_previous_season">
-                                                        <button type="submit" class="button-primary">
-                                                            Revert to Previous Season
-                                                        </button>
-                                                    </form>
-                                                <?php endif; ?>
-                                            <?php elseif ($rowType === 'Next'): ?>
-                                                <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
-                                                    Edit Setup
-                                                </a>
-                                                <a href="<?= htmlspecialchars(mlUrl('final.php?preview=1')) ?>" class="button-secondary admin-table-link">
-                                                    View Votes
-                                                </a>
-                                                <?php if ($rowVotingOpen && !$rowVotingComplete): ?>
-                                                    <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-inline-form">
-                                                        <input type="hidden" name="admin_action" value="close_voting">
-                                                        <button type="submit" class="button-secondary">
-                                                            Close Voting Early
-                                                        </button>
-                                                    </form>
-                                                <?php endif; ?>
-                                                <?php if (mlCanStartNextSeason($pdo, $rowSeasonId)): ?>
-                                                    <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-primary admin-table-link">
-                                                        Review Next Season
-                                                    </a>
-                                                <?php endif; ?>
-                                            <?php endif; ?>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <div class="admin-season-list">
+                        <?php foreach ($seasonList as $seasonRow): ?>
+                            <?php
+                            $rowSeasonId = (int)$seasonRow['SeasonID'];
+                            $rowType = $rowSeasonId === $currentSeasonId ? 'Current' : 'Next';
+                            $rowVotingOpen = ((string)$seasonRow['VotingOpenValue'] === '1');
+                            $rowVotingComplete = mlIsSeasonVotingComplete($pdo, $rowSeasonId);
+                            ?>
+                            <article class="admin-season-card">
+                                <div class="admin-season-card-header">
+                                    <h4 class="admin-season-card-name"><?= htmlspecialchars($seasonRow['SeasonName']) ?></h4>
+                                    <div class="admin-season-card-status">
+                                        <?php if ($rowType === 'Current'): ?>
+                                            <span class="pill pill-open">Current</span>
+                                        <?php else: ?>
+                                            <span class="pill pill-neutral">Next</span>
+                                            <span class="note">
+                                                <?= $rowVotingOpen ? ($rowVotingComplete ? 'Voting complete' : 'Voting open') : ($rowVotingComplete ? 'Voting complete' : ($rowSeasonId === $nextSeasonRowId && mlWasSeasonVotingClosedEarly($pdo, $rowSeasonId) ? 'Voting closed early' : 'Setup in progress')) ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <div class="admin-season-card-actions">
+                                    <?php if ($rowType === 'Current'): ?>
+                                        <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                            Edit Setup
+                                        </a>
+                                        <?php if ((string)$seasonRow['HasCommittedRounds'] === '1'): ?>
+                                            <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                                Edit Rounds
+                                            </a>
+                                        <?php endif; ?>
+                                        <?php if ($canRevertCurrentSeason): ?>
+                                            <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-season-action-form">
+                                                <input type="hidden" name="admin_action" value="revert_previous_season">
+                                                <button type="submit" class="button-primary">
+                                                    Revert to Previous Season
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                            Edit Setup
+                                        </a>
+                                        <a href="<?= htmlspecialchars(mlUrl('final.php?preview=1')) ?>" class="button-secondary admin-table-link">
+                                            View Votes
+                                        </a>
+                                        <?php if ($rowVotingOpen && !$rowVotingComplete): ?>
+                                            <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-season-action-form">
+                                                <input type="hidden" name="admin_action" value="close_voting">
+                                                <button type="submit" class="button-secondary">
+                                                    Close Voting Early
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
+                                        <?php if (mlCanStartNextSeason($pdo, $rowSeasonId)): ?>
+                                            <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-primary admin-table-link">
+                                                Review Next Season
+                                            </a>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
                     </div>
 
                     <?php if (!$nextSeasonRow): ?>
                         <div class="admin-section-divider">
                             <h3>Create the next season</h3>
                             <p>
-                                The next available season will use <strong>Season ID <?= $nextSeasonId ?></strong>. You can finish its setup before opening voting.
+                                Name the next season now. You can finish its setup before opening voting.
                             </p>
 
                             <form

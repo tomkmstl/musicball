@@ -599,7 +599,7 @@ body.theme-light.mb-page-leaving::before {
 .game-form-actions,
 .admin-section-actions,
 .admin-setup-actions,
-.admin-season-table-actions {
+.admin-season-card-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
@@ -612,10 +612,6 @@ body.theme-light.mb-page-leaving::before {
 .button-danger:hover:not([disabled]) {
     background: var(--danger);
     filter: brightness(0.9);
-}
-
-.admin-season-table td {
-    vertical-align: middle;
 }
 
 .buttons {
@@ -1090,6 +1086,66 @@ textarea.admin-input,
     display: inline;
 }
 
+.admin-season-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.admin-season-card {
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface-2);
+}
+
+.admin-season-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.admin-season-card-name {
+    min-width: 0;
+    margin: 0;
+    color: var(--text);
+    font-size: 1.08rem;
+    overflow-wrap: anywhere;
+}
+
+.admin-season-card-status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    margin-left: auto;
+    text-align: right;
+}
+
+.admin-season-card-actions {
+    margin-top: 16px;
+}
+
+.admin-season-action-form {
+    display: flex;
+    margin: 0;
+}
+
+@media (max-width: 700px) {
+    .admin-season-card-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .admin-season-card-actions > .admin-table-link,
+    .admin-season-card-actions > .admin-season-action-form,
+    .admin-season-card-actions > .admin-season-action-form > button {
+        width: 100%;
+    }
+}
+
 .admin-label-spaced {
     margin-top: 12px;
 }
@@ -1250,19 +1306,15 @@ textarea.admin-input,
     border-radius: 10px;
 }
 
-.admin-season-table-wrap,
 .standings-table-wrap {
     overflow-x: auto;
 }
 
-.admin-season-table,
 .standings-table {
     width: 100%;
     border-collapse: collapse;
 }
 
-.admin-season-table th,
-.admin-season-table td,
 .standings-table th,
 .standings-table td {
     padding: 6px 10px;
@@ -1637,7 +1689,7 @@ textarea.admin-input,
         align-items: stretch;
     }
 
-    .admin-season-table-actions {
+    .admin-season-card-actions {
         justify-content: flex-start;
     }
 }
