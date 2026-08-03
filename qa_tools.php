@@ -583,6 +583,22 @@ function mlQaGetAvailableRounds(PDO $pdo): array
                s.IsActive
         FROM ML_SeasonRounds sr
         INNER JOIN ML_Seasons s ON s.SeasonID = sr.SeasonID
+        WHERE (
+            sr.VotesDue IS NOT NULL
+            AND sr.VotesDue < UTC_TIMESTAMP()
+        ) OR (
+            s.IsActive = 1
+            AND NOT EXISTS (
+                SELECT 1
+                FROM ML_SeasonRounds previous_sr
+                WHERE previous_sr.SeasonID = sr.SeasonID
+                  AND previous_sr.RoundNumber < sr.RoundNumber
+                  AND (
+                      previous_sr.VotesDue IS NULL
+                      OR previous_sr.VotesDue >= UTC_TIMESTAMP()
+                  )
+            )
+        )
         ORDER BY sr.SeasonID DESC, sr.RoundNumber ASC, sr.SeasonRoundID ASC
     ");
 
@@ -621,6 +637,42 @@ function mlQaGetLiveRoundById(PDO $pdo, int $seasonRoundId): ?array
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
     return is_array($row) ? $row : null;
+}
+
+function mlQaSourceRoundHasStarted(PDO $pdo, int $seasonRoundId): bool
+{
+    if ($seasonRoundId <= 0) {
+        return false;
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT 1
+        FROM ML_SeasonRounds sr
+        INNER JOIN ML_Seasons s ON s.SeasonID = sr.SeasonID
+        WHERE sr.SeasonRoundID = ?
+          AND (
+              (
+                  sr.VotesDue IS NOT NULL
+                  AND sr.VotesDue < UTC_TIMESTAMP()
+              ) OR (
+                  s.IsActive = 1
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM ML_SeasonRounds previous_sr
+                      WHERE previous_sr.SeasonID = sr.SeasonID
+                        AND previous_sr.RoundNumber < sr.RoundNumber
+                        AND (
+                            previous_sr.VotesDue IS NULL
+                            OR previous_sr.VotesDue >= UTC_TIMESTAMP()
+                        )
+                  )
+              )
+          )
+        LIMIT 1
+    ");
+    $stmt->execute([$seasonRoundId]);
+
+    return $stmt->fetchColumn() !== false;
 }
 
 function mlQaGetSourceRoundCounts(PDO $pdo, int $seasonRoundId): array
@@ -945,6 +997,9 @@ function mlQaApplyTimeMachine(
     $liveRound = mlQaGetLiveRoundById($pdo, $seasonRoundId);
     if (!$liveRound) {
         throw new RuntimeException('The selected round was not found in this environment\'s ML_* source snapshot.');
+    }
+    if (!mlQaSourceRoundHasStarted($pdo, $seasonRoundId)) {
+        throw new RuntimeException('The selected source round has not started yet and cannot be used by the QA time machine.');
     }
 
     $seasonId = (int)$liveRound['SeasonID'];
@@ -1692,7 +1747,7 @@ foreach ($qaAvailableRounds as $availableRound) {
             <?php if (!mlIsQaMode()): ?>
                 <div class="status-banner" style="margin:0;">Open this page with <code>?testing=qa</code> before rebuilding a QA timeline.</div>
             <?php elseif (!$qaAvailableRounds): ?>
-                <div class="status-banner error" style="margin:0;">No rounds were found in this environment's ML_* source snapshot. Refresh the source data first.</div>
+                <div class="status-banner error" style="margin:0;">No started rounds were found in this environment's ML_* source snapshot. Refresh the source data if this is unexpected.</div>
             <?php else: ?>
                 <?php if ($qaUserCount !== null && $qaRoundScenarioStatus && (int)$qaUserCount !== (int)$qaRoundScenarioStatus['expected']): ?>
                     <div class="status-banner error" style="margin:0 0 14px;">
