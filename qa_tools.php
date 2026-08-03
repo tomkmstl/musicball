@@ -1280,9 +1280,6 @@ foreach ($qaAvailableRounds as $availableRound) {
                 <h1>Rewind Musicball</h1>
                 <p>Load a past round exactly where you need it.</p>
             </div>
-            <div class="qa-rewind-admin-link">
-                <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-back-link admin-back-link-discreet">&larr; Back to Admin</a>
-            </div>
         </div>
 
         <div class="qa-rewind-toolbar">
