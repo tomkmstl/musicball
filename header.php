@@ -201,7 +201,7 @@ if ($headerNextSeason) {
         </div>
     </div>
 
-    <div class="mb-header-subnav-row<?= $currentPage === 'admin' ? ' mb-header-subnav-row-admin-mobile-hidden' : '' ?>">
+    <div class="mb-header-subnav-row">
         <div class="mb-subnav<?= $isPrimaryNavPage ? ' is-contextual' : '' ?>">
             <a href="<?= htmlspecialchars(mlUrl('season.php')) ?>" class="mb-subnav-card<?= $headerActivePrimaryPage === 'season' ? ' is-active' : '' ?>">
                 Season
