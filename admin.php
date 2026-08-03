@@ -20,6 +20,11 @@ if (empty($_SESSION['ml_push_csrf']) || !is_string($_SESSION['ml_push_csrf'])) {
 }
 $pushCsrfToken = (string)$_SESSION['ml_push_csrf'];
 
+if (empty($_SESSION['ml_admin_csrf']) || !is_string($_SESSION['ml_admin_csrf'])) {
+    $_SESSION['ml_admin_csrf'] = bin2hex(random_bytes(24));
+}
+$adminCsrfToken = (string)$_SESSION['ml_admin_csrf'];
+
 $discordDataMode = mlDiscordGetDataMode($pdo);
 
 $adminMessage = isset($_SESSION['ml_admin_message']) ? (string)$_SESSION['ml_admin_message'] : '';
@@ -218,6 +223,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($action === 'generate_current_playlist') {
+            $submittedCsrfToken = isset($_POST['admin_csrf']) ? (string)$_POST['admin_csrf'] : '';
+            if ($submittedCsrfToken === '' || !hash_equals($adminCsrfToken, $submittedCsrfToken)) {
+                throw new RuntimeException('The playlist request expired. Refresh Admin and try again.');
+            }
+
             $adminRounds = mlComputeRoundPresentation($pdo, mlLoadSeasonRoundsForGameplay($pdo, $seasonId), $currentUserId);
             $playlistResult = mlHandleManualPlaylistTrigger($pdo, $adminRounds);
 
@@ -233,6 +243,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($action === 'create_season') {
             $newSeasonName = isset($_POST['new_season_name']) ? trim((string)$_POST['new_season_name']) : '';
+
+            if (mlGetNextSeason($pdo)) {
+                throw new RuntimeException('A Next season already exists. Start it before creating another season.');
+            }
 
             $nextSeasonIdStmt = $pdo->query('SELECT COALESCE(MAX(SeasonID), 0) + 1 FROM ML_Seasons');
             $nextSeasonId = (int)$nextSeasonIdStmt->fetchColumn();
@@ -429,10 +443,6 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
             <div class="admin-page-intro">
                 <h1>Admin</h1>
             </div>
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
-                <a href="<?= htmlspecialchars(mlUrl('qa_tools.php?testing=qa')) ?>" class="admin-back-link admin-back-link-discreet">QA Tools</a>
-                <a href="<?= htmlspecialchars(mlUrl('settings.php')) ?>" class="admin-back-link admin-back-link-discreet">&larr; Back to Settings</a>
-            </div>
         </div>
 
         <?php if ($adminMessage !== ''): ?>
@@ -451,7 +461,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                             <div class="home-shell-kicker">Admin menu</div>
                             <div class="admin-roku-mobile-title" id="admin-mobile-current-group">Gameplay</div>
                         </div>
-                        <div class="admin-roku-mobile-current" id="admin-mobile-current-view">Round voting settings</div>
+                        <div class="admin-roku-mobile-current" id="admin-mobile-current-view">Gameplay settings</div>
                     </div>
 
                     <div class="admin-roku-mobile-groups" role="tablist" aria-label="Admin categories">
@@ -464,13 +474,11 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
 
                     <div class="admin-roku-mobile-panels">
                         <div class="admin-roku-mobile-panel is-active" data-admin-mobile-panel="gameplay">
-                            <button type="button" class="admin-roku-mobile-link is-active" data-admin-nav="round-voting-settings">Round voting settings</button>
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="playlist-timing">Playlist timing</button>
+                            <button type="button" class="admin-roku-mobile-link is-active" data-admin-nav="gameplay">Gameplay settings</button>
                         </div>
 
                         <div class="admin-roku-mobile-panel" data-admin-mobile-panel="season-setup">
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="create-next-season">Create the next season</button>
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="manage-existing-seasons">Manage existing seasons</button>
+                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="season-setup">Season setup</button>
                         </div>
 
                         <div class="admin-roku-mobile-panel" data-admin-mobile-panel="spotify">
@@ -492,14 +500,12 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                 <nav class="admin-roku-nav">
                     <div class="admin-roku-group">
                         <div class="admin-roku-group-title">Gameplay</div>
-                        <button type="button" class="admin-roku-link is-active" data-admin-nav="round-voting-settings">Round voting settings</button>
-                        <button type="button" class="admin-roku-link" data-admin-nav="playlist-timing">Playlist timing</button>
+                        <button type="button" class="admin-roku-link is-active" data-admin-nav="gameplay">Gameplay settings</button>
                     </div>
 
                     <div class="admin-roku-group">
                         <div class="admin-roku-group-title">Season setup</div>
-                        <button type="button" class="admin-roku-link" data-admin-nav="create-next-season">Create the next season</button>
-                        <button type="button" class="admin-roku-link" data-admin-nav="manage-existing-seasons">Manage existing seasons</button>
+                        <button type="button" class="admin-roku-link" data-admin-nav="season-setup">Season setup</button>
                     </div>
 
                     <div class="admin-roku-group">
@@ -522,9 +528,10 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
             </aside>
 
             <div class="admin-roku-content">
-                <section class="admin-panel admin-admin-view is-active" data-admin-view="round-voting-settings">
+                <section class="admin-panel admin-admin-view is-active" data-admin-view="gameplay">
                     <div class="home-shell-kicker">Gameplay</div>
-                    <h2>Round voting settings</h2>
+                    <h2>Gameplay</h2>
+                    <h3>Round voting settings</h3>
                     <p>
                         Set the total points each player gets per round, and optionally cap how many points can go on a single song.
                     </p>
@@ -564,78 +571,87 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
 
                         <button type="submit" class="button-primary">Save Vote Settings</button>
                     </form>
+
+                    <div class="admin-section-divider">
+                        <h3>Playlist timing</h3>
+                        <p>
+                            Choose when a round becomes ready for a one-time playlist build. The playlist itself is only created when you trigger it, and the saved URL stays fixed afterward.
+                        </p>
+
+                        <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-form-stack">
+                            <input type="hidden" name="admin_action" value="save_playlist_settings">
+
+                            <div>
+                                <label class="admin-label" for="playlist_build_mode">Playlist timing</label>
+                                <select name="playlist_build_mode" id="playlist_build_mode" class="admin-input">
+                                    <option value="due" <?= $playlistBuildMode === 'due' ? 'selected' : '' ?>>Build at Songs Due</option>
+                                    <option value="wait" <?= $playlistBuildMode === 'wait' ? 'selected' : '' ?>>Wait for everyone</option>
+                                </select>
+                                <p>Current mode: <strong><?= htmlspecialchars($playlistBuildModeLabel) ?></strong></p>
+                            </div>
+
+                            <button type="submit" class="button-primary">Save Playlist Timing</button>
+                        </form>
+
+                        <?php if ($manualPlaylistRound): ?>
+                            <div class="admin-section-divider">
+                                <div class="admin-stat-line">
+                                    <strong>Manual build ready:</strong> <?= htmlspecialchars($manualPlaylistRound['Title']) ?>
+                                </div>
+                                <p>
+                                    You can generate the playlist now either because everyone has already submitted, or because the Songs Due deadline has passed. If some players have not submitted yet, the playlist will still build using the songs already received. After build, the stored playlist URL stays fixed across the app.
+                                </p>
+                                <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-form-top-sm">
+                                    <input type="hidden" name="admin_action" value="generate_current_playlist">
+                                    <input type="hidden" name="admin_csrf" value="<?= htmlspecialchars($adminCsrfToken) ?>">
+                                    <button
+                                        type="submit"
+                                        class="button-secondary"
+                                        onclick="return confirm('Generate this Spotify playlist now? Its saved URL will become the fixed playlist for this round.');"
+                                    >Generate Current Playlist</button>
+                                </form>
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 </section>
 
-                <section class="admin-panel admin-admin-view" data-admin-view="playlist-timing">
-                    <div class="home-shell-kicker">Gameplay</div>
-                    <h2>Playlist timing</h2>
-                    <p>
-                        Choose when a round becomes ready for a one-time playlist build. The playlist itself is only created when you trigger it, and the saved URL stays fixed afterward.
-                    </p>
+                <section class="admin-panel admin-admin-view" data-admin-view="season-setup">
+                    <div class="home-shell-kicker">Season setup</div>
+                    <h2>Season setup</h2>
+                    <?php if (!$nextSeasonRow): ?>
+                        <h3>Create the next season</h3>
+                        <p>
+                            The next available season will use <strong>Season ID <?= $nextSeasonId ?></strong>. Create it first, finish setup on the next page, then start voting only when you are ready.
+                        </p>
 
-                    <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-form-stack">
-                        <input type="hidden" name="admin_action" value="save_playlist_settings">
+                        <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-form-stack">
+                            <input type="hidden" name="admin_action" value="create_season">
 
-                        <div>
-                            <label class="admin-label" for="playlist_build_mode">Playlist timing</label>
-                            <select name="playlist_build_mode" id="playlist_build_mode" class="admin-input">
-                                <option value="due" <?= $playlistBuildMode === 'due' ? 'selected' : '' ?>>Build at Songs Due</option>
-                                <option value="wait" <?= $playlistBuildMode === 'wait' ? 'selected' : '' ?>>Wait for everyone</option>
-                            </select>
-                            <p>Current mode: <strong><?= htmlspecialchars($playlistBuildModeLabel) ?></strong></p>
-                        </div>
-
-                        <button type="submit" class="button-primary">Save Playlist Timing</button>
-                    </form>
-
-                    <?php if ($manualPlaylistRound): ?>
-                        <div class="admin-section-divider">
-                            <div class="admin-stat-line">
-                                <strong>Manual build ready:</strong> <?= htmlspecialchars($manualPlaylistRound['Title']) ?>
+                            <div>
+                                <label class="admin-label" for="new_season_name">Season name</label>
+                                <input
+                                    type="text"
+                                    name="new_season_name"
+                                    id="new_season_name"
+                                    class="admin-input"
+                                    value="<?= htmlspecialchars($nextSeasonDefaultName) ?>"
+                                    required
+                                >
                             </div>
-                            <p>
-                                You can generate the playlist now either because everyone has already submitted, or because the Songs Due deadline has passed. If some players have not submitted yet, the playlist will still build using the songs already received. After build, the stored playlist URL stays fixed across the app.
-                            </p>
-                            <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-form-top-sm">
-                                <input type="hidden" name="admin_action" value="generate_current_playlist">
-                                <button type="submit" class="button-secondary">Generate Current Playlist</button>
-                            </form>
+
+                            <button type="submit" class="button-primary">Create</button>
+                        </form>
+                    <?php else: ?>
+                        <div class="status-banner">
+                            <?= htmlspecialchars((string)$nextSeasonRow['SeasonName']) ?> is already in the Next state. Finish setting it up and start it before creating another one.
                         </div>
                     <?php endif; ?>
-                </section>
 
-                <section class="admin-panel admin-admin-view" data-admin-view="create-next-season">
-                    <div class="home-shell-kicker">Season setup</div>
-                    <h2>Create the next season</h2>
-                    <p>
-                        The next available season will use <strong>Season ID <?= $nextSeasonId ?></strong>. Create it first, finish setup on the next page, then start voting only when you are ready.
-                    </p>
-
-                    <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-form-stack">
-                        <input type="hidden" name="admin_action" value="create_season">
-
-                        <div>
-                            <label class="admin-label" for="new_season_name">Season name</label>
-                            <input
-                                type="text"
-                                name="new_season_name"
-                                id="new_season_name"
-                                class="admin-input"
-                                value="<?= htmlspecialchars($nextSeasonDefaultName) ?>"
-                                required
-                            >
-                        </div>
-
-                        <button type="submit" class="button-primary">Create</button>
-                    </form>
-                </section>
-
-                <section class="admin-panel admin-admin-view" data-admin-view="manage-existing-seasons">
-                    <div class="home-shell-kicker">Season setup</div>
-                    <h2>Manage existing seasons</h2>
-                    <p>
-                        Open a season to edit its setup, save progress, review next-season votes, and control the season lifecycle.
-                    </p>
+                    <div class="admin-section-divider">
+                        <h3>Manage existing seasons</h3>
+                        <p>
+                            Open a season to edit its setup, save progress, review next-season votes, and control the season lifecycle.
+                        </p>
 
                     <div class="admin-season-table-wrap">
                         <table class="admin-season-table">
@@ -734,6 +750,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                             </tbody>
                         </table>
                     </div>
+                    </div>
                 </section>
 
                 <section class="admin-panel admin-admin-view" data-admin-view="playlist-account">
@@ -761,9 +778,21 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                         <?php endif; ?>
 
                         <div class="settings-spotify-actions">
-                            <a href="<?= htmlspecialchars(mlUrl('integrations/spotify/connect.php')) ?>" class="button-primary"><?= $spotifyConnection['is_connected'] ? 'Reconnect Spotify' : 'Connect Spotify' ?></a>
+                            <a
+                                href="<?= htmlspecialchars(mlUrl('integrations/spotify/connect.php')) ?>"
+                                class="button-primary"
+                                <?= $spotifyConnection['is_connected'] ? 'onclick="return confirm(\'Reconnect Spotify? The saved account will only change after you complete Spotify authorization.\');"' : '' ?>
+                            ><?= $spotifyConnection['is_connected'] ? 'Reconnect Spotify' : 'Connect Spotify' ?></a>
                             <?php if ($spotifyConnection['is_connected']): ?>
-                                <a href="<?= htmlspecialchars(mlUrl('integrations/spotify/disconnect.php')) ?>" class="button-secondary">Disconnect Spotify</a>
+                                <form
+                                    method="post"
+                                    action="<?= htmlspecialchars(mlUrl('integrations/spotify/disconnect.php')) ?>"
+                                    class="admin-inline-form"
+                                    onsubmit="return confirm('Disconnect Spotify from Musicball? Song search and playlist generation will stop until an account is connected again. Existing Spotify playlists will not be deleted.');"
+                                >
+                                    <input type="hidden" name="admin_csrf" value="<?= htmlspecialchars($adminCsrfToken) ?>">
+                                    <button type="submit" class="button-primary button-danger">Disconnect Spotify</button>
+                                </form>
                             <?php endif; ?>
                         </div>
                         <p>This account stays separate from player settings and is controlled only here in Admin.</p>
@@ -1182,7 +1211,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    var defaultView = 'round-voting-settings';
+    var defaultView = 'gameplay';
     var storageKey = 'musicballAdminView';
     var navButtons = document.querySelectorAll('[data-admin-nav]');
     var viewPanels = document.querySelectorAll('[data-admin-view]');
@@ -1191,15 +1220,19 @@ document.addEventListener('DOMContentLoaded', function () {
     var mobileCurrentGroup = document.getElementById('admin-mobile-current-group');
     var mobileCurrentView = document.getElementById('admin-mobile-current-view');
     var viewToGroupMap = {
-        'round-voting-settings': { group: 'gameplay', label: 'Round voting settings', groupLabel: 'Gameplay' },
-        'playlist-timing': { group: 'gameplay', label: 'Playlist timing', groupLabel: 'Gameplay' },
-        'create-next-season': { group: 'season-setup', label: 'Create the next season', groupLabel: 'Season setup' },
-        'manage-existing-seasons': { group: 'season-setup', label: 'Manage existing seasons', groupLabel: 'Season setup' },
+        'gameplay': { group: 'gameplay', label: 'Gameplay settings', groupLabel: 'Gameplay' },
+        'season-setup': { group: 'season-setup', label: 'Season setup', groupLabel: 'Season setup' },
         'playlist-account': { group: 'spotify', label: 'Playlist Account', groupLabel: 'Spotify' },
         'discord-webhook-notifications': { group: 'discord', label: 'Discord Notifications', groupLabel: 'Discord' },
         'discord-notification-status': { group: 'discord', label: 'Discord notification status', groupLabel: 'Discord' },
         'push-notification-tests': { group: 'pwa', label: 'Push Notification Tests', groupLabel: 'PWA' },
         'pwa-dev-mode': { group: 'pwa', label: 'PWA Dev Mode', groupLabel: 'PWA' }
+    };
+    var legacyViewMap = {
+        'round-voting-settings': 'gameplay',
+        'playlist-timing': 'gameplay',
+        'create-next-season': 'season-setup',
+        'manage-existing-seasons': 'season-setup'
     };
 
     function activateAdminView(viewName) {
@@ -1293,7 +1326,7 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
         var storedView = window.localStorage.getItem(storageKey);
         if (storedView) {
-            initialView = storedView;
+            initialView = legacyViewMap[storedView] || storedView;
         }
     } catch (error) {
     }

@@ -1,5 +1,12 @@
 <?php
 $showRevealPodium = isset($showRevealPodium) ? (bool)$showRevealPodium : false;
+$roundResultsFinal = mlRoundIsFinishedForDisplay($round);
+$expectedVoters = (int)($round['expected_players'] ?? 0);
+$submittedVoters = (int)($round['vote_submission_count'] ?? 0);
+$showVotingSummary = (($round['round_state'] ?? '') === 'voting')
+    && $expectedVoters > 0
+    && ($showProgress || $showRevealPodium);
+$voterNoun = $expectedVoters === 1 ? 'player' : 'players';
 $roundSongDraft = isset($round['song_draft']) && is_array($round['song_draft']) ? $round['song_draft'] : [];
 $hasChosenSong = !empty($round['song_saved'])
     && in_array((string)($round['round_state'] ?? ''), ['submission', 'upcoming'], true)
@@ -27,6 +34,18 @@ $chosenSongSpotifyUrl = $hasChosenSong && preg_match('/^[A-Za-z0-9]{22}$/', $cho
     </div>
 
     <div class="game-round-detail-stack">
+        <?php if ($showVotingSummary): ?>
+            <div class="game-round-voting-summary<?= $roundResultsFinal ? ' is-final' : '' ?>">
+                <div class="game-round-voting-summary-title"><?= $roundResultsFinal ? 'Results final' : 'Voting stage' ?></div>
+                <div class="game-round-voting-summary-copy">
+                    <?php if ($roundResultsFinal): ?>
+                        All <?= $expectedVoters ?> <?= $voterNoun ?> have voted.
+                    <?php else: ?>
+                        <?= $submittedVoters ?> of <?= $expectedVoters ?> <?= $voterNoun ?> have voted.
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
         <?php if ($showRevealPodium && !empty($round['podium_finishers'])): ?>
             <div class="game-round-reveal-podium" aria-label="Top finishers">
                 <?php

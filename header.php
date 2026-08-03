@@ -58,7 +58,7 @@ if ($headerNextSeason) {
 ?>
 <?php if ($mlIsQaMode): ?>
     <div class="ml-qa-banner" style="background:#7a0019;color:#fff;padding:10px 14px;text-align:center;font-weight:700;letter-spacing:.02em;">
-        QA MODE ACTIVE &nbsp;|&nbsp; <a href="<?= htmlspecialchars(mlUrl('admin.php?testing=live')) ?>" style="color:#fff;text-decoration:underline;">Return to live</a>
+        <a href="<?= htmlspecialchars(mlUrl('qa_tools.php?testing=qa')) ?>" style="color:#fff;text-decoration:underline;">QA MODE</a> ACTIVE &nbsp;|&nbsp; <a href="<?= htmlspecialchars(mlUrl('admin.php?testing=live')) ?>" style="color:#fff;text-decoration:underline;">Return to live</a>
     </div>
 <?php endif; ?>
 <?php if ($showAdminToolsBanner): ?>
@@ -190,7 +190,8 @@ if ($headerNextSeason) {
                     <a href="<?= htmlspecialchars(mlUrl('playlists.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'playlists' ? ' is-active' : '' ?>">Playlists</a>
                     <a href="<?= htmlspecialchars(mlUrl('league-database.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'league-database' ? ' is-active' : '' ?>">League Database</a>
                     <?php if ($isAdminUser): ?>
-                        <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'admin' ? ' is-active' : '' ?>">Admin Tools</a>
+                        <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'admin' && $headerScriptName !== 'qa_tools.php' ? ' is-active' : '' ?>">Admin Tools</a>
+                        <a href="<?= htmlspecialchars(mlUrl('qa_tools.php?testing=qa')) ?>" class="mb-account-menu-link<?= $headerScriptName === 'qa_tools.php' ? ' is-active' : '' ?>">Rewind Musicball</a>
                     <?php endif; ?>
                     <a href="<?= htmlspecialchars(mlUrl('settings.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'settings' ? ' is-active' : '' ?>">Settings</a>
                     <div class="mb-account-menu-divider" aria-hidden="true"></div>

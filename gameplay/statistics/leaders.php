@@ -18,7 +18,7 @@ foreach ($leaderMetrics as $metricKey => $metricLabel) {
             return $valueB <=> $valueA;
         }
 
-        $tieBreakers = ['points', 'round_wins', 'total_voters', 'podiums', 'best_round_score', 'holdouts'];
+        $tieBreakers = mlGetOverallStandingsTieBreakerKeys();
         foreach ($tieBreakers as $tieKey) {
             if ($tieKey === $metricKey) {
                 continue;
@@ -56,7 +56,7 @@ foreach ($leaderMetrics as $metricKey => $metricLabel) {
 }
 ?>
 
-<?php if (!$hasClosedRounds || empty($standings)): ?>
+<?php if (!$hasFinalRounds || empty($standings)): ?>
     <div class="status-banner">No leaders are available yet.</div>
 <?php else: ?>
     <section class="standings-section statistics-leaders-section">

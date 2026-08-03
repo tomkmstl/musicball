@@ -3367,6 +3367,26 @@ body.ml-pull-refreshing .wrapper {
     box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
 }
 
+.game-round-voting-summary {
+    display: grid;
+    gap: 3px;
+    margin: 4px 0 18px;
+}
+
+.game-round-voting-summary-title {
+    color: var(--text);
+    font-weight: 700;
+}
+
+.game-round-voting-summary.is-final .game-round-voting-summary-title {
+    color: var(--brand);
+}
+
+.game-round-voting-summary-copy {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
 .game-round-reveal-podium {
     display: flex;
     align-items: flex-start;
@@ -4969,4 +4989,172 @@ body.theme-light .vote-points-btn:focus-visible {
 
 .admin-push-test-status[data-state="error"] {
     color: var(--danger);
+}
+
+/* =========================================================
+   QA rewind controls
+========================================================= */
+.qa-rewind-card {
+    max-width: 900px;
+}
+
+.qa-rewind-kicker {
+    margin-bottom: 6px;
+    color: var(--brand);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.qa-rewind-card .admin-page-intro p {
+    margin: 8px 0 0;
+}
+
+.qa-rewind-toolbar,
+.qa-rewind-toolbar-actions,
+.qa-rewind-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.qa-rewind-toolbar {
+    justify-content: space-between;
+    margin: 22px 0;
+}
+
+.qa-rewind-toolbar-actions {
+    justify-content: flex-end;
+}
+
+.qa-rewind-toolbar-actions form {
+    margin: 0;
+}
+
+.qa-rewind-form {
+    display: grid;
+    gap: 22px;
+    margin-top: 22px;
+}
+
+.qa-rewind-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.qa-rewind-options.is-closed {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.qa-rewind-fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.qa-rewind-fieldset[hidden] {
+    display: none;
+}
+
+.qa-rewind-fieldset .admin-label {
+    padding: 0;
+}
+
+.qa-rewind-choices {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.qa-rewind-choice {
+    position: relative;
+    min-width: 0;
+    cursor: pointer;
+}
+
+.qa-rewind-choice input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.qa-rewind-choice span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 9px 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text);
+    font-weight: 600;
+    text-align: center;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.qa-rewind-choice:hover span {
+    background: var(--surface-3);
+}
+
+.qa-rewind-choice input:checked + span {
+    border-color: var(--brand);
+    background: var(--brand);
+    color: #07131e;
+}
+
+body.theme-light .qa-rewind-choice input:checked + span {
+    color: #ffffff;
+}
+
+.qa-rewind-choice input:focus-visible + span {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+}
+
+.qa-rewind-footer {
+    justify-content: space-between;
+}
+
+.qa-rewind-placement {
+    flex: 1 1 280px;
+}
+
+.qa-rewind-load {
+    min-width: 140px;
+}
+
+.qa-rewind-empty {
+    margin-top: 22px;
+}
+
+@media (max-width: 800px) {
+    .qa-rewind-options {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 700px) {
+    .qa-rewind-toolbar,
+    .qa-rewind-footer {
+        align-items: stretch;
+    }
+
+    .qa-rewind-toolbar-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+    }
+
+    .qa-rewind-toolbar-actions form,
+    .qa-rewind-toolbar-actions .button-secondary,
+    .qa-rewind-load {
+        width: 100%;
+    }
 }
