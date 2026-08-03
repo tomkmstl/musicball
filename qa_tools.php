@@ -35,6 +35,7 @@ $mlQaTables = [
     'ML_SpotifyTokens',
     'ML_Submissions',
     'ML_Users',
+    'ML_UserSeasonPlaylistPins',
     'ML_WalkmanExcluded',
 ];
 
@@ -104,6 +105,33 @@ function mlQaRestoreEnvironmentSpecificSettingRows(PDO $pdo, array $settingRows)
     }
 }
 
+function mlQaReplaceQaTablesFromSource(PDO $pdo, array $tables): array
+{
+    foreach ($tables as $liveTable) {
+        $qaTable = 'QA_' . $liveTable;
+
+        if (!mlQaTableExists($pdo, $liveTable)) {
+            throw new RuntimeException('Missing source table: ' . $liveTable . '.');
+        }
+        if (!mlQaTableExists($pdo, $qaTable)) {
+            throw new RuntimeException('Missing QA table: ' . $qaTable . '. Run qa_clone_setup.sql first.');
+        }
+    }
+
+    $copied = [];
+    foreach ($tables as $liveTable) {
+        $qaTable = 'QA_' . $liveTable;
+        $pdo->exec('DELETE FROM ' . mlQaQuoteIdentifier($qaTable));
+        $inserted = $pdo->exec(
+            'INSERT INTO ' . mlQaQuoteIdentifier($qaTable)
+            . ' SELECT * FROM ' . mlQaQuoteIdentifier($liveTable)
+        );
+        $copied[$liveTable] = ($inserted === false) ? 0 : (int)$inserted;
+    }
+
+    return $copied;
+}
+
 function mlQaPushLiveToQa(PDO $pdo, array $tables): void
 {
     $qaEnvironmentSettings = mlQaGetEnvironmentSpecificSettingRows($pdo);
@@ -112,17 +140,7 @@ function mlQaPushLiveToQa(PDO $pdo, array $tables): void
 
     try {
         $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
-
-        foreach ($tables as $liveTable) {
-            $qaTable = 'QA_' . $liveTable;
-
-            if (!mlQaTableExists($pdo, $qaTable)) {
-                throw new RuntimeException('Missing QA table: ' . $qaTable . '. Run qa_clone_setup.sql first.');
-            }
-
-            $pdo->exec('DELETE FROM ' . mlQaQuoteIdentifier($qaTable));
-			$pdo->exec('INSERT INTO ' . mlQaQuoteIdentifier($qaTable) . ' SELECT * FROM ' . mlQaQuoteIdentifier($liveTable));
-        }
+        mlQaReplaceQaTablesFromSource($pdo, $tables);
 
         mlQaRestoreEnvironmentSpecificSettingRows($pdo, $qaEnvironmentSettings);
         mlQaClearCurrentSeasonRoundId($pdo);
@@ -550,27 +568,85 @@ function mlQaGetVotingScenarios(): array
 
 function mlQaGetAvailableRounds(PDO $pdo): array
 {
-    foreach (['QA_ML_SeasonRounds', 'QA_ML_Seasons', 'ML_SeasonRounds'] as $tableName) {
+    foreach (['ML_SeasonRounds', 'ML_Seasons'] as $tableName) {
         if (!mlQaTableExists($pdo, $tableName)) {
             return [];
         }
     }
 
     $stmt = $pdo->query("
-        SELECT qa_sr.SeasonRoundID,
-               qa_sr.SeasonID,
-               qa_sr.RoundNumber,
-               qa_sr.Title,
-               qa_s.SeasonName,
-               qa_s.IsActive
-        FROM QA_ML_SeasonRounds qa_sr
-        INNER JOIN QA_ML_Seasons qa_s ON qa_s.SeasonID = qa_sr.SeasonID
-        INNER JOIN ML_SeasonRounds live_sr ON live_sr.SeasonRoundID = qa_sr.SeasonRoundID
-        ORDER BY qa_sr.SeasonID DESC, qa_sr.RoundNumber ASC, qa_sr.SeasonRoundID ASC
+        SELECT sr.SeasonRoundID,
+               sr.SeasonID,
+               sr.RoundNumber,
+               sr.Title,
+               s.SeasonName,
+               s.IsActive
+        FROM ML_SeasonRounds sr
+        INNER JOIN ML_Seasons s ON s.SeasonID = sr.SeasonID
+        ORDER BY sr.SeasonID DESC, sr.RoundNumber ASC, sr.SeasonRoundID ASC
     ");
 
     $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
     return is_array($rows) ? $rows : [];
+}
+
+function mlQaGetLiveRoundById(PDO $pdo, int $seasonRoundId): ?array
+{
+    if ($seasonRoundId <= 0) {
+        return null;
+    }
+
+    foreach (['ML_SeasonRounds', 'ML_Seasons'] as $tableName) {
+        if (!mlQaTableExists($pdo, $tableName)) {
+            return null;
+        }
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT sr.SeasonRoundID,
+               sr.SeasonID,
+               sr.RoundNumber,
+               sr.Title,
+               sr.RoundState,
+               sr.SongsDue,
+               sr.VotesDue,
+               s.SeasonName,
+               s.IsActive
+        FROM ML_SeasonRounds sr
+        INNER JOIN ML_Seasons s ON s.SeasonID = sr.SeasonID
+        WHERE sr.SeasonRoundID = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$seasonRoundId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return is_array($row) ? $row : null;
+}
+
+function mlQaGetSourceRoundCounts(PDO $pdo, int $seasonRoundId): array
+{
+    $tables = [
+        'songs' => 'ML_RoundSongs',
+        'playlists' => 'ML_RoundPlaylists',
+        'playlist_items' => 'ML_RoundPlaylistItems',
+        'votes' => 'ML_RoundVotes',
+        'vote_submissions' => 'ML_RoundVoteSubmissions',
+    ];
+    $counts = [];
+
+    foreach ($tables as $key => $tableName) {
+        if (!mlQaTableExists($pdo, $tableName)) {
+            throw new RuntimeException('Missing source table: ' . $tableName . '.');
+        }
+
+        $stmt = $pdo->prepare(
+            'SELECT COUNT(*) FROM ' . mlQaQuoteIdentifier($tableName) . ' WHERE SeasonRoundID = ?'
+        );
+        $stmt->execute([$seasonRoundId]);
+        $counts[$key] = (int)$stmt->fetchColumn();
+    }
+
+    return $counts;
 }
 
 function mlQaGetLiveSeasonRounds(PDO $pdo, int $seasonId): array
@@ -827,7 +903,14 @@ function mlQaApplyVotingScenario(PDO $pdo, int $seasonRoundId, int $currentUserI
     return ['submitted' => $submitted, 'expected' => $expectedPlayers];
 }
 
-function mlQaApplyTimeMachine(PDO $pdo, int $seasonRoundId, string $targetStage, string $votingScenario, int $currentUserId): array
+function mlQaApplyTimeMachine(
+    PDO $pdo,
+    int $seasonRoundId,
+    string $targetStage,
+    string $votingScenario,
+    int $currentUserId,
+    array $tables
+): array
 {
     $stages = mlQaGetTimeMachineStages();
     if (!isset($stages[$targetStage])) {
@@ -859,19 +942,27 @@ function mlQaApplyTimeMachine(PDO $pdo, int $seasonRoundId, string $targetStage,
         }
     }
 
-    $qaRound = mlQaGetRoundById($pdo, $seasonRoundId);
-    if (!$qaRound) {
-        throw new RuntimeException('The selected QA round was not found. Push live data to QA and try again.');
-    }
-
-    $liveRound = mlQaGetMatchingLiveRound($pdo, $qaRound);
+    $liveRound = mlQaGetLiveRoundById($pdo, $seasonRoundId);
     if (!$liveRound) {
-        throw new RuntimeException('The selected round does not have a matching source round.');
+        throw new RuntimeException('The selected round was not found in this environment\'s ML_* source snapshot.');
     }
-    mlQaAssertMatchingRoundIds($qaRound, $liveRound);
 
-    $seasonId = (int)$qaRound['SeasonID'];
-    $targetRoundNumber = (int)$qaRound['RoundNumber'];
+    $seasonId = (int)$liveRound['SeasonID'];
+    $targetRoundNumber = (int)$liveRound['RoundNumber'];
+    $sourceCounts = mlQaGetSourceRoundCounts($pdo, $seasonRoundId);
+    if (
+        in_array($targetStage, ['voting', 'closed'], true)
+        && ($sourceCounts['songs'] <= 0 || $sourceCounts['playlists'] <= 0)
+    ) {
+        throw new RuntimeException(
+            'Source Season ' . $seasonId . ' / Round ' . $targetRoundNumber
+            . ' has ' . $sourceCounts['songs'] . ' song rows and '
+            . $sourceCounts['playlists'] . ' playlist rows in this environment\'s ML_* tables. '
+            . ucfirst($targetStage) . ' requires both. If this source snapshot is stale, refresh musicball_future '
+            . 'from the musicball database, then try again. No QA data was changed.'
+        );
+    }
+
     $sourceRounds = mlQaGetLiveSeasonRounds($pdo, $seasonId);
     if (!$sourceRounds) {
         throw new RuntimeException('The selected season does not have a source schedule to rebase.');
@@ -950,11 +1041,17 @@ function mlQaApplyTimeMachine(PDO $pdo, int $seasonRoundId, string $targetStage,
         'playlists' => 0,
         'playlist_items' => 0,
     ];
-    $participation = ['submitted' => 0, 'expected' => mlQaGetExpectedPlayerCountForTools($pdo)];
+    $participation = ['submitted' => 0, 'expected' => 0];
+    $sourceResetCounts = [];
+    $qaEnvironmentSettings = mlQaGetEnvironmentSpecificSettingRows($pdo);
 
     $pdo->beginTransaction();
     try {
         $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+
+        $sourceResetCounts = mlQaReplaceQaTablesFromSource($pdo, $tables);
+        mlQaRestoreEnvironmentSpecificSettingRows($pdo, $qaEnvironmentSettings);
+        $participation['expected'] = mlQaGetExpectedPlayerCountForTools($pdo);
 
         $deleted = mlQaDeleteSeasonGameplayData($pdo, $sourceRounds);
 
@@ -994,7 +1091,12 @@ function mlQaApplyTimeMachine(PDO $pdo, int $seasonRoundId, string $targetStage,
             $targetCopied = mlQaCopyRoundDataGroups($pdo, $seasonRoundId, ['songs', 'playlists', 'playlist_items']);
             $copied = mlQaAddCounts($copied, $targetCopied);
             if ($targetCopied['songs'] <= 0 || $targetCopied['playlists'] <= 0) {
-                throw new RuntimeException('The source round needs songs and a playlist before it can be recreated in voting.');
+                throw new RuntimeException(
+                    'Source preflight found ' . $sourceCounts['songs'] . ' song rows and '
+                    . $sourceCounts['playlists'] . ' playlist rows, but the QA copy produced '
+                    . $targetCopied['songs'] . ' songs and ' . $targetCopied['playlists']
+                    . ' playlists. All QA changes were rolled back.'
+                );
             }
             $participation = mlQaApplyVotingScenario($pdo, $seasonRoundId, $currentUserId, $votingScenario);
         } elseif ($targetStage === 'closed') {
@@ -1003,7 +1105,12 @@ function mlQaApplyTimeMachine(PDO $pdo, int $seasonRoundId, string $targetStage,
             ]);
             $copied = mlQaAddCounts($copied, $targetCopied);
             if ($targetCopied['songs'] <= 0 || $targetCopied['playlists'] <= 0) {
-                throw new RuntimeException('The source round needs songs and a playlist before it can be recreated as closed.');
+                throw new RuntimeException(
+                    'Source preflight found ' . $sourceCounts['songs'] . ' song rows and '
+                    . $sourceCounts['playlists'] . ' playlist rows, but the QA copy produced '
+                    . $targetCopied['songs'] . ' songs and ' . $targetCopied['playlists']
+                    . ' playlists. All QA changes were rolled back.'
+                );
             }
             $participation['submitted'] = $targetCopied['vote_submissions'];
         }
@@ -1028,12 +1135,12 @@ function mlQaApplyTimeMachine(PDO $pdo, int $seasonRoundId, string $targetStage,
         throw $e;
     }
 
-    if (isset($_SESSION['ml_round_votes'][$currentUserId][$seasonId][$seasonRoundId])) {
-        unset($_SESSION['ml_round_votes'][$currentUserId][$seasonId][$seasonRoundId]);
+    if (isset($_SESSION['ml_round_votes'][$currentUserId])) {
+        unset($_SESSION['ml_round_votes'][$currentUserId]);
     }
 
     return [
-        'round' => $qaRound,
+        'round' => $liveRound,
         'stage' => $targetStage,
         'stage_label' => $stages[$targetStage]['label'],
         'voting_scenario' => $targetStage === 'voting' ? $votingScenario : '',
@@ -1043,6 +1150,8 @@ function mlQaApplyTimeMachine(PDO $pdo, int $seasonRoundId, string $targetStage,
         'offset_seconds' => $offsetSeconds,
         'deleted' => $deleted,
         'copied' => $copied,
+        'source_counts' => $sourceCounts,
+        'source_reset_counts' => $sourceResetCounts,
         'submitted' => (int)$participation['submitted'],
         'expected' => (int)$participation['expected'],
     ];
@@ -1419,7 +1528,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         if ($action === 'push_live_to_qa') {
             mlQaPushLiveToQa($livePdo, $mlQaTables);
-            $message = 'Live data was copied into all QA_ML_* tables. QA-specific Discord settings were preserved.';
+            $message = 'This environment\'s ML_* snapshot was copied into all configured QA_ML_* mirror tables. QA-specific Discord settings were preserved.';
         } elseif ($action === 'apply_time_machine') {
             if (!mlIsQaMode()) {
                 throw new RuntimeException('Open QA Tools in QA mode before using the QA time machine.');
@@ -1430,14 +1539,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $selectedTimeMachineRoundId,
                 $selectedTimeMachineStage,
                 $selectedVotingScenario,
-                $currentUserId
+                $currentUserId,
+                $mlQaTables
             );
             $round = $timeMachineResult['round'];
             $message = 'QA time machine rebuilt ' . $round['SeasonName']
                 . ' / Round ' . (int)$round['RoundNumber'] . ' - ' . $round['Title']
                 . ' at ' . $timeMachineResult['stage_label'] . '.';
             $info = ucfirst((string)$timeMachineResult['deadline_label']) . ': '
-                . $timeMachineResult['deadline_utc'] . ' UTC. ';
+                . $timeMachineResult['deadline_utc'] . ' UTC. '
+                . 'QA was reset from this environment\'s ML_* snapshot before the timeline was rebuilt. ';
 
             if ($timeMachineResult['stage'] === 'voting') {
                 $info .= (int)$timeMachineResult['submitted'] . ' of '
@@ -1539,7 +1650,7 @@ foreach ($qaAvailableRounds as $availableRound) {
         <div class="admin-page-topline admin-page-topline-compact">
             <div class="admin-page-intro">
                 <h1>QA Tools</h1>
-                <p style="margin:8px 0 0;opacity:.85;">Copy the current live Musicball data into the QA_ML_* tables, then launch the app in QA mode.</p>
+                <p style="margin:8px 0 0;opacity:.85;">Reset QA from this environment's ML_* source snapshot, then launch the app in QA mode.</p>
             </div>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
                 <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-back-link admin-back-link-discreet">&larr; Back to Admin</a>
@@ -1561,7 +1672,7 @@ foreach ($qaAvailableRounds as $availableRound) {
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin:18px 0 24px;">
             <form method="post" action="<?= htmlspecialchars(mlUrl('qa_tools.php')) ?>" style="margin:0;">
                 <input type="hidden" name="qa_action" value="push_live_to_qa">
-                <button type="submit" class="button-primary">Push Live Data to QA</button>
+                <button type="submit" class="button-primary">Reset QA from ML Snapshot</button>
             </form>
             <a href="<?= htmlspecialchars(mlUrl('qa_tools.php?testing=qa')) ?>" class="button-secondary">Open QA Tools in QA Mode</a>
             <a href="<?= htmlspecialchars(mlUrl('season.php?testing=qa')) ?>" class="button-secondary">Open QA App</a>
@@ -1571,13 +1682,17 @@ foreach ($qaAvailableRounds as $availableRound) {
         <div class="card" style="margin:0 0 24px;padding:18px;">
             <h2 style="margin-top:0;">QA Time Machine</h2>
             <p style="margin:8px 0 16px;opacity:.85;">
-                Rebuild a season around any source round. Earlier rounds retain their completed results, later rounds become genuinely upcoming, and the complete QA schedule is shifted together from the untouched source dates.
+                Rebuild a season around any source round. Every rebuild first resets the configured QA mirror tables from this environment's ML_* snapshot. Earlier rounds retain their completed results, later rounds become genuinely upcoming, and the complete QA schedule is shifted together from the untouched source dates.
             </p>
+
+            <div class="note" style="margin:0 0 16px;">
+                <strong>Source freshness:</strong> On mb-future, the ML_* tables are only as current as the last controlled refresh from the musicball database. This page does not perform that cross-database refresh.
+            </div>
 
             <?php if (!mlIsQaMode()): ?>
                 <div class="status-banner" style="margin:0;">Open this page with <code>?testing=qa</code> before rebuilding a QA timeline.</div>
             <?php elseif (!$qaAvailableRounds): ?>
-                <div class="status-banner error" style="margin:0;">No matching source and QA rounds were found. Push live data to QA first.</div>
+                <div class="status-banner error" style="margin:0;">No rounds were found in this environment's ML_* source snapshot. Refresh the source data first.</div>
             <?php else: ?>
                 <?php if ($qaUserCount !== null && $qaRoundScenarioStatus && (int)$qaUserCount !== (int)$qaRoundScenarioStatus['expected']): ?>
                     <div class="status-banner error" style="margin:0 0 14px;">
@@ -1656,7 +1771,7 @@ foreach ($qaAvailableRounds as $availableRound) {
                         <button
                             type="submit"
                             class="button-primary"
-                            onclick="return confirm('Rebuild this QA season from source data? Existing QA gameplay data for every round in the selected season will be replaced.');"
+                            onclick="return confirm('Reset all configured QA mirror tables from the local ML snapshot, then rebuild this timeline? Existing QA test changes will be replaced.');"
                         >Rebuild QA Timeline</button>
                         <a href="<?= htmlspecialchars(mlUrl('season.php?testing=qa')) ?>" class="button-secondary">Open QA App</a>
                     </div>
