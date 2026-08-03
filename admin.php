@@ -379,11 +379,6 @@ $seasonListStmt = $pdo->query("
 ");
 $seasonList = $seasonListStmt->fetchAll(PDO::FETCH_ASSOC);
 
-foreach ($seasonList as &$seasonRow) {
-    $seasonRow['HasCommittedRounds'] = $seasonRoundsReady && mlSeasonHasCommittedRounds($pdo, (int)$seasonRow['SeasonID']) ? '1' : '0';
-}
-unset($seasonRow);
-
 $totalUsersStmt = $pdo->query('SELECT COUNT(*) FROM ML_Users');
 $totalUsers = (int)$totalUsersStmt->fetchColumn();
 
@@ -399,6 +394,19 @@ $nextSeasonVotingOpen = $nextSeasonRow ? mlIsSeasonVotingOpen($pdo, $nextSeasonR
 $nextSeasonVotingComplete = $nextSeasonRow ? mlIsSeasonVotingComplete($pdo, $nextSeasonRowId) : false;
 $nextSeasonSubmissionCount = $nextSeasonRow ? mlGetSeasonSubmissionCount($pdo, $nextSeasonRowId) : 0;
 $canRevertCurrentSeason = $currentSeasonId > 0 ? mlCanRevertToPreviousSeason($pdo, $currentSeasonId) : false;
+
+$seasonList = array_values(array_filter(
+    $seasonList,
+    static function (array $row) use ($currentSeasonId, $nextSeasonRowId): bool {
+        $rowSeasonId = (int)$row['SeasonID'];
+        return $rowSeasonId === $currentSeasonId
+            || ($nextSeasonRowId > 0 && $rowSeasonId === $nextSeasonRowId);
+    }
+));
+foreach ($seasonList as &$seasonRow) {
+    $seasonRow['HasCommittedRounds'] = $seasonRoundsReady && mlSeasonHasCommittedRounds($pdo, (int)$seasonRow['SeasonID']) ? '1' : '0';
+}
+unset($seasonRow);
 
 $nextSeasonIdStmt = $pdo->query('SELECT COALESCE(MAX(SeasonID), 0) + 1 FROM ML_Seasons');
 $nextSeasonId = (int)$nextSeasonIdStmt->fetchColumn();
@@ -618,40 +626,10 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                 <section class="admin-panel admin-admin-view" data-admin-view="season-setup">
                     <div class="home-shell-kicker">Season setup</div>
                     <h2>Season setup</h2>
-                    <?php if (!$nextSeasonRow): ?>
-                        <h3>Create the next season</h3>
-                        <p>
-                            The next available season will use <strong>Season ID <?= $nextSeasonId ?></strong>. Create it first, finish setup on the next page, then start voting only when you are ready.
-                        </p>
-
-                        <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-form-stack">
-                            <input type="hidden" name="admin_action" value="create_season">
-
-                            <div>
-                                <label class="admin-label" for="new_season_name">Season name</label>
-                                <input
-                                    type="text"
-                                    name="new_season_name"
-                                    id="new_season_name"
-                                    class="admin-input"
-                                    value="<?= htmlspecialchars($nextSeasonDefaultName) ?>"
-                                    required
-                                >
-                            </div>
-
-                            <button type="submit" class="button-primary">Create</button>
-                        </form>
-                    <?php else: ?>
-                        <div class="status-banner">
-                            <?= htmlspecialchars((string)$nextSeasonRow['SeasonName']) ?> is already in the Next state. Finish setting it up and start it before creating another one.
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="admin-section-divider">
-                        <h3>Manage existing seasons</h3>
-                        <p>
-                            Open a season to edit its setup, save progress, review next-season votes, and control the season lifecycle.
-                        </p>
+                    <h3>Manage seasons</h3>
+                    <p>
+                        Manage the current season and any next season being prepared.
+                    </p>
 
                     <div class="admin-season-table-wrap">
                         <table class="admin-season-table">
@@ -668,14 +646,9 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                 <?php foreach ($seasonList as $seasonRow): ?>
                                     <?php
                                     $rowSeasonId = (int)$seasonRow['SeasonID'];
+                                    $rowType = $rowSeasonId === $currentSeasonId ? 'Current' : 'Next';
                                     $rowVotingOpen = ((string)$seasonRow['VotingOpenValue'] === '1');
                                     $rowVotingComplete = mlIsSeasonVotingComplete($pdo, $rowSeasonId);
-                                    $rowType = 'Past';
-                                    if ($currentSeasonId > 0 && $rowSeasonId === $currentSeasonId) {
-                                        $rowType = 'Current';
-                                    } elseif ($nextSeasonRowId > 0 && $rowSeasonId === $nextSeasonRowId) {
-                                        $rowType = 'Next';
-                                    }
                                     ?>
                                     <tr>
                                         <td>
@@ -690,8 +663,6 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                                 <div class="note admin-note-top-xs">
                                                     <?= $rowVotingOpen ? ($rowVotingComplete ? 'Voting complete' : 'Voting open') : ($rowVotingComplete ? 'Voting complete' : ($rowSeasonId === $nextSeasonRowId && mlWasSeasonVotingClosedEarly($pdo, $rowSeasonId) ? 'Voting closed early' : 'Setup in progress')) ?>
                                                 </div>
-                                            <?php else: ?>
-                                                <span class="pill pill-closed">Past</span>
                                             <?php endif; ?>
                                         </td>
                                         <td><?= (int)$seasonRow['CategoryCount'] ?></td>
@@ -738,10 +709,6 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                                         Review Next Season
                                                     </a>
                                                 <?php endif; ?>
-                                            <?php else: ?>
-                                                <a href="<?= htmlspecialchars(mlUrl('season.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
-                                                    View
-                                                </a>
                                             <?php endif; ?>
                                             </div>
                                         </td>
@@ -750,7 +717,38 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                             </tbody>
                         </table>
                     </div>
-                    </div>
+
+                    <?php if (!$nextSeasonRow): ?>
+                        <div class="admin-section-divider">
+                            <h3>Create the next season</h3>
+                            <p>
+                                The next available season will use <strong>Season ID <?= $nextSeasonId ?></strong>. You can finish its setup before opening voting.
+                            </p>
+
+                            <form
+                                method="post"
+                                action="<?= htmlspecialchars(mlUrl('admin.php')) ?>"
+                                class="admin-form-stack"
+                                onsubmit="return confirm('Create this new season? You can edit its setup before opening voting.');"
+                            >
+                                <input type="hidden" name="admin_action" value="create_season">
+
+                                <div>
+                                    <label class="admin-label" for="new_season_name">Season name</label>
+                                    <input
+                                        type="text"
+                                        name="new_season_name"
+                                        id="new_season_name"
+                                        class="admin-input"
+                                        value="<?= htmlspecialchars($nextSeasonDefaultName) ?>"
+                                        required
+                                    >
+                                </div>
+
+                                <button type="submit" class="button-primary">Create Next Season</button>
+                            </form>
+                        </div>
+                    <?php endif; ?>
                 </section>
 
                 <section class="admin-panel admin-admin-view" data-admin-view="playlist-account">
