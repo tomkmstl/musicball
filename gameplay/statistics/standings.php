@@ -1,4 +1,4 @@
-<?php if (!$hasClosedRounds || empty($standings)): ?>
+<?php if (!$hasFinalRounds || empty($standings)): ?>
     <div class="status-banner">No standings are available yet.</div>
 <?php else: ?>
     <section class="standings-section">

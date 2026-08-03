@@ -3367,6 +3367,26 @@ body.ml-pull-refreshing .wrapper {
     box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
 }
 
+.game-round-voting-summary {
+    display: grid;
+    gap: 3px;
+    margin: 4px 0 18px;
+}
+
+.game-round-voting-summary-title {
+    color: var(--text);
+    font-weight: 700;
+}
+
+.game-round-voting-summary.is-final .game-round-voting-summary-title {
+    color: var(--brand);
+}
+
+.game-round-voting-summary-copy {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
 .game-round-reveal-podium {
     display: flex;
     align-items: flex-start;

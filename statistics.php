@@ -20,7 +20,7 @@ $standingsData = $showAllTimeStandings
     ? mlBuildAllTimeStandingsData($pdo, (int)$currentUser['UserID'])
     : ($seasonRow ? mlBuildStandingsData($pdo, $selectedSeasonId, (int)$currentUser['UserID']) : ['standings' => [], 'round_breakdown' => []]);
 
-if (!$showAllTimeStandings && $requestedSeasonId <= 0 && $seasonRow && empty($standingsData['closed_round_count'])) {
+if (!$showAllTimeStandings && $requestedSeasonId <= 0 && $seasonRow && empty($standingsData['final_round_count'])) {
     foreach ($seasonList as $seasonOption) {
         $fallbackSeasonId = (int)($seasonOption['SeasonID'] ?? 0);
         if ($fallbackSeasonId <= 0 || $fallbackSeasonId === (int)$selectedSeasonId) {
@@ -28,7 +28,7 @@ if (!$showAllTimeStandings && $requestedSeasonId <= 0 && $seasonRow && empty($st
         }
 
         $fallbackData = mlBuildStandingsData($pdo, $fallbackSeasonId, (int)$currentUser['UserID']);
-        if (!empty($fallbackData['closed_round_count'])) {
+        if (!empty($fallbackData['final_round_count'])) {
             $selectedSeasonId = $fallbackSeasonId;
             $seasonRow = mlLoadSeasonById($pdo, $selectedSeasonId);
             $standingsData = $fallbackData;
@@ -39,7 +39,7 @@ if (!$showAllTimeStandings && $requestedSeasonId <= 0 && $seasonRow && empty($st
 
 $standings = $standingsData['standings'] ?? [];
 $roundBreakdown = $showAllTimeStandings ? [] : ($standingsData['round_breakdown'] ?? []);
-$hasClosedRounds = !empty($standingsData['closed_round_count']);
+$hasFinalRounds = !empty($standingsData['final_round_count']);
 
 $allowedSorts = [
     'points' => 'points',
@@ -70,7 +70,7 @@ if (!empty($standings)) {
             return $valueB <=> $valueA;
         }
 
-        $tieBreakers = ['points', 'round_wins', 'total_voters', 'podiums', 'best_round_score', 'holdouts'];
+        $tieBreakers = mlGetOverallStandingsTieBreakerKeys();
         foreach ($tieBreakers as $tieKey) {
             if ($tieKey === $sortKey) {
                 continue;
@@ -85,22 +85,29 @@ if (!empty($standings)) {
         return strcasecmp((string)($a['user_name'] ?? ''), (string)($b['user_name'] ?? ''));
     });
 
-    $rankCount = count($standings);
-    $groupStartIndex = 0;
-    $lastSortValue = null;
-
-    foreach ($standings as $index => &$standingRow) {
-        $currentSortValue = (int)($standingRow[$sortKey] ?? 0);
-        if ($index === 0 || $currentSortValue !== $lastSortValue) {
-            $groupStartIndex = $index;
-            $lastSortValue = $currentSortValue;
+    if ($sortKey === 'points' && $sortDir === 'desc') {
+        foreach ($standings as &$standingRow) {
+            $standingRow['display_rank'] = (int)($standingRow['rank'] ?? 0);
         }
+        unset($standingRow);
+    } else {
+        $rankCount = count($standings);
+        $groupStartIndex = 0;
+        $lastSortValue = null;
 
-        $standingRow['display_rank'] = ($sortDir === 'asc')
-            ? ($rankCount - $groupStartIndex)
-            : ($groupStartIndex + 1);
+        foreach ($standings as $index => &$standingRow) {
+            $currentSortValue = (int)($standingRow[$sortKey] ?? 0);
+            if ($index === 0 || $currentSortValue !== $lastSortValue) {
+                $groupStartIndex = $index;
+                $lastSortValue = $currentSortValue;
+            }
+
+            $standingRow['display_rank'] = ($sortDir === 'asc')
+                ? ($rankCount - $groupStartIndex)
+                : ($groupStartIndex + 1);
+        }
+        unset($standingRow);
     }
-    unset($standingRow);
 }
 
 function mlStatisticsUrl(string $targetView, bool $showAllTimeStandings, $seasonRow, string $sortKey, string $sortDir): string

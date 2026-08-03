@@ -23,28 +23,41 @@ function mlCompareRoundStandingEntries(array $a, array $b): int {
 
     return 0;
 }
+function mlGetOverallStandingsTieBreakerKeys(): array {
+    return ['points', 'round_wins', 'total_voters', 'podiums', 'best_round_score', 'holdouts'];
+}
+function mlGetOverallStandingsMetric(array $entry, string $metricKey): int {
+    if ($metricKey === 'total_voters') {
+        return (int)($entry['total_voters'] ?? $entry['positive_voter_total'] ?? 0);
+    }
+
+    return (int)($entry[$metricKey] ?? 0);
+}
 function mlCompareOverallStandingsEntries(array $a, array $b): int {
-    $pointsA = (int)($a['points'] ?? 0);
-    $pointsB = (int)($b['points'] ?? 0);
-    if ($pointsA !== $pointsB) {
-        return ($pointsA > $pointsB) ? -1 : 1;
-    }
-
-    $votersA = (int)($a['positive_voter_total'] ?? 0);
-    $votersB = (int)($b['positive_voter_total'] ?? 0);
-    if ($votersA !== $votersB) {
-        return ($votersA > $votersB) ? -1 : 1;
-    }
-
-    $userIdA = (int)($a['user_id'] ?? 0);
-    $userIdB = (int)($b['user_id'] ?? 0);
-    if ($userIdA !== $userIdB) {
-        return ($userIdA > $userIdB) ? -1 : 1;
+    foreach (mlGetOverallStandingsTieBreakerKeys() as $metricKey) {
+        $valueA = mlGetOverallStandingsMetric($a, $metricKey);
+        $valueB = mlGetOverallStandingsMetric($b, $metricKey);
+        if ($valueA !== $valueB) {
+            return ($valueA > $valueB) ? -1 : 1;
+        }
     }
 
     return 0;
 }
-function mlBuildStandingsDataFromClosedRounds(PDO $pdo, array $closedRounds, int $currentUserId, bool $includeRoundBreakdown = true): array {
+function mlRankOverallStandings(array &$standings): void {
+    usort($standings, 'mlCompareOverallStandingsEntries');
+
+    $previousRow = null;
+    foreach ($standings as $index => &$row) {
+        if ($previousRow === null || mlCompareOverallStandingsEntries($previousRow, $row) !== 0) {
+            $rank = $index + 1;
+        }
+        $row['rank'] = $rank;
+        $previousRow = $row;
+    }
+    unset($row);
+}
+function mlBuildStandingsDataFromFinalRounds(PDO $pdo, array $finalRounds, int $currentUserId, bool $includeRoundBreakdown = true): array {
     $users = mlLoadAllUsers($pdo);
     $playerStats = [];
 
@@ -68,25 +81,19 @@ function mlBuildStandingsDataFromClosedRounds(PDO $pdo, array $closedRounds, int
     $result = [
         'standings' => [],
         'round_breakdown' => [],
-        'closed_round_count' => count($closedRounds),
+        'final_round_count' => count($finalRounds),
     ];
 
-    if (empty($closedRounds) || !mlTableExists($pdo, 'ML_RoundSongs') || !mlTableExists($pdo, 'ML_RoundVotes')) {
+    if (empty($finalRounds) || !mlTableExists($pdo, 'ML_RoundSongs') || !mlTableExists($pdo, 'ML_RoundVotes')) {
         foreach ($playerStats as $row) {
             $result['standings'][] = $row;
         }
-        usort($result['standings'], 'mlCompareOverallStandingsEntries');
-        $rank = 1;
-        foreach ($result['standings'] as &$row) {
-            $row['rank'] = $rank;
-            $rank++;
-        }
-        unset($row);
+        mlRankOverallStandings($result['standings']);
         return $result;
     }
 
-    $closedRoundIds = array_keys($closedRounds);
-    $placeholders = implode(',', array_fill(0, count($closedRoundIds), '?'));
+    $finalRoundIds = array_keys($finalRounds);
+    $placeholders = implode(',', array_fill(0, count($finalRoundIds), '?'));
 
     $roundSongStats = [];
     try {
@@ -105,7 +112,7 @@ function mlBuildStandingsDataFromClosedRounds(PDO $pdo, array $closedRounds, int
             ORDER BY rs.SeasonRoundID ASC, rs.RoundSongID ASC
         ";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($closedRoundIds);
+        $stmt->execute($finalRoundIds);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($rows as $row) {
@@ -134,13 +141,7 @@ function mlBuildStandingsDataFromClosedRounds(PDO $pdo, array $closedRounds, int
         foreach ($playerStats as $row) {
             $result['standings'][] = $row;
         }
-        usort($result['standings'], 'mlCompareOverallStandingsEntries');
-        $rank = 1;
-        foreach ($result['standings'] as &$row) {
-            $row['rank'] = $rank;
-            $rank++;
-        }
-        unset($row);
+        mlRankOverallStandings($result['standings']);
         return $result;
     }
 
@@ -153,7 +154,7 @@ function mlBuildStandingsDataFromClosedRounds(PDO $pdo, array $closedRounds, int
             ORDER BY rv.SeasonRoundID ASC, rv.RoundSongID ASC, rv.VoterUserID ASC
         ";
         $stmt = $pdo->prepare($voterSql);
-        $stmt->execute($closedRoundIds);
+        $stmt->execute($finalRoundIds);
         $voterRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($voterRows as $row) {
@@ -179,7 +180,7 @@ function mlBuildStandingsDataFromClosedRounds(PDO $pdo, array $closedRounds, int
     }
 
     $roundBreakdown = [];
-    foreach ($closedRounds as $seasonRoundId => $round) {
+    foreach ($finalRounds as $seasonRoundId => $round) {
         $submittedEntries = [];
         $playerCells = [];
 
@@ -258,19 +259,12 @@ function mlBuildStandingsDataFromClosedRounds(PDO $pdo, array $closedRounds, int
     }
 
     $standings = array_values($playerStats);
-    usort($standings, 'mlCompareOverallStandingsEntries');
-
-    $rank = 1;
-    foreach ($standings as &$row) {
-        $row['rank'] = $rank;
-        $rank++;
-    }
-    unset($row);
+    mlRankOverallStandings($standings);
 
     return [
         'standings' => $standings,
         'round_breakdown' => $roundBreakdown,
-        'closed_round_count' => count($closedRounds),
+        'final_round_count' => count($finalRounds),
     ];
 }
 function mlBuildStandingsData(PDO $pdo, int $seasonId, int $currentUserId): array {
@@ -283,14 +277,14 @@ function mlBuildStandingsData(PDO $pdo, int $seasonId, int $currentUserId): arra
 
     $rounds = mlLoadSeasonRoundsForGameplay($pdo, $seasonId);
     $presentedRounds = mlComputeRoundPresentation($pdo, $rounds, $currentUserId);
-    $closedRounds = [];
+    $finalRounds = [];
     foreach ($presentedRounds as $round) {
-        if (($round['round_state'] ?? '') === 'closed') {
-            $closedRounds[(int)$round['SeasonRoundID']] = $round;
+        if (mlRoundIsFinishedForDisplay($round)) {
+            $finalRounds[(int)$round['SeasonRoundID']] = $round;
         }
     }
 
-    $cache[$cacheKey] = mlBuildStandingsDataFromClosedRounds($pdo, $closedRounds, $currentUserId, true);
+    $cache[$cacheKey] = mlBuildStandingsDataFromFinalRounds($pdo, $finalRounds, $currentUserId, true);
     return $cache[$cacheKey];
 }
 function mlBuildAllTimeStandingsData(PDO $pdo, int $currentUserId): array {
@@ -302,7 +296,7 @@ function mlBuildAllTimeStandingsData(PDO $pdo, int $currentUserId): array {
     }
 
     $seasonList = mlLoadSeasonSummaries($pdo);
-    $closedRounds = [];
+    $finalRounds = [];
 
     foreach ($seasonList as $seasonRow) {
         $seasonId = (int)($seasonRow['SeasonID'] ?? 0);
@@ -313,14 +307,14 @@ function mlBuildAllTimeStandingsData(PDO $pdo, int $currentUserId): array {
         $rounds = mlLoadSeasonRoundsForGameplay($pdo, $seasonId);
         $presentedRounds = mlComputeRoundPresentation($pdo, $rounds, $currentUserId);
         foreach ($presentedRounds as $round) {
-            if (($round['round_state'] ?? '') === 'closed') {
-                $closedRounds[(int)$round['SeasonRoundID']] = $round;
+            if (mlRoundIsFinishedForDisplay($round)) {
+                $finalRounds[(int)$round['SeasonRoundID']] = $round;
             }
         }
     }
 
-    if (!empty($closedRounds)) {
-        uasort($closedRounds, static function (array $a, array $b): int {
+    if (!empty($finalRounds)) {
+        uasort($finalRounds, static function (array $a, array $b): int {
             $seasonComparison = ((int)($a['SeasonID'] ?? 0)) <=> ((int)($b['SeasonID'] ?? 0));
             if ($seasonComparison !== 0) {
                 return $seasonComparison;
@@ -335,7 +329,7 @@ function mlBuildAllTimeStandingsData(PDO $pdo, int $currentUserId): array {
         });
     }
 
-    $cache[$cacheKey] = mlBuildStandingsDataFromClosedRounds($pdo, $closedRounds, $currentUserId, false);
+    $cache[$cacheKey] = mlBuildStandingsDataFromFinalRounds($pdo, $finalRounds, $currentUserId, false);
     return $cache[$cacheKey];
 }
 function mlBuildStandingsPreview(PDO $pdo, int $seasonId, int $currentUserId): array {

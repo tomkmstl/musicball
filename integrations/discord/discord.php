@@ -426,8 +426,8 @@ function mlDiscordBuildTestMessageText(string $eventKey): string
     $messages = [
         'submission_open' => "🧪 Test: 🎵 Round 3 is open — song submissions are live.",
         'voting_open' => "🧪 Test: 🗳️ Voting is open for Round 3.",
-        'all_votes_in' => "🧪 Test: ✅ All votes are in for Round 3. Results are ready.",
-        'round_closed' => "🧪 Test: 🏁 Round 3 is closed. Final results are live.",
+        'all_votes_in' => "🧪 Test: ✅ All votes are in for Round 3. Results and standings are final.",
+        'round_closed' => "🧪 Test: 🏁 Round 3 is officially closed.",
         'builder_voting_complete' => "🧪 Test: 🧱 Season Builder voting is complete for Season 3. Next season is ready for review.",
         'season_started' => "🧪 Test: 🚀 Season 3 is now live on Musicball !",
         'song_submitted' => "🧪 Test: 🎶 musicballer submitted a song for Round 3.",
@@ -685,6 +685,23 @@ function mlDiscordRoundHasPlaylist(PDO $pdo, int $seasonRoundId): bool
         $stmt = $pdo->prepare("\n            SELECT 1\n            FROM ML_RoundPlaylists\n            WHERE SeasonRoundID = ?\n            LIMIT 1\n        ");
         $stmt->execute([$seasonRoundId]);
         return (bool)$stmt->fetchColumn();
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
+function mlDiscordIsFinalRoundForSeason(PDO $pdo, array $round): bool
+{
+    $seasonId = (int)($round['SeasonID'] ?? 0);
+    $roundNumber = (int)($round['RoundNumber'] ?? 0);
+    if ($seasonId <= 0 || $roundNumber <= 0) {
+        return false;
+    }
+
+    try {
+        $stmt = $pdo->prepare('SELECT MAX(RoundNumber) FROM ML_SeasonRounds WHERE SeasonID = ?');
+        $stmt->execute([$seasonId]);
+        return $roundNumber === (int)$stmt->fetchColumn();
     } catch (Throwable $e) {
         return false;
     }
@@ -1225,7 +1242,11 @@ function mlDiscordMaybeSendAllVotesInForRound(PDO $pdo, int $seasonRoundId): arr
         return ['sent' => false, 'reason' => 'votes_not_complete'];
     }
 
-    $messageText = '✅ All votes are in for ' . mlDiscordBuildRoundLabel($round) . '. Results are ready.';
+    if (mlDiscordIsFinalRoundForSeason($pdo, $round)) {
+        $messageText = '✅ The season is complete. Final standings are ready.';
+    } else {
+        $messageText = '✅ All votes are in for ' . mlDiscordBuildRoundLabel($round) . '. Results and standings are final.';
+    }
     return mlDiscordSendMessageOnce($pdo, $seasonRoundId, 'all_votes_in', $messageText);
 }
 
@@ -1255,7 +1276,7 @@ function mlDiscordMaybeSendRoundClosedForRound(PDO $pdo, array $round): array
         return ['sent' => false, 'reason' => 'round_not_closed'];
     }
 
-    $messageText = '🏁 ' . mlDiscordBuildRoundLabel($round) . ' is closed. Final results are live.';
+    $messageText = '🏁 ' . mlDiscordBuildRoundLabel($round) . ' is officially closed.';
     return mlDiscordSendMessageOnce($pdo, $seasonRoundId, 'round_closed', $messageText);
 }
 
