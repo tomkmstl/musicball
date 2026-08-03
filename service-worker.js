@@ -1,6 +1,6 @@
 const swUrl = new URL(self.location.href);
 const DEV_MODE = swUrl.searchParams.get('dev_mode') === '1';
-const CACHE_NAME = DEV_MODE ? 'musicball-dev-cache' : 'musicball-static-v7';
+const CACHE_NAME = DEV_MODE ? 'musicball-dev-cache' : 'musicball-static-v8';
 
 const APP_SHELL = [
     '/',

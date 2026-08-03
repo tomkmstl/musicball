@@ -1086,6 +1086,13 @@ textarea.admin-input,
     display: inline;
 }
 
+.admin-readonly-fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
 .admin-season-list {
     display: grid;
     gap: 12px;

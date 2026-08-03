@@ -52,7 +52,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('There is no open next-season voting cycle to close.');
             }
 
+            if (mlGetSeasonSubmissionCount($pdo, (int)$targetVotingSeason['SeasonID']) <= 0) {
+                throw new RuntimeException('Voting cannot be closed early until at least one player has submitted.');
+            }
+
+            $pdo->beginTransaction();
+            mlLockSeasonBuilder($pdo, (int)$targetVotingSeason['SeasonID']);
             mlSetSeasonConfig($pdo, (int)$targetVotingSeason['SeasonID'], 'voting_open', '0');
+            $pdo->commit();
             $_SESSION['ml_admin_message'] = 'Voting for ' . $targetVotingSeason['SeasonName'] . ' is now closed early. You can still review the partial results and start the season when ready.';
             header('Location: ' . mlUrl('admin.php'));
             exit;
@@ -266,6 +273,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $insertSeasonStmt = $pdo->prepare('INSERT INTO ML_Seasons (SeasonID, SeasonName, IsActive) VALUES (?, ?, 0)');
             $insertSeasonStmt->execute([$nextSeasonId, $newSeasonName]);
             mlSetSeasonConfig($pdo, $nextSeasonId, 'voting_open', '0');
+            mlSetSeasonConfig($pdo, $nextSeasonId, 'builder_locked', '0');
 
             $pdo->commit();
 
@@ -626,6 +634,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                             $rowType = $rowSeasonId === $currentSeasonId ? 'Current' : 'Next';
                             $rowVotingOpen = ((string)$seasonRow['VotingOpenValue'] === '1');
                             $rowVotingComplete = mlIsSeasonVotingComplete($pdo, $rowSeasonId);
+                            $rowBuilderLocked = mlIsSeasonBuilderLocked($pdo, $rowSeasonId);
                             ?>
                             <article class="admin-season-card">
                                 <div class="admin-season-card-header">
@@ -636,7 +645,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                         <?php else: ?>
                                             <span class="pill pill-neutral">Next</span>
                                             <span class="note">
-                                                <?= $rowVotingOpen ? ($rowVotingComplete ? 'Voting complete' : 'Voting open') : ($rowVotingComplete ? 'Voting complete' : ($rowSeasonId === $nextSeasonRowId && mlWasSeasonVotingClosedEarly($pdo, $rowSeasonId) ? 'Voting closed early' : 'Setup in progress')) ?>
+                                                <?= $rowVotingOpen ? ($rowVotingComplete ? 'Voting complete' : 'Voting open') : ($rowVotingComplete ? 'Voting complete' : ($rowSeasonId === $nextSeasonRowId && mlWasSeasonVotingClosedEarly($pdo, $rowSeasonId) ? 'Voting closed early' : ($rowBuilderLocked ? 'Voting closed' : 'Setup in progress'))) ?>
                                             </span>
                                         <?php endif; ?>
                                     </div>
@@ -645,7 +654,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                 <div class="admin-season-card-actions">
                                     <?php if ($rowType === 'Current'): ?>
                                         <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
-                                            Edit Setup
+                                            <?= $rowBuilderLocked ? 'View Setup' : 'Edit Setup' ?>
                                         </a>
                                         <?php if ((string)$seasonRow['HasCommittedRounds'] === '1'): ?>
                                             <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
@@ -662,7 +671,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                         <?php endif; ?>
                                     <?php else: ?>
                                         <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
-                                            Edit Setup
+                                            <?= $rowBuilderLocked ? 'View Setup' : 'Edit Setup' ?>
                                         </a>
                                         <a href="<?= htmlspecialchars(mlUrl('final.php?preview=1')) ?>" class="button-secondary admin-table-link">
                                             View Votes
@@ -674,6 +683,11 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                                     Close Voting Early
                                                 </button>
                                             </form>
+                                        <?php endif; ?>
+                                        <?php if ($rowBuilderLocked && !mlCanStartNextSeason($pdo, $rowSeasonId)): ?>
+                                            <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                                Edit Schedule
+                                            </a>
                                         <?php endif; ?>
                                         <?php if (mlCanStartNextSeason($pdo, $rowSeasonId)): ?>
                                             <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-primary admin-table-link">
