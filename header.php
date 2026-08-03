@@ -58,7 +58,7 @@ if ($headerNextSeason) {
 ?>
 <?php if ($mlIsQaMode): ?>
     <div class="ml-qa-banner" style="background:#7a0019;color:#fff;padding:10px 14px;text-align:center;font-weight:700;letter-spacing:.02em;">
-        QA MODE ACTIVE &nbsp;|&nbsp; <a href="<?= htmlspecialchars(mlUrl('admin.php?testing=live')) ?>" style="color:#fff;text-decoration:underline;">Return to live</a>
+        <a href="<?= htmlspecialchars(mlUrl('qa_tools.php?testing=qa')) ?>" style="color:#fff;text-decoration:underline;">QA MODE</a> ACTIVE &nbsp;|&nbsp; <a href="<?= htmlspecialchars(mlUrl('admin.php?testing=live')) ?>" style="color:#fff;text-decoration:underline;">Return to live</a>
     </div>
 <?php endif; ?>
 <?php if ($showAdminToolsBanner): ?>
