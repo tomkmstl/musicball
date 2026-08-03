@@ -512,6 +512,595 @@ function mlQaAssertMatchingRoundIds(array $qaRound, array $liveRound): void
     }
 }
 
+function mlQaGetTimeMachineStages(): array
+{
+    return [
+        'submission' => [
+            'label' => 'Song Submission',
+            'description' => 'The selected round is accepting songs. Its song deadline will be 10 minutes away.',
+        ],
+        'voting' => [
+            'label' => 'Voting',
+            'description' => 'The selected round has a playlist and its voting deadline will be 10 minutes away.',
+        ],
+        'closed' => [
+            'label' => 'Closed / Results',
+            'description' => 'The selected round is closed. If another round follows it, that round\'s song deadline will be 10 minutes away.',
+        ],
+    ];
+}
+
+function mlQaGetVotingScenarios(): array
+{
+    return [
+        'none' => [
+            'label' => 'Nobody has voted',
+            'description' => 'Voting starts with no submitted ballots.',
+        ],
+        'everyone_except_me' => [
+            'label' => 'Everyone except me has voted',
+            'description' => 'Every player except the signed-in admin has a deterministic submitted ballot.',
+        ],
+        'everyone' => [
+            'label' => 'Everyone has voted',
+            'description' => 'Every player has a deterministic submitted ballot, so results are final immediately.',
+        ],
+    ];
+}
+
+function mlQaGetAvailableRounds(PDO $pdo): array
+{
+    foreach (['QA_ML_SeasonRounds', 'QA_ML_Seasons', 'ML_SeasonRounds'] as $tableName) {
+        if (!mlQaTableExists($pdo, $tableName)) {
+            return [];
+        }
+    }
+
+    $stmt = $pdo->query("
+        SELECT qa_sr.SeasonRoundID,
+               qa_sr.SeasonID,
+               qa_sr.RoundNumber,
+               qa_sr.Title,
+               qa_s.SeasonName,
+               qa_s.IsActive
+        FROM QA_ML_SeasonRounds qa_sr
+        INNER JOIN QA_ML_Seasons qa_s ON qa_s.SeasonID = qa_sr.SeasonID
+        INNER JOIN ML_SeasonRounds live_sr ON live_sr.SeasonRoundID = qa_sr.SeasonRoundID
+        ORDER BY qa_sr.SeasonID DESC, qa_sr.RoundNumber ASC, qa_sr.SeasonRoundID ASC
+    ");
+
+    $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    return is_array($rows) ? $rows : [];
+}
+
+function mlQaGetLiveSeasonRounds(PDO $pdo, int $seasonId): array
+{
+    if ($seasonId <= 0 || !mlQaTableExists($pdo, 'ML_SeasonRounds')) {
+        return [];
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT SeasonRoundID, SeasonID, RoundNumber, Title, RoundState, SongsDue, VotesDue
+        FROM ML_SeasonRounds
+        WHERE SeasonID = ?
+        ORDER BY RoundNumber ASC, SeasonRoundID ASC
+    ");
+    $stmt->execute([$seasonId]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    return is_array($rows) ? $rows : [];
+}
+
+function mlQaCreateUtcDate($value, string $label): DateTimeImmutable
+{
+    $value = trim((string)$value);
+    if ($value === '') {
+        throw new RuntimeException('The source schedule is missing ' . $label . '.');
+    }
+
+    try {
+        return new DateTimeImmutable($value, new DateTimeZone('UTC'));
+    } catch (Throwable $e) {
+        throw new RuntimeException('The source schedule has an invalid ' . $label . '.');
+    }
+}
+
+function mlQaGetDatabaseNow(PDO $pdo): DateTimeImmutable
+{
+    $value = $pdo->query('SELECT UTC_TIMESTAMP()')->fetchColumn();
+    return mlQaCreateUtcDate($value, 'database time');
+}
+
+function mlQaFormatUtc(DateTimeImmutable $date): string
+{
+    return $date->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+}
+
+function mlQaShiftUtcDate($value, int $offsetSeconds, string $label): string
+{
+    return mlQaFormatUtc(mlQaCreateUtcDate($value, $label)->modify(($offsetSeconds >= 0 ? '+' : '') . $offsetSeconds . ' seconds'));
+}
+
+function mlQaGetExpectedPlayerCountForTools(PDO $pdo): int
+{
+    global $totalPlayers;
+
+    if (isset($totalPlayers) && (int)$totalPlayers > 0) {
+        return (int)$totalPlayers;
+    }
+
+    if (!mlQaTableExists($pdo, 'QA_ML_Users')) {
+        return 0;
+    }
+
+    return (int)$pdo->query('SELECT COUNT(*) FROM QA_ML_Users')->fetchColumn();
+}
+
+function mlQaDeleteSeasonGameplayData(PDO $pdo, array $rounds): array
+{
+    $deleted = [
+        'songs' => 0,
+        'votes' => 0,
+        'vote_submissions' => 0,
+        'playlists' => 0,
+        'playlist_items' => 0,
+        'discord_events' => 0,
+    ];
+
+    foreach ($rounds as $round) {
+        $seasonRoundId = (int)($round['SeasonRoundID'] ?? 0);
+        if ($seasonRoundId <= 0) {
+            continue;
+        }
+
+        $deleted = mlQaAddCounts($deleted, mlQaDeleteRoundData($pdo, $seasonRoundId, [
+            'playlist_items',
+            'votes',
+            'vote_submissions',
+            'discord_events',
+            'playlists',
+            'songs',
+        ]));
+    }
+
+    return $deleted;
+}
+
+function mlQaCopyRoundDataGroups(PDO $pdo, int $seasonRoundId, array $groups): array
+{
+    $copied = [
+        'songs' => 0,
+        'votes' => 0,
+        'vote_submissions' => 0,
+        'playlists' => 0,
+        'playlist_items' => 0,
+    ];
+
+    $tables = [
+        'songs' => ['ML_RoundSongs', 'QA_ML_RoundSongs'],
+        'playlists' => ['ML_RoundPlaylists', 'QA_ML_RoundPlaylists'],
+        'playlist_items' => ['ML_RoundPlaylistItems', 'QA_ML_RoundPlaylistItems'],
+        'votes' => ['ML_RoundVotes', 'QA_ML_RoundVotes'],
+        'vote_submissions' => ['ML_RoundVoteSubmissions', 'QA_ML_RoundVoteSubmissions'],
+    ];
+
+    foreach ($groups as $group) {
+        if (!isset($tables[$group])) {
+            continue;
+        }
+
+        $copied[$group] += mlQaCopyRoundRows($pdo, $tables[$group][0], $tables[$group][1], $seasonRoundId);
+    }
+
+    return $copied;
+}
+
+function mlQaMarkHistoricalDiscordEvents(PDO $pdo, int $seasonRoundId): void
+{
+    $stmt = $pdo->prepare("
+        INSERT INTO QA_ML_DiscordEventLog (SeasonRoundID, EventKey, MessageText)
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE MessageText = VALUES(MessageText)
+    ");
+
+    foreach (['submission_open_qa', 'voting_open_qa', 'all_votes_in_qa', 'round_closed_qa'] as $eventKey) {
+        $stmt->execute([$seasonRoundId, $eventKey, 'QA time machine: historical event already complete.']);
+    }
+}
+
+function mlQaBuildDeterministicScores(array $candidateSongIds, int $totalPoints, int $maxPerSong, int $rotation): array
+{
+    if (!$candidateSongIds || $totalPoints <= 0 || $maxPerSong <= 0) {
+        throw new RuntimeException('The QA ballot does not have enough eligible songs for the configured voting rules.');
+    }
+
+    if ((count($candidateSongIds) * $maxPerSong) < $totalPoints) {
+        throw new RuntimeException('The configured voting total cannot fit on this QA ballot without exceeding the per-song maximum.');
+    }
+
+    $candidateSongIds = array_values(array_map('intval', $candidateSongIds));
+    $scores = array_fill_keys($candidateSongIds, 0);
+    $candidateCount = count($candidateSongIds);
+    $remaining = $totalPoints;
+    $cursor = $rotation % $candidateCount;
+
+    while ($remaining > 0) {
+        $assignedThisPass = 0;
+        for ($index = 0; $index < $candidateCount && $remaining > 0; $index++) {
+            $songId = $candidateSongIds[($cursor + $index) % $candidateCount];
+            if ($scores[$songId] >= $maxPerSong) {
+                continue;
+            }
+
+            $scores[$songId]++;
+            $remaining--;
+            $assignedThisPass++;
+        }
+
+        if ($assignedThisPass === 0) {
+            throw new RuntimeException('The QA ballot generator could not assign all configured voting points.');
+        }
+
+        $cursor = ($cursor + 1) % $candidateCount;
+    }
+
+    return $scores;
+}
+
+function mlQaApplyVotingScenario(PDO $pdo, int $seasonRoundId, int $currentUserId, string $scenario): array
+{
+    $scenarios = mlQaGetVotingScenarios();
+    if (!isset($scenarios[$scenario])) {
+        throw new RuntimeException('Invalid QA voting scenario.');
+    }
+
+    $pdo->prepare('DELETE FROM QA_ML_RoundVotes WHERE SeasonRoundID = ?')->execute([$seasonRoundId]);
+    $pdo->prepare('DELETE FROM QA_ML_RoundVoteSubmissions WHERE SeasonRoundID = ?')->execute([$seasonRoundId]);
+
+    if ($scenario === 'none') {
+        return ['submitted' => 0, 'expected' => mlQaGetExpectedPlayerCountForTools($pdo)];
+    }
+
+    $users = $pdo->query('SELECT UserID FROM QA_ML_Users ORDER BY UserID ASC')->fetchAll(PDO::FETCH_COLUMN);
+    $userIds = array_values(array_map('intval', is_array($users) ? $users : []));
+    $expectedPlayers = mlQaGetExpectedPlayerCountForTools($pdo);
+
+    if ($expectedPlayers <= 0 || count($userIds) !== $expectedPlayers) {
+        throw new RuntimeException(
+            'QA has ' . count($userIds) . ' users, but gameplay expects ' . $expectedPlayers
+            . '. Align the expected-player count before generating voting scenarios.'
+        );
+    }
+
+    if (!in_array($currentUserId, $userIds, true)) {
+        throw new RuntimeException('The signed-in admin is not present in QA_ML_Users and cannot be the remaining voter.');
+    }
+
+    $songStmt = $pdo->prepare('SELECT RoundSongID, UserID FROM QA_ML_RoundSongs WHERE SeasonRoundID = ? ORDER BY RoundSongID ASC');
+    $songStmt->execute([$seasonRoundId]);
+    $songs = $songStmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!$songs) {
+        throw new RuntimeException('The selected QA round has no songs for generated ballots.');
+    }
+
+    $totalPoints = max(1, (int)mlQaGetSettingValue($pdo, 'votes_per_round', '12'));
+    $configuredMax = (int)mlQaGetSettingValue($pdo, 'vote_max_per_song', '0');
+    $maxPerSong = $configuredMax > 0 ? min($configuredMax, $totalPoints, 10) : min($totalPoints, 10);
+
+    $insertVoteStmt = $pdo->prepare("
+        INSERT INTO QA_ML_RoundVotes (SeasonRoundID, VoterUserID, RoundSongID, Score, Comment)
+        VALUES (?, ?, ?, ?, '')
+    ");
+    $insertSubmissionStmt = $pdo->prepare("
+        INSERT INTO QA_ML_RoundVoteSubmissions (SeasonRoundID, UserID)
+        VALUES (?, ?)
+        ON DUPLICATE KEY UPDATE SubmittedAt = CURRENT_TIMESTAMP
+    ");
+
+    $submitted = 0;
+    foreach ($userIds as $userIndex => $voterUserId) {
+        if ($scenario === 'everyone_except_me' && $voterUserId === $currentUserId) {
+            continue;
+        }
+
+        $candidateSongIds = [];
+        foreach ($songs as $song) {
+            if ((int)$song['UserID'] !== $voterUserId) {
+                $candidateSongIds[] = (int)$song['RoundSongID'];
+            }
+        }
+
+        $scores = mlQaBuildDeterministicScores($candidateSongIds, $totalPoints, $maxPerSong, $userIndex);
+        foreach ($candidateSongIds as $roundSongId) {
+            $insertVoteStmt->execute([
+                $seasonRoundId,
+                $voterUserId,
+                $roundSongId,
+                (int)($scores[$roundSongId] ?? 0),
+            ]);
+        }
+
+        $insertSubmissionStmt->execute([$seasonRoundId, $voterUserId]);
+        $submitted++;
+    }
+
+    return ['submitted' => $submitted, 'expected' => $expectedPlayers];
+}
+
+function mlQaApplyTimeMachine(PDO $pdo, int $seasonRoundId, string $targetStage, string $votingScenario, int $currentUserId): array
+{
+    $stages = mlQaGetTimeMachineStages();
+    if (!isset($stages[$targetStage])) {
+        throw new RuntimeException('Invalid QA time-machine stage.');
+    }
+
+    $requiredTables = [
+        'ML_SeasonRounds',
+        'ML_RoundSongs',
+        'ML_RoundVotes',
+        'ML_RoundVoteSubmissions',
+        'ML_RoundPlaylists',
+        'ML_RoundPlaylistItems',
+        'QA_ML_SeasonRounds',
+        'QA_ML_Seasons',
+        'QA_ML_RoundSongs',
+        'QA_ML_RoundVotes',
+        'QA_ML_RoundVoteSubmissions',
+        'QA_ML_RoundPlaylists',
+        'QA_ML_RoundPlaylistItems',
+        'QA_ML_DiscordEventLog',
+        'QA_ML_Settings',
+        'QA_ML_Users',
+    ];
+
+    foreach ($requiredTables as $tableName) {
+        if (!mlQaTableExists($pdo, $tableName)) {
+            throw new RuntimeException('Missing required table: ' . $tableName . '. Run qa_clone_setup.sql and push live data first.');
+        }
+    }
+
+    $qaRound = mlQaGetRoundById($pdo, $seasonRoundId);
+    if (!$qaRound) {
+        throw new RuntimeException('The selected QA round was not found. Push live data to QA and try again.');
+    }
+
+    $liveRound = mlQaGetMatchingLiveRound($pdo, $qaRound);
+    if (!$liveRound) {
+        throw new RuntimeException('The selected round does not have a matching source round.');
+    }
+    mlQaAssertMatchingRoundIds($qaRound, $liveRound);
+
+    $seasonId = (int)$qaRound['SeasonID'];
+    $targetRoundNumber = (int)$qaRound['RoundNumber'];
+    $sourceRounds = mlQaGetLiveSeasonRounds($pdo, $seasonId);
+    if (!$sourceRounds) {
+        throw new RuntimeException('The selected season does not have a source schedule to rebase.');
+    }
+
+    $targetIndex = null;
+    foreach ($sourceRounds as $index => $sourceRound) {
+        if ((int)$sourceRound['SeasonRoundID'] === $seasonRoundId) {
+            $targetIndex = $index;
+            break;
+        }
+    }
+    if ($targetIndex === null) {
+        throw new RuntimeException('The selected round is missing from the source season schedule.');
+    }
+
+    $pinnedSeasonRoundId = $seasonRoundId;
+    if ($targetStage === 'closed' && isset($sourceRounds[$targetIndex + 1])) {
+        $pinnedSeasonRoundId = (int)$sourceRounds[$targetIndex + 1]['SeasonRoundID'];
+    }
+
+    $databaseNow = mlQaGetDatabaseNow($pdo);
+    $desiredNextDeadline = $databaseNow->modify('+10 minutes');
+    $sourceAnchor = null;
+    $anchorLabel = '';
+
+    if ($targetStage === 'submission') {
+        $sourceAnchor = mlQaCreateUtcDate($sourceRounds[$targetIndex]['SongsDue'] ?? null, 'song deadline for the selected round');
+        $anchorLabel = 'song deadline';
+    } elseif ($targetStage === 'voting') {
+        $sourceAnchor = mlQaCreateUtcDate($sourceRounds[$targetIndex]['VotesDue'] ?? null, 'voting deadline for the selected round');
+        $anchorLabel = 'voting deadline';
+    } elseif (isset($sourceRounds[$targetIndex + 1])) {
+        $sourceAnchor = mlQaCreateUtcDate($sourceRounds[$targetIndex + 1]['SongsDue'] ?? null, 'song deadline for the next round');
+        $anchorLabel = 'next round song deadline';
+    } else {
+        $sourceAnchor = mlQaCreateUtcDate($sourceRounds[$targetIndex]['VotesDue'] ?? null, 'voting deadline for the final round');
+        $desiredNextDeadline = $databaseNow->modify('-10 minutes');
+        $anchorLabel = 'final voting deadline';
+    }
+
+    $offsetSeconds = $desiredNextDeadline->getTimestamp() - $sourceAnchor->getTimestamp();
+    $rebasedRounds = [];
+    foreach ($sourceRounds as $sourceRound) {
+        $roundId = (int)$sourceRound['SeasonRoundID'];
+        $roundNumber = (int)$sourceRound['RoundNumber'];
+        $rebasedRounds[$roundId] = [
+            'SeasonRoundID' => $roundId,
+            'RoundNumber' => $roundNumber,
+            'SongsDue' => mlQaShiftUtcDate($sourceRound['SongsDue'] ?? null, $offsetSeconds, 'song deadline for Round ' . $roundNumber),
+            'VotesDue' => mlQaShiftUtcDate($sourceRound['VotesDue'] ?? null, $offsetSeconds, 'voting deadline for Round ' . $roundNumber),
+            'RoundState' => $roundNumber < $targetRoundNumber
+                ? 'closed'
+                : ($roundNumber === $targetRoundNumber ? $targetStage : 'submission'),
+        ];
+    }
+
+    $rebasedTarget = $rebasedRounds[$seasonRoundId];
+    $rebasedSongsDue = mlQaCreateUtcDate($rebasedTarget['SongsDue'], 'rebased song deadline');
+    $rebasedVotesDue = mlQaCreateUtcDate($rebasedTarget['VotesDue'], 'rebased voting deadline');
+    if ($targetStage === 'submission' && $rebasedSongsDue <= $databaseNow) {
+        throw new RuntimeException('The source schedule cannot place this round in song submission with ten minutes remaining.');
+    }
+    if ($targetStage === 'voting' && ($rebasedSongsDue >= $databaseNow || $rebasedVotesDue <= $databaseNow)) {
+        throw new RuntimeException('The source schedule cannot place this round in voting with ten minutes remaining.');
+    }
+    if ($targetStage === 'closed' && $rebasedVotesDue >= $databaseNow) {
+        throw new RuntimeException('The source schedule cannot close this round while keeping the next deadline ten minutes away.');
+    }
+
+    $deleted = [];
+    $copied = [
+        'songs' => 0,
+        'votes' => 0,
+        'vote_submissions' => 0,
+        'playlists' => 0,
+        'playlist_items' => 0,
+    ];
+    $participation = ['submitted' => 0, 'expected' => mlQaGetExpectedPlayerCountForTools($pdo)];
+
+    $pdo->beginTransaction();
+    try {
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+
+        $deleted = mlQaDeleteSeasonGameplayData($pdo, $sourceRounds);
+
+        $updateRoundStmt = $pdo->prepare("
+            UPDATE QA_ML_SeasonRounds
+            SET RoundState = ?, SongsDue = ?, VotesDue = ?
+            WHERE SeasonRoundID = ? AND SeasonID = ?
+        ");
+        foreach ($rebasedRounds as $roundId => $rebasedRound) {
+            $updateRoundStmt->execute([
+                $rebasedRound['RoundState'],
+                $rebasedRound['SongsDue'],
+                $rebasedRound['VotesDue'],
+                $roundId,
+                $seasonId,
+            ]);
+            if ($updateRoundStmt->rowCount() === 0 && !mlQaGetRoundById($pdo, $roundId)) {
+                throw new RuntimeException('A QA round is missing from the selected season. Push live data to QA and try again.');
+            }
+        }
+
+        foreach ($sourceRounds as $sourceRound) {
+            $roundId = (int)$sourceRound['SeasonRoundID'];
+            $roundNumber = (int)$sourceRound['RoundNumber'];
+            if ($roundNumber >= $targetRoundNumber) {
+                continue;
+            }
+
+            $roundCopied = mlQaCopyRoundDataGroups($pdo, $roundId, [
+                'songs', 'playlists', 'playlist_items', 'votes', 'vote_submissions',
+            ]);
+            $copied = mlQaAddCounts($copied, $roundCopied);
+            mlQaMarkHistoricalDiscordEvents($pdo, $roundId);
+        }
+
+        if ($targetStage === 'voting') {
+            $targetCopied = mlQaCopyRoundDataGroups($pdo, $seasonRoundId, ['songs', 'playlists', 'playlist_items']);
+            $copied = mlQaAddCounts($copied, $targetCopied);
+            if ($targetCopied['songs'] <= 0 || $targetCopied['playlists'] <= 0) {
+                throw new RuntimeException('The source round needs songs and a playlist before it can be recreated in voting.');
+            }
+            $participation = mlQaApplyVotingScenario($pdo, $seasonRoundId, $currentUserId, $votingScenario);
+        } elseif ($targetStage === 'closed') {
+            $targetCopied = mlQaCopyRoundDataGroups($pdo, $seasonRoundId, [
+                'songs', 'playlists', 'playlist_items', 'votes', 'vote_submissions',
+            ]);
+            $copied = mlQaAddCounts($copied, $targetCopied);
+            if ($targetCopied['songs'] <= 0 || $targetCopied['playlists'] <= 0) {
+                throw new RuntimeException('The source round needs songs and a playlist before it can be recreated as closed.');
+            }
+            $participation['submitted'] = $targetCopied['vote_submissions'];
+        }
+
+        $pdo->exec('UPDATE QA_ML_Seasons SET IsActive = 0');
+        $activateSeasonStmt = $pdo->prepare('UPDATE QA_ML_Seasons SET IsActive = 1 WHERE SeasonID = ?');
+        $activateSeasonStmt->execute([$seasonId]);
+        mlQaSetCurrentSeasonRoundId($pdo, $pinnedSeasonRoundId);
+        mlQaSetSettingValue($pdo, 'qa_time_machine_stage', $targetStage);
+        mlQaSetSettingValue($pdo, 'qa_time_machine_anchor', mlQaFormatUtc($desiredNextDeadline));
+
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        try {
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+        } catch (Throwable $inner) {
+        }
+        throw $e;
+    }
+
+    if (isset($_SESSION['ml_round_votes'][$currentUserId][$seasonId][$seasonRoundId])) {
+        unset($_SESSION['ml_round_votes'][$currentUserId][$seasonId][$seasonRoundId]);
+    }
+
+    return [
+        'round' => $qaRound,
+        'stage' => $targetStage,
+        'stage_label' => $stages[$targetStage]['label'],
+        'voting_scenario' => $targetStage === 'voting' ? $votingScenario : '',
+        'deadline_label' => $anchorLabel,
+        'deadline_utc' => mlQaFormatUtc($desiredNextDeadline),
+        'pinned_season_round_id' => $pinnedSeasonRoundId,
+        'offset_seconds' => $offsetSeconds,
+        'deleted' => $deleted,
+        'copied' => $copied,
+        'submitted' => (int)$participation['submitted'],
+        'expected' => (int)$participation['expected'],
+    ];
+}
+
+function mlQaGetRoundScenarioStatus(PDO $pdo, ?array $round, int $currentUserId): array
+{
+    if (!$round) {
+        return [];
+    }
+
+    $seasonRoundId = (int)$round['SeasonRoundID'];
+    $stage = (string)($round['RoundState'] ?? '');
+    $deadlineValue = '';
+    $deadlineLabel = '';
+
+    if ($stage === 'submission') {
+        $deadlineValue = (string)($round['SongsDue'] ?? '');
+        $deadlineLabel = 'Song deadline';
+    } elseif ($stage === 'voting') {
+        $deadlineValue = (string)($round['VotesDue'] ?? '');
+        $deadlineLabel = 'Voting deadline';
+    } elseif ($stage === 'closed') {
+        $nextStmt = $pdo->prepare("
+            SELECT SongsDue
+            FROM QA_ML_SeasonRounds
+            WHERE SeasonID = ? AND RoundNumber > ?
+            ORDER BY RoundNumber ASC, SeasonRoundID ASC
+            LIMIT 1
+        ");
+        $nextStmt->execute([(int)$round['SeasonID'], (int)$round['RoundNumber']]);
+        $nextDeadline = $nextStmt->fetchColumn();
+        if ($nextDeadline !== false) {
+            $deadlineValue = (string)$nextDeadline;
+            $deadlineLabel = 'Next round song deadline';
+        } else {
+            $deadlineValue = (string)($round['VotesDue'] ?? '');
+            $deadlineLabel = 'Final voting deadline';
+        }
+    }
+
+    $countStmt = $pdo->prepare('SELECT COUNT(*) FROM QA_ML_RoundVoteSubmissions WHERE SeasonRoundID = ?');
+    $countStmt->execute([$seasonRoundId]);
+    $submitted = (int)$countStmt->fetchColumn();
+
+    $meStmt = $pdo->prepare('SELECT 1 FROM QA_ML_RoundVoteSubmissions WHERE SeasonRoundID = ? AND UserID = ? LIMIT 1');
+    $meStmt->execute([$seasonRoundId, $currentUserId]);
+
+    return [
+        'stage' => $stage,
+        'deadline_label' => $deadlineLabel,
+        'deadline_utc' => $deadlineValue,
+        'submitted' => $submitted,
+        'expected' => mlQaGetExpectedPlayerCountForTools($pdo),
+        'current_user_submitted' => (bool)$meStmt->fetchColumn(),
+    ];
+}
+
 function mlQaRollbackLatestRoundToStage(PDO $pdo, string $targetStage): array
 {
     $stages = mlQaGetRollbackStages();
@@ -820,6 +1409,9 @@ function mlQaPushCurrentRoundForwardToStage(PDO $pdo, string $targetStage): arra
 $message = '';
 $error = '';
 $info = '';
+$selectedTimeMachineRoundId = isset($_POST['time_machine_round_id']) ? (int)$_POST['time_machine_round_id'] : 0;
+$selectedTimeMachineStage = isset($_POST['time_machine_stage']) ? trim((string)$_POST['time_machine_stage']) : 'voting';
+$selectedVotingScenario = isset($_POST['voting_scenario']) ? trim((string)$_POST['voting_scenario']) : 'everyone_except_me';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['qa_action']) ? trim((string)$_POST['qa_action']) : '';
@@ -828,6 +1420,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($action === 'push_live_to_qa') {
             mlQaPushLiveToQa($livePdo, $mlQaTables);
             $message = 'Live data was copied into all QA_ML_* tables. QA-specific Discord settings were preserved.';
+        } elseif ($action === 'apply_time_machine') {
+            if (!mlIsQaMode()) {
+                throw new RuntimeException('Open QA Tools in QA mode before using the QA time machine.');
+            }
+
+            $timeMachineResult = mlQaApplyTimeMachine(
+                $livePdo,
+                $selectedTimeMachineRoundId,
+                $selectedTimeMachineStage,
+                $selectedVotingScenario,
+                $currentUserId
+            );
+            $round = $timeMachineResult['round'];
+            $message = 'QA time machine rebuilt ' . $round['SeasonName']
+                . ' / Round ' . (int)$round['RoundNumber'] . ' - ' . $round['Title']
+                . ' at ' . $timeMachineResult['stage_label'] . '.';
+            $info = ucfirst((string)$timeMachineResult['deadline_label']) . ': '
+                . $timeMachineResult['deadline_utc'] . ' UTC. ';
+
+            if ($timeMachineResult['stage'] === 'voting') {
+                $info .= (int)$timeMachineResult['submitted'] . ' of '
+                    . (int)$timeMachineResult['expected'] . ' players have submitted votes.';
+                if ($timeMachineResult['voting_scenario'] === 'everyone_except_me') {
+                    $info .= ' The signed-in user is the remaining voter.';
+                }
+            } else {
+                $info .= 'The complete season schedule was shifted from the untouched source dates.';
+            }
         } elseif ($action === 'rollback_latest_round') {
             if (!mlIsQaMode()) {
                 throw new RuntimeException('Open QA Tools in QA mode before running a QA rollback.');
@@ -877,10 +1497,31 @@ foreach ($mlQaTables as $liveTable) {
 
 $qaRollbackStages = mlQaGetRollbackStages();
 $qaPushForwardStages = mlQaGetPushForwardStages();
+$qaTimeMachineStages = mlQaGetTimeMachineStages();
+$qaVotingScenarios = mlQaGetVotingScenarios();
+$qaAvailableRounds = mlQaGetAvailableRounds($livePdo);
 $currentQaRound = mlQaGetCurrentRound($livePdo);
 $qaCurrentSeasonRoundId = mlQaGetCurrentSeasonRoundId($livePdo);
 $latestQaRound = mlQaGetLatestRound($livePdo);
 $previousQaRound = $currentQaRound ? mlQaGetPreviousRound($livePdo, $currentQaRound) : null;
+$qaRoundScenarioStatus = mlQaGetRoundScenarioStatus($livePdo, $currentQaRound, $currentUserId);
+$qaUserCount = mlQaGetTableCount($livePdo, 'QA_ML_Users');
+
+if ($selectedTimeMachineRoundId <= 0 && $currentQaRound) {
+    $selectedTimeMachineRoundId = (int)$currentQaRound['SeasonRoundID'];
+}
+
+$qaRoundsBySeason = [];
+foreach ($qaAvailableRounds as $availableRound) {
+    $seasonKey = (int)$availableRound['SeasonID'];
+    if (!isset($qaRoundsBySeason[$seasonKey])) {
+        $qaRoundsBySeason[$seasonKey] = [
+            'label' => (string)$availableRound['SeasonName'],
+            'rounds' => [],
+        ];
+    }
+    $qaRoundsBySeason[$seasonKey]['rounds'][] = $availableRound;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -928,7 +1569,105 @@ $previousQaRound = $currentQaRound ? mlQaGetPreviousRound($livePdo, $currentQaRo
         </div>
 
         <div class="card" style="margin:0 0 24px;padding:18px;">
-            <h2 style="margin-top:0;">QA Round Stage Controls</h2>
+            <h2 style="margin-top:0;">QA Time Machine</h2>
+            <p style="margin:8px 0 16px;opacity:.85;">
+                Rebuild a season around any source round. Earlier rounds retain their completed results, later rounds become genuinely upcoming, and the complete QA schedule is shifted together from the untouched source dates.
+            </p>
+
+            <?php if (!mlIsQaMode()): ?>
+                <div class="status-banner" style="margin:0;">Open this page with <code>?testing=qa</code> before rebuilding a QA timeline.</div>
+            <?php elseif (!$qaAvailableRounds): ?>
+                <div class="status-banner error" style="margin:0;">No matching source and QA rounds were found. Push live data to QA first.</div>
+            <?php else: ?>
+                <?php if ($qaUserCount !== null && $qaRoundScenarioStatus && (int)$qaUserCount !== (int)$qaRoundScenarioStatus['expected']): ?>
+                    <div class="status-banner error" style="margin:0 0 14px;">
+                        QA contains <?= (int)$qaUserCount ?> users, but gameplay expects <?= (int)$qaRoundScenarioStatus['expected'] ?>. Voting presets will remain blocked until these counts match.
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($currentQaRound && $qaRoundScenarioStatus): ?>
+                    <div class="note" style="margin:0 0 16px;">
+                        <strong>Current QA position:</strong>
+                        <?= htmlspecialchars((string)$currentQaRound['SeasonName']) ?> /
+                        Round <?= (int)$currentQaRound['RoundNumber'] ?> -
+                        <?= htmlspecialchars((string)$currentQaRound['Title']) ?> /
+                        <?= htmlspecialchars(ucwords(str_replace('_', ' ', (string)$qaRoundScenarioStatus['stage']))) ?>.
+                        <?php if ($qaRoundScenarioStatus['deadline_utc'] !== ''): ?>
+                            <br><strong><?= htmlspecialchars((string)$qaRoundScenarioStatus['deadline_label']) ?>:</strong>
+                            <?= htmlspecialchars((string)$qaRoundScenarioStatus['deadline_utc']) ?> UTC.
+                        <?php endif; ?>
+                        <?php if ($qaRoundScenarioStatus['stage'] === 'voting'): ?>
+                            <br><strong>Participation:</strong>
+                            <?= (int)$qaRoundScenarioStatus['submitted'] ?> of <?= (int)$qaRoundScenarioStatus['expected'] ?> submitted
+                            <?= $qaRoundScenarioStatus['current_user_submitted'] ? '(you have submitted).' : '(you have not submitted).' ?>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
+                <form method="post" action="<?= htmlspecialchars(mlUrl('qa_tools.php?testing=qa')) ?>" class="admin-form-stack" style="margin:0;">
+                    <input type="hidden" name="qa_action" value="apply_time_machine">
+
+                    <div class="admin-grid" style="align-items:start;">
+                        <div>
+                            <label class="admin-label" for="time_machine_round_id">Season and round</label>
+                            <select name="time_machine_round_id" id="time_machine_round_id" class="admin-input" required>
+                                <?php foreach ($qaRoundsBySeason as $seasonGroup): ?>
+                                    <optgroup label="<?= htmlspecialchars((string)$seasonGroup['label']) ?>">
+                                        <?php foreach ($seasonGroup['rounds'] as $availableRound): ?>
+                                            <option
+                                                value="<?= (int)$availableRound['SeasonRoundID'] ?>"
+                                                <?= (int)$availableRound['SeasonRoundID'] === $selectedTimeMachineRoundId ? 'selected' : '' ?>
+                                            >Round <?= (int)$availableRound['RoundNumber'] ?> - <?= htmlspecialchars((string)$availableRound['Title']) ?></option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="admin-label" for="time_machine_stage">Place the season at</label>
+                            <select name="time_machine_stage" id="time_machine_stage" class="admin-input">
+                                <?php foreach ($qaTimeMachineStages as $stageKey => $stage): ?>
+                                    <option value="<?= htmlspecialchars($stageKey) ?>" <?= $selectedTimeMachineStage === $stageKey ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($stage['label']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="admin-label" for="voting_scenario">Voting participation</label>
+                        <select name="voting_scenario" id="voting_scenario" class="admin-input">
+                            <?php foreach ($qaVotingScenarios as $scenarioKey => $scenario): ?>
+                                <option value="<?= htmlspecialchars($scenarioKey) ?>" <?= $selectedVotingScenario === $scenarioKey ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($scenario['label']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="note" style="margin-top:8px;">Used only when the selected position is Voting. Generated ballots obey the QA league's current point total, per-song maximum, and self-voting restriction.</div>
+                    </div>
+
+                    <div class="note" style="margin:0;">
+                        <strong>Ten-minute placement:</strong> Song Submission ends in 10 minutes; Voting ends in 10 minutes; Closed places the next round's song deadline 10 minutes away. For a closed final round, voting ended 10 minutes ago.
+                    </div>
+
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                        <button
+                            type="submit"
+                            class="button-primary"
+                            onclick="return confirm('Rebuild this QA season from source data? Existing QA gameplay data for every round in the selected season will be replaced.');"
+                        >Rebuild QA Timeline</button>
+                        <a href="<?= htmlspecialchars(mlUrl('season.php?testing=qa')) ?>" class="button-secondary">Open QA App</a>
+                    </div>
+                </form>
+            <?php endif; ?>
+        </div>
+
+        <details style="margin:0 0 24px;">
+            <summary style="cursor:pointer;font-weight:700;margin:0 0 10px;">Existing single-round controls</summary>
+        <div class="card" style="margin:0;padding:18px;">
+            <h2 style="margin-top:0;">Single-Round Stage Controls</h2>
             <?php if ($currentQaRound): ?>
                 <p style="margin:8px 0 8px;opacity:.9;">
                     Current QA round: <strong><?= htmlspecialchars((string)$currentQaRound['SeasonName']) ?></strong>
@@ -1010,6 +1749,7 @@ $previousQaRound = $currentQaRound ? mlQaGetPreviousRound($livePdo, $currentQaRo
                 </div>
             <?php endif; ?>
         </div>
+        </details>
 
         <div class="admin-season-table-wrap">
             <table class="admin-season-table">
