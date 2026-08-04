@@ -32,15 +32,30 @@ if (!is_array($request)) {
 
 $action = strtolower(trim((string)($request['action'] ?? '')));
 $userId = (int)$currentUser['UserID'];
+$requestScope = strtolower(trim((string)($request['scope'] ?? '')));
+$isAdminTestRequest = $requestScope === 'admin_test' && in_array($action, ['status', 'test'], true);
 
-if (!mlPushTableExists($pdo, 'ML_PushSubscriptions')) {
+if ($requestScope === 'admin_test' && !$isAdminTestRequest) {
+    mlPushApiRespond(400, ['ok' => false, 'error' => 'Invalid admin test request.']);
+}
+
+if ($isAdminTestRequest && !mlIsAdminUserId($pdo, $userId)) {
+    mlPushApiRespond(403, ['ok' => false, 'error' => 'Administrator access is required.']);
+}
+
+// QA Tools tests the current admin device, not a rewound gameplay snapshot.
+// All ordinary status, subscribe, unsubscribe, and delivery requests continue
+// using the active data mode.
+$pushPdo = $isAdminTestRequest && function_exists('mlGetLivePdo') ? mlGetLivePdo() : $pdo;
+
+if (!mlPushTableExists($pushPdo, 'ML_PushSubscriptions')) {
     mlPushApiRespond(503, ['ok' => false, 'error' => 'Deadline reminder storage is not available yet.']);
 }
 
 try {
     if ($action === 'status') {
         $endpoint = trim((string)($request['endpoint'] ?? ''));
-        $activeSubscription = mlPushLoadActiveSubscription($pdo, $userId, $endpoint);
+        $activeSubscription = mlPushLoadActiveSubscription($pushPdo, $userId, $endpoint);
         mlPushApiRespond(200, ['ok' => true, 'subscribed' => $activeSubscription !== null]);
     }
 
@@ -67,12 +82,12 @@ try {
             mlPushApiRespond(403, ['ok' => false, 'error' => 'Administrator access is required.']);
         }
 
-        if (!mlPushServerReady($pdo)) {
+        if (!mlPushServerReady($pushPdo)) {
             mlPushApiRespond(503, ['ok' => false, 'error' => 'Deadline reminders are not available yet.']);
         }
 
         $endpoint = trim((string)($request['endpoint'] ?? ''));
-        $subscriptionRow = mlPushLoadActiveSubscription($pdo, $userId, $endpoint);
+        $subscriptionRow = mlPushLoadActiveSubscription($pushPdo, $userId, $endpoint);
         if ($subscriptionRow === null) {
             mlPushApiRespond(404, ['ok' => false, 'error' => 'Turn on reminders for this device first.']);
         }
@@ -93,7 +108,7 @@ try {
         ]);
 
         if (!empty($result['expired'])) {
-            mlPushDisableSubscriptionById($pdo, (int)$subscriptionRow['PushSubscriptionID']);
+            mlPushDisableSubscriptionById($pushPdo, (int)$subscriptionRow['PushSubscriptionID']);
         }
 
         if (empty($result['success'])) {

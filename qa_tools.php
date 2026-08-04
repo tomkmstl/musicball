@@ -12,14 +12,15 @@ if (!mlIsAdminUserId($pdo, $currentUserId)) {
     exit;
 }
 
-$pushStorageReady = mlPushStorageReady($pdo);
-$pushReady = mlPushServerReady($pdo);
+// The admin test targets this device's real subscription. Rewind snapshots
+// must not determine whether a live PWA subscription is available.
+$livePdo = mlGetLivePdo();
+$pushStorageReady = mlPushStorageReady($livePdo);
+$pushReady = mlPushServerReady($livePdo);
 if (empty($_SESSION['ml_push_csrf']) || !is_string($_SESSION['ml_push_csrf'])) {
     $_SESSION['ml_push_csrf'] = bin2hex(random_bytes(24));
 }
 $pushCsrfToken = (string)$_SESSION['ml_push_csrf'];
-
-$livePdo = mlGetLivePdo();
 
 $mlQaTables = [
     'ML_Config',
@@ -1392,7 +1393,7 @@ foreach ($qaAvailableRounds as $availableRound) {
         <section class="admin-section-divider">
             <div class="qa-rewind-kicker">Push notifications</div>
             <h2>Push Notification Test</h2>
-            <p>Send any supported notification to this admin device. Push Notifications must be on for this device in Settings.</p>
+            <p>Send any supported notification to this admin device. Push Notifications must be on for this device in Live Mode Settings.</p>
 
             <div class="admin-push-test-control" data-push-admin-test>
                 <div class="admin-push-test-status" data-push-admin-status>Checking this device...</div>

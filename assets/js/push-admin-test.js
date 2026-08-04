@@ -44,7 +44,7 @@
         } else if ('Notification' in window && Notification.permission === 'denied') {
             setStatus('Blocked in this device\'s notification settings', 'error');
         } else {
-            setStatus('Turn on Push Notifications for this device in Settings first.', 'unavailable');
+            setStatus('Turn on Push Notifications for this device in Live Mode Settings first.', 'unavailable');
         }
     }
 
@@ -92,7 +92,10 @@
                 return null;
             }
 
-            return request('status', { endpoint: browserSubscription.endpoint }).then(function (body) {
+            return request('status', {
+                endpoint: browserSubscription.endpoint,
+                scope: 'admin_test'
+            }).then(function (body) {
                 serverSubscribed = !!body.subscribed;
                 render();
             });
@@ -109,7 +112,8 @@
             setBusy(true);
             request('test', {
                 endpoint: browserSubscription.endpoint,
-                notification_type: typeSelect ? typeSelect.value : 'connection_test'
+                notification_type: typeSelect ? typeSelect.value : 'connection_test',
+                scope: 'admin_test'
             }).then(function () {
                 setBusy(false);
                 setStatus('Test sent', 'sent');
