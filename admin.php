@@ -81,33 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        if ($action === 'revert_previous_season') {
-            $currentSeasonRow = mlGetCurrentSeason($pdo);
-            if (!$currentSeasonRow) {
-                throw new RuntimeException('No current season was found.');
-            }
-
-            $currentSeasonId = (int)$currentSeasonRow['SeasonID'];
-            if (!mlCanRevertToPreviousSeason($pdo, $currentSeasonId)) {
-                throw new RuntimeException('Revert is only allowed before Round 1 Songs Due for the current season.');
-            }
-
-            $previousSeasonRow = mlGetPreviousSeason($pdo, $currentSeasonId);
-            if (!$previousSeasonRow) {
-                throw new RuntimeException('There is no previous season available to restore.');
-            }
-
-            $pdo->beginTransaction();
-            $pdo->exec('UPDATE ML_Seasons SET IsActive = 0');
-            $activateStmt = $pdo->prepare('UPDATE ML_Seasons SET IsActive = 1 WHERE SeasonID = ?');
-            $activateStmt->execute([(int)$previousSeasonRow['SeasonID']]);
-            $pdo->commit();
-
-            $_SESSION['ml_admin_message'] = $previousSeasonRow['SeasonName'] . ' has been restored as the current season.';
-            header('Location: ' . mlUrl('admin.php'));
-            exit;
-        }
-
         if ($action === 'save_discord_settings') {
             $discordEnabled = isset($_POST['discord_enabled']) && $_POST['discord_enabled'] === '1';
             if ($discordDataMode === 'qa') {
@@ -389,7 +362,6 @@ $currentSeasonRow = mlGetCurrentSeason($pdo);
 $currentSeasonId = $currentSeasonRow ? (int)$currentSeasonRow['SeasonID'] : 0;
 $nextSeasonRow = mlGetNextSeason($pdo);
 $nextSeasonRowId = $nextSeasonRow ? (int)$nextSeasonRow['SeasonID'] : 0;
-$canRevertCurrentSeason = $currentSeasonId > 0 ? mlCanRevertToPreviousSeason($pdo, $currentSeasonId) : false;
 
 $seasonList = array_values(array_filter(
     $seasonList,
@@ -653,28 +625,27 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
 
                                 <div class="admin-season-card-actions">
                                     <?php if ($rowType === 'Current'): ?>
-                                        <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
-                                            <?= $rowBuilderLocked ? 'View Setup' : 'Edit Setup' ?>
+                                        <?php if (!$rowBuilderLocked): ?>
+                                            <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                                Edit Setup
+                                            </a>
+                                        <?php endif; ?>
+                                        <a href="<?= htmlspecialchars(mlUrl('view_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                            View Rounds
                                         </a>
                                         <?php if ((string)$seasonRow['HasCommittedRounds'] === '1'): ?>
                                             <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
                                                 Edit Rounds
                                             </a>
                                         <?php endif; ?>
-                                        <?php if ($canRevertCurrentSeason): ?>
-                                            <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-season-action-form">
-                                                <input type="hidden" name="admin_action" value="revert_previous_season">
-                                                <button type="submit" class="button-primary">
-                                                    Revert to Previous Season
-                                                </button>
-                                            </form>
-                                        <?php endif; ?>
                                     <?php else: ?>
-                                        <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
-                                            <?= $rowBuilderLocked ? 'View Setup' : 'Edit Setup' ?>
-                                        </a>
-                                        <a href="<?= htmlspecialchars(mlUrl('final.php?preview=1')) ?>" class="button-secondary admin-table-link">
-                                            View Votes
+                                        <?php if (!$rowBuilderLocked): ?>
+                                            <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                                Edit Setup
+                                            </a>
+                                        <?php endif; ?>
+                                        <a href="<?= htmlspecialchars(mlUrl('view_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                            View Rounds
                                         </a>
                                         <?php if ($rowVotingOpen && !$rowVotingComplete): ?>
                                             <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-season-action-form">

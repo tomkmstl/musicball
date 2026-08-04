@@ -62,6 +62,156 @@ function mlRoundsPageParseUtc($value) {
     }
 }
 
+function mlRoundsPageDeadlineLabel($fieldName) {
+    return $fieldName === 'schedule_left' ? 'Songs Due' : 'Votes Due';
+}
+
+function mlRoundsPageSameDisplayedDeadline(?DateTimeImmutable $first, ?DateTimeImmutable $second) {
+    if (!$first || !$second) {
+        return $first === null && $second === null;
+    }
+
+    // datetime-local inputs use minute precision, so ignore stored seconds when
+    // deciding whether the admin actually changed a displayed deadline.
+    return $first->format('Y-m-d H:i') === $second->format('Y-m-d H:i');
+}
+
+function mlRoundsPageValidateDeadlineEdits(
+    array &$roundRows,
+    array $storedRoundRows,
+    $seasonIsActive,
+    $isNextSeason,
+    DateTimeImmutable $now
+) {
+    foreach ($roundRows as $roundNumber => &$roundRow) {
+        foreach (['schedule_left', 'schedule_right'] as $fieldName) {
+            $deadlineLabel = mlRoundsPageDeadlineLabel($fieldName);
+            $storedValue = trim((string)($storedRoundRows[$roundNumber][$fieldName] ?? ''));
+            $postedValue = trim((string)($roundRow[$fieldName] ?? ''));
+            $storedDeadline = mlRoundsPageParseUtc($storedValue);
+            $postedDeadline = mlRoundsPageParseUtc($postedValue);
+
+            if ($seasonIsActive && $storedDeadline && $now > $storedDeadline) {
+                if (!mlRoundsPageSameDisplayedDeadline($storedDeadline, $postedDeadline)) {
+                    throw new RuntimeException(
+                        'Round ' . (int)$roundNumber . ' ' . $deadlineLabel
+                        . ' has passed and can no longer be changed.'
+                    );
+                }
+
+                // Preserve the exact stored value instead of trimming seconds from
+                // a locked deadline as it passes through a minute-precision input.
+                $roundRow[$fieldName] = $storedValue;
+                continue;
+            }
+
+            if (($seasonIsActive || $isNextSeason) && $postedDeadline && $postedDeadline <= $now) {
+                $message = $isNextSeason
+                    ? ' must be in the future before the next-season schedule can be saved.'
+                    : ' cannot be moved into the past.';
+                throw new RuntimeException(
+                    'Round ' . (int)$roundNumber . ' ' . $deadlineLabel . $message
+                );
+            }
+        }
+    }
+    unset($roundRow);
+}
+
+function mlRoundsPageRestoreStoredDeadlines(array &$roundRows, array $storedRoundRows) {
+    foreach ($roundRows as $roundNumber => &$roundRow) {
+        foreach (['schedule_left', 'schedule_right'] as $fieldName) {
+            $roundRow[$fieldName] = trim((string)($storedRoundRows[$roundNumber][$fieldName] ?? ''));
+        }
+    }
+    unset($roundRow);
+}
+
+function mlRoundsPageAllDeadlinesPassed(array $roundRows, DateTimeImmutable $now) {
+    $deadlineCount = 0;
+    foreach ($roundRows as $roundRow) {
+        foreach (['schedule_left', 'schedule_right'] as $fieldName) {
+            $deadline = mlRoundsPageParseUtc($roundRow[$fieldName] ?? '');
+            if (!$deadline || $now <= $deadline) {
+                return false;
+            }
+            $deadlineCount++;
+        }
+    }
+
+    return $deadlineCount > 0;
+}
+
+function mlRoundsPageLoadFinalVotesDue(PDO $pdo, $seasonId, $finalRoundNumber = 12) {
+    $stmt = $pdo->prepare(
+        "SELECT VotesDue FROM ML_SeasonRounds
+         WHERE SeasonID = ? AND RoundNumber = ? AND VotesDue IS NOT NULL
+         LIMIT 1"
+    );
+    $stmt->execute([(int)$seasonId, (int)$finalRoundNumber]);
+    $value = $stmt->fetchColumn();
+
+    if ($value === false || trim((string)$value) === '') {
+        $stmt = $pdo->prepare(
+            "SELECT VotesDue FROM ML_SeasonRoundSlots
+             WHERE SeasonID = ? AND RoundNumber = ? AND VotesDue IS NOT NULL
+             LIMIT 1"
+        );
+        $stmt->execute([(int)$seasonId, (int)$finalRoundNumber]);
+        $value = $stmt->fetchColumn();
+    }
+
+    return mlRoundsPageParseUtc($value === false ? '' : (string)$value);
+}
+
+function mlRoundsPageLoadFirstSongsDue(PDO $pdo, $seasonId) {
+    $stmt = $pdo->prepare(
+        "SELECT SongsDue FROM ML_SeasonRoundSlots
+         WHERE SeasonID = ? AND RoundNumber = 1 AND SongsDue IS NOT NULL
+         LIMIT 1"
+    );
+    $stmt->execute([(int)$seasonId]);
+    $value = $stmt->fetchColumn();
+
+    if ($value === false || trim((string)$value) === '') {
+        $stmt = $pdo->prepare(
+            "SELECT SongsDue FROM ML_SeasonRounds
+             WHERE SeasonID = ? AND RoundNumber = 1 AND SongsDue IS NOT NULL
+             LIMIT 1"
+        );
+        $stmt->execute([(int)$seasonId]);
+        $value = $stmt->fetchColumn();
+    }
+
+    return mlRoundsPageParseUtc($value === false ? '' : (string)$value);
+}
+
+function mlRoundsPageFormatUtc(?DateTimeImmutable $date) {
+    return $date ? $date->format('M j, Y g:i A') . ' UTC' : 'an unknown date';
+}
+
+function mlRoundsPageValidateSeasonBoundary(
+    ?DateTimeImmutable $currentSeasonEndsAt,
+    ?DateTimeImmutable $nextSeasonSongsDue,
+    $currentSeasonName,
+    $nextSeasonName
+) {
+    if (!$nextSeasonSongsDue) {
+        return;
+    }
+    if (!$currentSeasonEndsAt) {
+        throw new RuntimeException(
+            $currentSeasonName . ' needs a final Votes Due deadline before ' . $nextSeasonName . ' can be scheduled.'
+        );
+    }
+    if ($nextSeasonSongsDue <= $currentSeasonEndsAt) {
+        throw new RuntimeException(
+            $nextSeasonName . ' Round 1 Songs Due must be later than ' . $currentSeasonName
+            . ' final Votes Due (' . mlRoundsPageFormatUtc($currentSeasonEndsAt) . ').'
+        );
+    }
+}
+
 function mlRoundsPageValidateSchedule(array $roundRows, $requireComplete, $requireFuture) {
     $previousVotesDue = null;
     $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
@@ -410,6 +560,36 @@ for ($roundNumber = 1; $roundNumber <= $slotCount; $roundNumber++) {
         'schedule_right' => trim((string)($resolved['schedule_right'] ?? $slot['schedule_right'] ?? '')),
     ];
 }
+$storedRoundRows = $roundRows;
+$requestNow = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+$activeSeasonChangesLocked = $seasonIsActive && mlRoundsPageAllDeadlinesPassed($storedRoundRows, $requestNow);
+$contentFieldsEditable = $contentEditable && !$activeSeasonChangesLocked;
+$nextSeasonPastDeadlineWarning = '';
+if ($isNextSeason) {
+    foreach ($storedRoundRows as $roundNumber => $storedRoundRow) {
+        foreach (['schedule_left', 'schedule_right'] as $fieldName) {
+            $storedDeadline = mlRoundsPageParseUtc($storedRoundRow[$fieldName] ?? '');
+            if ($storedDeadline && $storedDeadline <= $requestNow) {
+                $nextSeasonPastDeadlineWarning = 'Round ' . (int)$roundNumber . ' '
+                    . mlRoundsPageDeadlineLabel($fieldName)
+                    . ' is no longer in the future. Update it and any affected later deadlines before saving.';
+                break 2;
+            }
+        }
+    }
+}
+
+$currentSeasonFinalVotesDue = null;
+$nextSeasonFirstSongsDue = null;
+if ($isNextSeason && $currentSeasonId > 0) {
+    $currentSeasonFinalVotesDue = mlRoundsPageLoadFinalVotesDue($pdo, $currentSeasonId, $slotCount);
+} elseif ($seasonIsActive && $nextSeasonId > 0) {
+    $nextSeasonFirstSongsDue = mlRoundsPageLoadFirstSongsDue($pdo, $nextSeasonId);
+}
+
+$currentSeasonHasEnded = $isNextSeason
+    && $currentSeasonFinalVotesDue instanceof DateTimeImmutable
+    && $requestNow > $currentSeasonFinalVotesDue;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $roundsAction = trim((string)($_POST['rounds_action'] ?? ''));
@@ -482,9 +662,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         unset($roundRow);
 
+        mlRoundsPageValidateDeadlineEdits(
+            $roundRows,
+            $storedRoundRows,
+            $seasonIsActive,
+            $isNextSeason,
+            $requestNow
+        );
+
         $requiresCompleteSchedule = $roundsAction !== 'save_schedule' || $builderLocked;
         $requiresFutureSchedule = $roundsAction === 'start_builder_voting';
         mlRoundsPageValidateSchedule($roundRows, $requiresCompleteSchedule, $requiresFutureSchedule);
+
+        if ($isNextSeason) {
+            mlRoundsPageValidateSeasonBoundary(
+                $currentSeasonFinalVotesDue,
+                mlRoundsPageParseUtc($roundRows[1]['schedule_left'] ?? ''),
+                (string)($currentSeasonRow['SeasonName'] ?? 'The current season'),
+                (string)$seasonRow['SeasonName']
+            );
+        } elseif ($seasonIsActive && $nextSeasonRow) {
+            mlRoundsPageValidateSeasonBoundary(
+                mlRoundsPageParseUtc($roundRows[$slotCount]['schedule_right'] ?? ''),
+                $nextSeasonFirstSongsDue,
+                (string)$seasonRow['SeasonName'],
+                (string)$nextSeasonRow['SeasonName']
+            );
+        }
 
         if ($roundsAction === 'start_builder_voting') {
             if (!$canStartBuilderVoting) {
@@ -501,8 +705,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$contentEditable) {
                 throw new RuntimeException('Final round content is not editable yet.');
             }
-        } elseif ($roundsAction === 'start_season' && !$canStartSeasonHere) {
-            throw new RuntimeException('The next season cannot be started until Season Builder results are final.');
+            if ($seasonIsActive && $activeSeasonChangesLocked) {
+                throw new RuntimeException('All season deadlines have passed. This season can no longer be changed.');
+            }
+        } elseif ($roundsAction === 'start_season') {
+            if (!$canStartSeasonHere) {
+                throw new RuntimeException('The next season cannot be started until Season Builder results are final.');
+            }
+            if (!$currentSeasonHasEnded) {
+                throw new RuntimeException(
+                    'The next season cannot start until the current season ends at '
+                    . mlRoundsPageFormatUtc($currentSeasonFinalVotesDue) . '.'
+                );
+            }
+            $roundOneSongsDue = mlRoundsPageParseUtc($roundRows[1]['schedule_left'] ?? '');
+            $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+            if (!$roundOneSongsDue || $roundOneSongsDue <= $now) {
+                throw new RuntimeException('Round 1 Songs Due must still be in the future when the season starts.');
+            }
         }
 
         $pdo->beginTransaction();
@@ -548,7 +768,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
+        // A failed save should leave no rejected schedule values in the form.
+        // Keep any unsaved title/description edits, but restore every deadline
+        // from the database-backed rows loaded at the start of the request.
+        mlRoundsPageRestoreStoredDeadlines($roundRows, $storedRoundRows);
         $adminError = $e->getMessage();
+    }
+}
+
+$seasonBoundaryError = '';
+try {
+    if ($isNextSeason) {
+        mlRoundsPageValidateSeasonBoundary(
+            $currentSeasonFinalVotesDue,
+            mlRoundsPageParseUtc($roundRows[1]['schedule_left'] ?? ''),
+            (string)($currentSeasonRow['SeasonName'] ?? 'The current season'),
+            (string)$seasonRow['SeasonName']
+        );
+    } elseif ($seasonIsActive && $nextSeasonRow) {
+        mlRoundsPageValidateSeasonBoundary(
+            mlRoundsPageParseUtc($roundRows[$slotCount]['schedule_right'] ?? ''),
+            $nextSeasonFirstSongsDue,
+            (string)$seasonRow['SeasonName'],
+            (string)$nextSeasonRow['SeasonName']
+        );
+    }
+} catch (Throwable $e) {
+    $seasonBoundaryError = $e->getMessage();
+}
+$seasonStartRoundOneSongsDue = mlRoundsPageParseUtc($roundRows[1]['schedule_left'] ?? '');
+$seasonStartRoundOneIsFuture = $seasonStartRoundOneSongsDue
+    && $seasonStartRoundOneSongsDue > $requestNow;
+$canStartSeasonNow = $canStartSeasonHere
+    && $currentSeasonHasEnded
+    && $seasonStartRoundOneIsFuture
+    && $seasonBoundaryError === '';
+
+$deadlineLocks = [];
+foreach ($storedRoundRows as $roundNumber => $storedRoundRow) {
+    $deadlineLocks[$roundNumber] = [];
+    foreach (['schedule_left', 'schedule_right'] as $fieldName) {
+        $storedDeadline = mlRoundsPageParseUtc($storedRoundRow[$fieldName] ?? '');
+        $deadlineLocks[$roundNumber][$fieldName] = $seasonIsActive
+            && $storedDeadline instanceof DateTimeImmutable
+            && $requestNow > $storedDeadline;
     }
 }
 
@@ -625,7 +888,7 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
                     <?php elseif ($builderVotingOpen): ?>
                         Season Builder voting is open. Structure and ballot options are locked, but the season schedule can still be adjusted here.
                     <?php elseif ($canStartSeasonHere): ?>
-                        Season Builder results are final. Review the resolved rounds, adjust their placement if needed, then start the season.
+                        Season Builder results are final. Review the resolved rounds and adjust their placement; the season can start after the current season ends.
                     <?php elseif ($seasonIsActive): ?>
                         Manage the live season's round content and schedule. Only untouched upcoming round content can be swapped.
                     <?php else: ?>
@@ -650,6 +913,23 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
                 <?= htmlspecialchars($builderReadinessErrors[0]) ?> Return to the earlier setup steps before opening voting.
             </div>
         <?php endif; ?>
+        <?php if ($seasonBoundaryError !== ''): ?>
+            <div class="status-banner error"><?= htmlspecialchars($seasonBoundaryError) ?></div>
+        <?php endif; ?>
+        <?php if ($canStartSeasonHere && !$currentSeasonHasEnded): ?>
+            <div class="status-banner">
+                The current season remains active until its final voting deadline<?= $currentSeasonFinalVotesDue ? ', ' . htmlspecialchars(mlRoundsPageFormatUtc($currentSeasonFinalVotesDue)) : '' ?>. This season cannot start before then.
+            </div>
+        <?php endif; ?>
+        <?php if ($canStartSeasonHere && $currentSeasonHasEnded && !$seasonStartRoundOneIsFuture): ?>
+            <div class="status-banner error">Round 1 Songs Due must be moved into the future before this season can start.</div>
+        <?php endif; ?>
+        <?php if ($activeSeasonChangesLocked): ?>
+            <div class="status-banner">All deadlines for this season have passed. Season changes are now locked.</div>
+        <?php endif; ?>
+        <?php if ($nextSeasonPastDeadlineWarning !== ''): ?>
+            <div class="status-banner error"><?= htmlspecialchars($nextSeasonPastDeadlineWarning) ?></div>
+        <?php endif; ?>
 
         <div class="admin-grid admin-grid-tight">
             <section class="admin-panel">
@@ -668,6 +948,9 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
                 </p>
                 <p>Season Builder submissions: <strong><?= (int)$submissionCount ?> / <?= (int)$totalUsers ?></strong></p>
                 <p>Gameplay rounds committed: <strong><?= $hasCommittedRounds ? 'Yes' : 'No' ?></strong></p>
+                <?php if ($isNextSeason && $currentSeasonFinalVotesDue): ?>
+                    <p>Current season ends: <strong><?= htmlspecialchars(mlRoundsPageFormatUtc($currentSeasonFinalVotesDue)) ?></strong></p>
+                <?php endif; ?>
             </section>
 
             <section class="admin-panel">
@@ -722,7 +1005,7 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
                 <div class="admin-section-header admin-section-header-stack-mobile">
                     <div>
                         <div class="home-shell-kicker">Rounds</div>
-                        <h2><?= $contentEditable ? 'Round content and schedule' : 'Season schedule' ?></h2>
+                        <h2><?= $contentFieldsEditable ? 'Round content and schedule' : 'Season schedule' ?></h2>
                         <p>Round positions own the dates. Final round content can be edited and swapped separately once Season Builder results are final.</p>
                     </div>
                     <?php if ($canStartBuilderVoting): ?>
@@ -737,6 +1020,10 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
 
                 <div class="admin-round-list admin-round-list-committed">
                     <?php foreach ($roundRows as $roundNumber => $roundRow): ?>
+                        <?php
+                        $songsDeadlineLocked = !empty($deadlineLocks[$roundNumber]['schedule_left']);
+                        $votesDeadlineLocked = !empty($deadlineLocks[$roundNumber]['schedule_right']);
+                        ?>
                         <div class="admin-round-card admin-round-card-committed">
                             <div class="admin-round-card-top admin-round-card-top-static">
                                 <div class="admin-category-number">Round <?= (int)$roundNumber ?></div>
@@ -745,7 +1032,7 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
                             <div class="admin-round-grid admin-round-grid-fixed admin-round-grid-committed">
                                 <div>
                                     <label class="admin-label" for="season-round-title-<?= (int)$roundNumber ?>">Title</label>
-                                    <?php if ($contentEditable): ?>
+                                    <?php if ($contentFieldsEditable): ?>
                                         <input type="text" id="season-round-title-<?= (int)$roundNumber ?>" name="rounds[<?= (int)$roundNumber ?>][title]" class="admin-input" value="<?= htmlspecialchars($roundRow['title']) ?>" required>
                                     <?php else: ?>
                                         <div class="admin-readonly-field"><?= htmlspecialchars($roundRow['title'] !== '' ? $roundRow['title'] : 'Pending Season Builder result') ?></div>
@@ -753,7 +1040,7 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
                                 </div>
                                 <div>
                                     <label class="admin-label" for="season-round-tag-<?= (int)$roundNumber ?>">Description</label>
-                                    <?php if ($contentEditable): ?>
+                                    <?php if ($contentFieldsEditable): ?>
                                         <textarea id="season-round-tag-<?= (int)$roundNumber ?>" name="rounds[<?= (int)$roundNumber ?>][tag]" class="admin-input admin-textarea" rows="3"><?= htmlspecialchars($roundRow['tag']) ?></textarea>
                                     <?php else: ?>
                                         <div class="admin-readonly-field"><?= htmlspecialchars($roundRow['tag'] !== '' ? $roundRow['tag'] : 'Final description will be resolved from voting.') ?></div>
@@ -764,11 +1051,17 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
                             <div class="admin-round-grid admin-round-grid-common">
                                 <div>
                                     <label class="admin-label" for="season-round-songs-<?= (int)$roundNumber ?>">Songs Due</label>
-                                    <input type="datetime-local" id="season-round-songs-<?= (int)$roundNumber ?>" name="rounds[<?= (int)$roundNumber ?>][schedule_left]" class="admin-input" value="" data-utc-datetime="<?= htmlspecialchars($roundRow['schedule_left']) ?>" <?= $scheduleEditable ? 'required' : 'disabled' ?>>
+                                    <input type="datetime-local" id="season-round-songs-<?= (int)$roundNumber ?>" name="rounds[<?= (int)$roundNumber ?>][schedule_left]" class="admin-input<?= $songsDeadlineLocked ? ' admin-deadline-locked' : '' ?>" value="" data-utc-datetime="<?= htmlspecialchars($roundRow['schedule_left']) ?>" <?= !$scheduleEditable ? 'disabled' : ($songsDeadlineLocked ? 'readonly aria-readonly="true"' : 'required') ?>>
+                                    <?php if ($songsDeadlineLocked): ?>
+                                        <div class="note">Deadline passed — locked.</div>
+                                    <?php endif; ?>
                                 </div>
                                 <div>
                                     <label class="admin-label" for="season-round-votes-<?= (int)$roundNumber ?>">Votes Due</label>
-                                    <input type="datetime-local" id="season-round-votes-<?= (int)$roundNumber ?>" name="rounds[<?= (int)$roundNumber ?>][schedule_right]" class="admin-input" value="" data-utc-datetime="<?= htmlspecialchars($roundRow['schedule_right']) ?>" <?= $scheduleEditable ? 'required' : 'disabled' ?>>
+                                    <input type="datetime-local" id="season-round-votes-<?= (int)$roundNumber ?>" name="rounds[<?= (int)$roundNumber ?>][schedule_right]" class="admin-input<?= $votesDeadlineLocked ? ' admin-deadline-locked' : '' ?>" value="" data-utc-datetime="<?= htmlspecialchars($roundRow['schedule_right']) ?>" <?= !$scheduleEditable ? 'disabled' : ($votesDeadlineLocked ? 'readonly aria-readonly="true"' : 'required') ?>>
+                                    <?php if ($votesDeadlineLocked): ?>
+                                        <div class="note">Deadline passed — locked.</div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -794,7 +1087,7 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
                                 name="rounds_action"
                                 value="start_builder_voting"
                                 class="button-primary"
-                                <?= !empty($builderReadinessErrors) ? 'disabled' : '' ?>
+                                <?= (!empty($builderReadinessErrors) || $seasonBoundaryError !== '') ? 'disabled' : '' ?>
                                 onclick="return confirm('Open Season Builder voting? Round structure and voting options will become permanently read-only.');"
                             >Start Season Builder Voting</button>
                         <?php endif; ?>
@@ -805,10 +1098,11 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
                             name="rounds_action"
                             value="start_season"
                             class="button-primary"
+                            <?= !$canStartSeasonNow ? 'disabled' : '' ?>
                             onclick="return confirm('Start this season with these rounds and deadlines?');"
                         >Start <?= htmlspecialchars($seasonRow['SeasonName']) ?></button>
                     <?php elseif ($seasonIsActive): ?>
-                        <button type="submit" name="rounds_action" value="save_rounds" class="button-primary">Save Season Changes</button>
+                        <button type="submit" name="rounds_action" value="save_rounds" class="button-primary" <?= $activeSeasonChangesLocked ? 'disabled' : '' ?>>Save Season Changes</button>
                     <?php endif; ?>
                 </div>
             <?php endif; ?>

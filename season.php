@@ -45,6 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdminUser) {
 }
 $seasonList = mlLoadSeasonSummaries($pdo);
 $seasonRow = mlLoadSeasonById($pdo, $selectedSeasonId);
+$selectedSeasonIsActive = $seasonRow && (int)($seasonRow['IsActive'] ?? 0) === 1;
+$selectedSeasonIsFuture = $seasonRow && !$selectedSeasonIsActive && $selectedSeasonId > (int)$seasonId;
 $rounds = $seasonRow ? mlLoadSeasonRoundsForGameplay($pdo, $selectedSeasonId) : [];
 $presentedRounds = $seasonRow ? mlComputeRoundPresentation($pdo, $rounds, (int)$currentUser['UserID']) : [];
 $privatePlaylistStorageReady = mlPlaylistPinsTableAvailable($pdo);
@@ -63,10 +65,12 @@ if ($seasonRow) {
     $rounds = mlLoadSeasonRoundsForGameplay($pdo, $selectedSeasonId);
     $presentedRounds = mlComputeRoundPresentation($pdo, $rounds, (int)$currentUser['UserID']);
 
-    try {
-        mlDiscordProcessSeasonPresentation($pdo, $presentedRounds);
-    } catch (Throwable $e) {
-        // Never interrupt gameplay for Discord failures.
+    if ($selectedSeasonIsActive) {
+        try {
+            mlDiscordProcessSeasonPresentation($pdo, $presentedRounds);
+        } catch (Throwable $e) {
+            // Never interrupt gameplay for Discord failures.
+        }
     }
 }
 
@@ -204,6 +208,9 @@ $seasonRevealState = $activeRound
         <?php if ($seasonError !== ''): ?>
             <div class="status-banner error"><?= htmlspecialchars($seasonError) ?></div>
         <?php endif; ?>
+        <?php if ($selectedSeasonIsFuture): ?>
+            <div class="status-banner">This season has not started. Its rounds are available to review, but gameplay remains locked until the current season ends.</div>
+        <?php endif; ?>
 
         <?php if (!$seasonRow): ?>
             <div class="status-banner error">No season could be loaded.</div>
@@ -216,7 +223,7 @@ $seasonRevealState = $activeRound
                 <div class="game-round-section game-round-section-active<?= $seasonRevealState ? ' game-round-section-reveal' : '' ?>">
                    <div class="game-round-section-heading-wrap">
 						<div>
-							<h2><?= $seasonRevealState ? 'Round Complete' : 'Active Round' ?></h2>
+							<h2><?= $selectedSeasonIsFuture ? 'First Round' : ($seasonRevealState ? 'Round Complete' : 'Active Round') ?></h2>
 						</div>
 					</div>
                     <div class="game-round-list game-round-list-active<?= $seasonRevealState ? ' game-round-list-reveal' : '' ?>">
@@ -228,7 +235,7 @@ $seasonRevealState = $activeRound
             <?php if (!empty($nextRounds)): ?>
                 <div class="game-round-section game-round-section-next">
                     <div class="game-round-section-heading-wrap">
-                        <h2>Next Rounds</h2>
+                        <h2><?= $selectedSeasonIsFuture ? 'Later Rounds' : 'Next Rounds' ?></h2>
                     </div>
                     <div class="game-round-list">
                         <?php foreach ($nextRounds as $round): ?>

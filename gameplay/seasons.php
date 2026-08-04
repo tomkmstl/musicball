@@ -69,6 +69,21 @@ function mlLoadSeasonById(PDO $pdo, ?int $seasonId): ?array {
     $result = $row ?: null;
     return $result;
 }
+function mlSeasonIsActiveForGameplay(PDO $pdo, int $seasonId): bool {
+    static $cache = [];
+
+    if ($seasonId <= 0) {
+        return false;
+    }
+    if (array_key_exists($seasonId, $cache)) {
+        return $cache[$seasonId];
+    }
+
+    $stmt = $pdo->prepare('SELECT IsActive FROM ML_Seasons WHERE SeasonID = ? LIMIT 1');
+    $stmt->execute([$seasonId]);
+    $cache[$seasonId] = ((int)$stmt->fetchColumn() === 1);
+    return $cache[$seasonId];
+}
 function mlLoadSeasonRoundsForGameplay(PDO $pdo, int $seasonId): array {
     $select = 'SeasonRoundID, SeasonID, RoundNumber, Title, Tagline, SongsDue, VotesDue';
     if (mlSeasonRoundsHasStateColumns($pdo)) {
