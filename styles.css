@@ -3741,50 +3741,10 @@ html[data-theme="dark"] .discord-toggle-warning {
     margin-bottom: 14px;
 }
 
-.admin-roku-mobile-groups {
-    display: flex;
-    min-width: 0;
-    max-width: 100%;
-    flex-wrap: nowrap;
-    gap: 8px;
-    overflow-x: auto;
-    padding: 2px 2px 10px;
-    background: transparent;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x proximity;
-    scrollbar-width: none;
-}
-
-.admin-roku-mobile-groups::-webkit-scrollbar {
-    display: none;
-}
-
-.admin-roku-mobile-group {
-    appearance: none;
-    flex: 0 0 auto;
-    min-height: 44px;
-    border: 1px solid var(--line);
-    background: var(--surface-2);
-    color: var(--text);
-    border-radius: 999px;
-    padding: 10px 14px;
-    white-space: nowrap;
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
-    scroll-snap-align: start;
-    transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
-}
-
-.admin-roku-mobile-group.is-active {
-    background: color-mix(in srgb, var(--surface) 72%, var(--brand) 28%);
-    border-color: var(--brand);
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 30%, transparent);
-}
-
-.admin-roku-mobile-group:focus-visible {
-    outline: 2px solid var(--brand);
-    outline-offset: 2px;
+.admin-roku-mobile-select {
+    width: 100%;
+    min-height: 48px;
+    margin: 0;
 }
 
 .admin-roku-nav {
@@ -3862,7 +3822,6 @@ html[data-theme="dark"] .discord-toggle-warning {
     .admin-roku-content,
     .admin-admin-view,
     .admin-roku-mobile-nav,
-    .admin-roku-mobile-groups,
     .admin-panel,
     .admin-form-stack,
     .admin-form-stack > div,
@@ -3895,18 +3854,6 @@ html[data-theme="dark"] .discord-toggle-warning {
         overflow-wrap: anywhere;
         word-break: break-word;
     }
-
-	.admin-roku-mobile-groups {
-		width: 100%;
-		flex-wrap: nowrap;
-		overflow-x: auto;
-		overscroll-behavior-x: contain;
-	}
-
-	.admin-roku-mobile-group {
-		flex: 0 0 auto;
-		max-width: 100%;
-	}
 
     .admin-panel {
         padding: 16px 14px;
