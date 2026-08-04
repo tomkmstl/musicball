@@ -934,7 +934,40 @@ textarea.admin-input,
     display: block;
     width: 100%;
     inline-size: 100%;
+    min-inline-size: 0;
     max-inline-size: 100%;
+}
+
+@media (max-width: 700px) {
+    .admin-round-grid-common {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .admin-round-grid-common > div {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .admin-round-grid-common .admin-input[type="datetime-local"] {
+        -webkit-appearance: none;
+        appearance: none;
+        box-sizing: border-box;
+        width: min(100%, 250px);
+        max-width: 250px;
+        min-width: 0;
+        inline-size: min(100%, 250px);
+        max-inline-size: 250px;
+        min-inline-size: 0;
+    }
+
+    .admin-round-grid-common .admin-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+        flex: 0 0 auto;
+    }
 }
 
 .admin-swap-dialog {
