@@ -390,25 +390,21 @@ function mlRoundsPageHasProgress(PDO $pdo, $seasonRoundId) {
     return false;
 }
 
-function mlRoundsPageCurrentRoundNumber(PDO $pdo, array $committedRows, $slotCount) {
-    $qaCurrentSeasonRoundId = function_exists('mlGetQaCurrentSeasonRoundId') ? mlGetQaCurrentSeasonRoundId($pdo) : 0;
-    if ($qaCurrentSeasonRoundId > 0) {
-        foreach ($committedRows as $roundRow) {
-            if ((int)$roundRow['SeasonRoundID'] === $qaCurrentSeasonRoundId) {
-                return (int)$roundRow['RoundNumber'];
-            }
-        }
+function mlRoundsPageIsSwapEligible(PDO $pdo, array $roundRow, $seasonIsActive, ?DateTimeImmutable $now = null) {
+    $seasonRoundId = (int)($roundRow['SeasonRoundID'] ?? 0);
+    if ($seasonRoundId <= 0 || mlRoundsPageHasProgress($pdo, $seasonRoundId)) {
+        return false;
     }
 
-    $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
-    foreach ($committedRows as $roundRow) {
+    if ($seasonIsActive) {
         $votesDue = mlRoundsPageParseUtc($roundRow['VotesDue'] ?? '');
-        if (!$votesDue || $now <= $votesDue) {
-            return (int)$roundRow['RoundNumber'];
+        $now = $now ?: new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        if (!$votesDue || $now >= $votesDue) {
+            return false;
         }
     }
 
-    return (int)$slotCount;
+    return true;
 }
 
 function mlRoundsPageLoadCommittedRows(PDO $pdo, $seasonId) {
@@ -424,7 +420,7 @@ function mlRoundsPageLoadCommittedRows(PDO $pdo, $seasonId) {
     return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }
 
-function mlRoundsPageSwapContent(PDO $pdo, $seasonId, $sourceRoundNumber, $targetRoundNumber, $seasonIsActive, $slotCount) {
+function mlRoundsPageSwapContent(PDO $pdo, $seasonId, $sourceRoundNumber, $targetRoundNumber, $seasonIsActive) {
     $rows = mlRoundsPageLoadCommittedRows($pdo, (int)$seasonId);
     $byRoundNumber = [];
     foreach ($rows as $row) {
@@ -442,15 +438,12 @@ function mlRoundsPageSwapContent(PDO $pdo, $seasonId, $sourceRoundNumber, $targe
     $source = $byRoundNumber[$sourceRoundNumber];
     $target = $byRoundNumber[$targetRoundNumber];
 
-    if ($seasonIsActive) {
-        $currentRoundNumber = mlRoundsPageCurrentRoundNumber($pdo, $rows, (int)$slotCount);
-        if ($sourceRoundNumber <= $currentRoundNumber || $targetRoundNumber <= $currentRoundNumber) {
-            throw new RuntimeException('Only upcoming rounds can be swapped during a live season.');
-        }
-    }
-
-    if (mlRoundsPageHasProgress($pdo, (int)$source['SeasonRoundID']) || mlRoundsPageHasProgress($pdo, (int)$target['SeasonRoundID'])) {
-        throw new RuntimeException('Round content cannot be swapped after a playlist has been generated or voting activity exists.');
+    if (!mlRoundsPageIsSwapEligible($pdo, $source, $seasonIsActive)
+        || !mlRoundsPageIsSwapEligible($pdo, $target, $seasonIsActive)) {
+        $message = $seasonIsActive
+            ? 'Only rounds with a future voting deadline and no playlist or voting activity can be swapped.'
+            : 'Round content cannot be swapped after a playlist has been generated or voting activity exists.';
+        throw new RuntimeException($message);
     }
 
     $scheduleColumns = ['SongsDue', 'VotesDue'];
@@ -621,8 +614,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $targetSeasonId,
                 $sourceRoundNumber,
                 $targetRoundNumber,
-                $seasonIsActive,
-                $slotCount
+                $seasonIsActive
             );
             $pdo->commit();
 
@@ -832,7 +824,12 @@ if ($contentEditable && $roundsTableReady) {
 
             foreach ($roundRows as $roundNumber => $roundRow) {
                 $seasonRoundId = (int)($committedIdsByRound[$roundNumber] ?? 0);
-                if ($seasonRoundId > 0 && mlRoundsPageHasProgress($pdo, $seasonRoundId)) {
+                if ($seasonRoundId > 0 && !mlRoundsPageIsSwapEligible(
+                    $pdo,
+                    ['SeasonRoundID' => $seasonRoundId],
+                    false,
+                    $requestNow
+                )) {
                     continue;
                 }
                 $swapEligibleRounds[$roundNumber] = $roundRow;
@@ -845,11 +842,10 @@ if ($contentEditable && $roundsTableReady) {
         );
         $eligibilityStmt->execute([$targetSeasonId]);
         $committedRowsForEligibility = $eligibilityStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        $currentRoundNumber = mlRoundsPageCurrentRoundNumber($pdo, $committedRowsForEligibility, $slotCount);
 
         foreach ($committedRowsForEligibility as $eligibilityRow) {
             $roundNumber = (int)$eligibilityRow['RoundNumber'];
-            if ($roundNumber <= $currentRoundNumber || mlRoundsPageHasProgress($pdo, (int)$eligibilityRow['SeasonRoundID'])) {
+            if (!mlRoundsPageIsSwapEligible($pdo, $eligibilityRow, true, $requestNow)) {
                 continue;
             }
             if (isset($roundRows[$roundNumber])) {
