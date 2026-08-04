@@ -413,14 +413,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
         <div class="admin-roku-shell">
             <aside class="admin-roku-sidebar" aria-label="Admin sections">
                 <div class="admin-roku-mobile-nav" aria-label="Admin sections">
-                    <div class="admin-roku-mobile-header">
-                        <div>
-                            <div class="home-shell-kicker">Admin menu</div>
-                            <div class="admin-roku-mobile-title" id="admin-mobile-current-view">Gameplay</div>
-                        </div>
-                    </div>
-
-                    <div class="admin-roku-mobile-groups" role="tablist" aria-label="Admin sections">
+                    <div class="admin-roku-mobile-groups">
                         <button type="button" class="admin-roku-mobile-group is-active" data-admin-nav="gameplay">Gameplay</button>
                         <button type="button" class="admin-roku-mobile-group" data-admin-nav="season-setup">Season Setup</button>
                         <button type="button" class="admin-roku-mobile-group" data-admin-nav="integrations">Integrations</button>
@@ -1052,13 +1045,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var storageKey = 'musicballAdminView';
     var navButtons = document.querySelectorAll('[data-admin-nav]');
     var viewPanels = document.querySelectorAll('[data-admin-view]');
-    var mobileCurrentView = document.getElementById('admin-mobile-current-view');
-    var viewLabels = {
-        'gameplay': 'Gameplay',
-        'season-setup': 'Season Setup',
-        'integrations': 'Integrations',
-        'notification-status': 'Notification Status'
-    };
+    var mobileNavStrip = document.querySelector('.admin-roku-mobile-groups');
     var legacyViewMap = {
         'round-voting-settings': 'gameplay',
         'playlist-timing': 'gameplay',
@@ -1068,6 +1055,30 @@ document.addEventListener('DOMContentLoaded', function () {
         'discord-webhook-notifications': 'integrations',
         'discord-notification-status': 'notification-status'
     };
+
+    function revealActiveMobileNav(viewName) {
+        if (!mobileNavStrip || mobileNavStrip.clientWidth <= 0) {
+            return;
+        }
+
+        var activeButton = Array.prototype.find.call(
+            mobileNavStrip.querySelectorAll('[data-admin-nav]'),
+            function (button) {
+                return button.getAttribute('data-admin-nav') === viewName;
+            }
+        );
+        if (!activeButton) {
+            return;
+        }
+
+        var stripRect = mobileNavStrip.getBoundingClientRect();
+        var buttonRect = activeButton.getBoundingClientRect();
+        if (buttonRect.left < stripRect.left) {
+            mobileNavStrip.scrollLeft -= stripRect.left - buttonRect.left + 8;
+        } else if (buttonRect.right > stripRect.right) {
+            mobileNavStrip.scrollLeft += buttonRect.right - stripRect.right + 8;
+        }
+    }
 
     function activateAdminView(viewName) {
         if (!viewName) {
@@ -1092,12 +1103,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         navButtons.forEach(function (button) {
-            button.classList.toggle('is-active', button.getAttribute('data-admin-nav') === viewName);
+            var isActive = button.getAttribute('data-admin-nav') === viewName;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
 
-        if (mobileCurrentView) {
-            mobileCurrentView.textContent = viewLabels[viewName] || viewLabels[defaultView];
-        }
+        revealActiveMobileNav(viewName);
 
         try {
             window.localStorage.setItem(storageKey, viewName);
