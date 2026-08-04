@@ -924,6 +924,19 @@ textarea.admin-input,
     mask: url('assets/icons/swap.svg') center / contain no-repeat;
 }
 
+.admin-round-grid-common > div,
+.admin-round-grid-common .admin-input[type="datetime-local"] {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.admin-round-grid-common .admin-input[type="datetime-local"] {
+    display: block;
+    width: 100%;
+    inline-size: 100%;
+    max-inline-size: 100%;
+}
+
 .admin-swap-dialog {
     width: min(520px, calc(100vw - 32px));
     max-height: calc(100vh - 32px);
