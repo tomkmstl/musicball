@@ -2,12 +2,7 @@
 require_once 'session_boot.php';
 require_once 'config.php';
 
-$preview = isset($_GET['preview']) && $_GET['preview'] == '1';
 $votingSeason = mlGetVotingSeason($pdo);
-
-if (!$votingSeason && $preview && isset($_SESSION['UserID']) && mlIsAdminUserId($pdo, (int)$_SESSION['UserID'])) {
-    $votingSeason = mlGetNextSeason($pdo);
-}
 
 if (!$votingSeason) {
     $_SESSION['ml_notice'] = 'Voting for the next season is currently closed.';
@@ -28,7 +23,7 @@ $submittedCountStmt = $pdo->prepare('SELECT COUNT(*) FROM ML_Submissions WHERE S
 $submittedCountStmt->execute([$seasonId]);
 $submittedCount = (int)$submittedCountStmt->fetchColumn();
 
-if ($submittedCount < $totalPlayers && !$preview) {
+if ($submittedCount < $totalPlayers) {
     header('Location: ./');
     exit;
 }

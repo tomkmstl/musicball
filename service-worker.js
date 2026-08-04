@@ -1,6 +1,4 @@
-const swUrl = new URL(self.location.href);
-const DEV_MODE = swUrl.searchParams.get('dev_mode') === '1';
-const CACHE_NAME = DEV_MODE ? 'musicball-dev-cache' : 'musicball-static-v6';
+const CACHE_NAME = 'musicball-static-v10';
 
 const APP_SHELL = [
     '/',
@@ -11,11 +9,6 @@ const APP_SHELL = [
 ];
 
 self.addEventListener('install', function (event) {
-    if (DEV_MODE) {
-        self.skipWaiting();
-        return;
-    }
-
     event.waitUntil(
         caches.open(CACHE_NAME).then(function (cache) {
             return Promise.all(
@@ -36,7 +29,7 @@ self.addEventListener('activate', function (event) {
         caches.keys().then(function (keys) {
             return Promise.all(
                 keys.map(function (key) {
-                    if (DEV_MODE || key !== CACHE_NAME) {
+                    if (key !== CACHE_NAME) {
                         return caches.delete(key);
                     }
                     return Promise.resolve();
@@ -58,18 +51,6 @@ self.addEventListener('fetch', function (event) {
     const requestUrl = new URL(request.url);
 
     if (requestUrl.origin !== self.location.origin) {
-        return;
-    }
-
-    if (DEV_MODE) {
-        event.respondWith(
-            fetch(request, { cache: 'no-store' }).catch(function () {
-                if (request.mode === 'navigate') {
-                    return caches.match('offline.html');
-                }
-                return caches.match(request);
-            })
-        );
         return;
     }
 

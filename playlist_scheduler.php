@@ -76,8 +76,8 @@ try {
          LEFT JOIN ML_RoundSongs rs ON rs.SeasonRoundID = sr.SeasonRoundID
          LEFT JOIN ML_RoundPlaylists rp ON rp.SeasonRoundID = sr.SeasonRoundID
          WHERE rp.SeasonRoundID IS NULL
+           AND s.IsActive = 1
            AND sr.SongsDue IS NOT NULL
-           AND sr.SongsDue <> ''
            AND sr.SongsDue <= ?
          GROUP BY sr.SeasonRoundID, sr.SeasonID, sr.RoundNumber, sr.Title, sr.Tagline, sr.SongsDue, sr.VotesDue, s.SeasonName
          ORDER BY sr.SongsDue ASC, sr.SeasonRoundID ASC"

@@ -26,9 +26,6 @@ unset($_SESSION['ml_admin_message']);
 $adminError = isset($_SESSION['ml_admin_error']) ? (string)$_SESSION['ml_admin_error'] : '';
 unset($_SESSION['ml_admin_error']);
 
-$overrideDates = isset($_GET['override_dates']) && $_GET['override_dates'] === '1';
-$overrideQuerySuffix = $overrideDates ? '&override_dates=1' : '';
-
 $slotCount = 12;
 $seasonBuilderReady = mlSeasonBuilderAvailable($pdo);
 
@@ -262,21 +259,6 @@ function mlApplyOptionVoteSelectionCountsFromPost(array &$optionVoteRounds) {
     unset($optionVote);
 }
 
-function mlScheduleValueIsPastUtc($value) {
-    $value = trim((string)$value);
-    if ($value === '') {
-        return false;
-    }
-
-    try {
-        $dt = new DateTime($value, new DateTimeZone('UTC'));
-        $now = new DateTime('now', new DateTimeZone('UTC'));
-        return $dt < $now;
-    } catch (Throwable $e) {
-        return false;
-    }
-}
-
 $seasonStmt = $pdo->prepare('SELECT SeasonID, SeasonName, IsActive FROM ML_Seasons WHERE SeasonID = ? LIMIT 1');
 $seasonStmt->execute([$targetSeasonId]);
 $setupSeason = $seasonStmt->fetch(PDO::FETCH_ASSOC);
@@ -316,23 +298,7 @@ mlLoadOptionVoteChoices($pdo, $targetSeasonId, $optionVoteRounds);
 if ($optionVoteSelectionSettingReady) {
     mlLoadOptionVoteSelectionCounts($pdo, $targetSeasonId, $optionVoteRounds);
 }
-$seasonHasBegun = ((int)$setupSeason['IsActive'] === 1);
-
-$existingSubmissionStmt = $pdo->prepare('SELECT COUNT(DISTINCT UserID) FROM ML_Submissions WHERE SeasonID = ?');
-$existingSubmissionStmt->execute([$targetSeasonId]);
-$existingSubmissionCount = (int)$existingSubmissionStmt->fetchColumn();
-
-if (!$seasonHasBegun) {
-    foreach ($roundSlots as $slot) {
-        if (
-            mlScheduleValueIsPastUtc($slot['schedule_left']) ||
-            mlScheduleValueIsPastUtc($slot['schedule_right'])
-        ) {
-            $seasonHasBegun = true;
-            break;
-        }
-    }
-}
+$setupLocked = mlIsSeasonBuilderLocked($pdo, $targetSeasonId);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $setupAction = isset($_POST['setup_action']) ? (string)$_POST['setup_action'] : '';
@@ -342,14 +308,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new RuntimeException('Run the database migration first: db/ml_season_builder_schema.sql');
         }
 
-        if (!in_array($setupAction, ['save_options', 'preview_voting', 'start_voting'], true)) {
+        if (!in_array($setupAction, ['save_options', 'preview_voting', 'save_options_continue'], true)) {
             throw new RuntimeException('Unknown season options action.');
         }
 
-        if ($existingSubmissionCount > 0) {
-            throw new RuntimeException(
-                'Voting options can no longer be changed because player submissions already exist for this season.'
-            );
+        if ($setupLocked) {
+            throw new RuntimeException('Voting options are read-only because Season Builder voting has already opened.');
         }
 
         if ($q1Enabled) {
@@ -397,7 +361,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($label !== '') { $q2Part2Count++; }
         }
 
-        if (in_array($setupAction, ['preview_voting', 'start_voting'], true)) {
+        if (in_array($setupAction, ['preview_voting', 'save_options_continue'], true)) {
             if (!empty($optionVoteRounds) && !$optionVotePlayerStorageReady) {
                 throw new RuntimeException(
                     'Create ML_SeasonRoundOptionVotes before starting voting with Option Vote rounds.'
@@ -412,9 +376,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ($selectionCount + 1) . ' choices when players select ' . $selectionCount . '.'
                     );
                 }
-            }
-            if (!$overrideDates && $seasonHasBegun) {
-                throw new RuntimeException('Season Builder voting cannot be started after this season has already begun.');
             }
             if ($q1Enabled && $configuredCategoryCount < $q1MinimumCategories) {
                 throw new RuntimeException(
@@ -544,11 +505,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        if ($setupAction === 'start_voting') {
-            mlSetSeasonConfig($pdo, $targetSeasonId, 'voting_open', '1');
-            $_SESSION['ml_admin_message'] = 'Voting is now live for ' . $setupSeason['SeasonName'] . '.';
-        } elseif ($setupAction === 'save_options') {
+        if ($setupAction === 'save_options') {
             $_SESSION['ml_admin_message'] = 'Voting options saved for ' . $setupSeason['SeasonName'] . '.';
+        } elseif ($setupAction === 'save_options_continue') {
+            $_SESSION['ml_admin_message'] = 'Voting options saved. Set the season schedule before opening voting.';
         }
 
         $pdo->commit();
@@ -558,7 +518,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        header('Location: ' . mlUrl('season-builder/season_options.php?season_id=' . $targetSeasonId . $overrideQuerySuffix));
+        if ($setupAction === 'save_options_continue') {
+            header('Location: ' . mlUrl('season_rounds.php?season_id=' . $targetSeasonId));
+            exit;
+        }
+
+        header('Location: ' . mlUrl('season-builder/season_options.php?season_id=' . $targetSeasonId));
         exit;
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
@@ -567,12 +532,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $adminError = $e->getMessage();
     }
 }
-
-$setupVotingOpen = ((string)mlGetSeasonConfig($pdo, $targetSeasonId, 'voting_open', '0') === '1');
-$setupIsActive = ((int)$setupSeason['IsActive'] === 1);
-
-$totalUsersStmt = $pdo->query('SELECT COUNT(*) FROM ML_Users');
-$totalUsers = (int)$totalUsersStmt->fetchColumn();
 
 $submissionStmt = $pdo->prepare('SELECT COUNT(DISTINCT UserID) FROM ML_Submissions WHERE SeasonID = ?');
 $submissionStmt->execute([$targetSeasonId]);
@@ -594,11 +553,9 @@ foreach ($q2OptionsForSetup[2] as $label) {
     if ($label !== '') { $q2Part2Count++; }
 }
 
-$optionVoteChoiceCount = 0;
 $optionVoteIncompleteRounds = [];
 foreach ($optionVoteRounds as $roundNumber => $optionVote) {
     $choiceCount = count($optionVote['choices']);
-    $optionVoteChoiceCount += $choiceCount;
 
     $selectionCount = max(1, (int)($optionVote['selections_per_player'] ?? 1));
     if ($choiceCount <= $selectionCount) {
@@ -613,17 +570,15 @@ foreach ($roundSlots as $slot) {
     }
 }
 
-$startButtonLabel = 'Start ' . $setupSeason['SeasonName'] . ' Voting';
-$startVotingDisabled = (
+$continueDisabled = (
     !$seasonBuilderReady
-    || ($seasonHasBegun && !$overrideDates)
     || $configuredRoundCount !== $slotCount
     || ($q1Enabled && $configuredCategoryCount < $q1MinimumCategories)
     || ($madlibsEnabled && ($q2Part1Count < 2 || $q2Part2Count < 2))
     || !empty($optionVoteIncompleteRounds)
     || (!empty($optionVoteRounds) && !$optionVotePlayerStorageReady)
     || (!$q1Enabled && !$madlibsEnabled && empty($optionVoteRounds))
-    || $submissionCount > 0
+    || $setupLocked
 );
 ?>
 <!DOCTYPE html>
@@ -644,11 +599,7 @@ $startVotingDisabled = (
             <div>
                 <div class="home-shell-kicker">Season options</div>
                 <h1><?= htmlspecialchars($setupSeason['SeasonName']) ?></h1>
-                <p>Step 2 of 2: configure the voting choices for the season structure you just saved.</p>
-            </div>
-            <div class="admin-section-actions">
-                <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . (int)$targetSeasonId . $overrideQuerySuffix)) ?>" class="button-secondary admin-back-link">&laquo; Edit Round Structure</a>
-                <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="button-secondary admin-back-link">Back to Admin</a>
+                <p>Step 2 of 3: configure the voting choices for the season structure you just saved.</p>
             </div>
         </div>
 
@@ -658,6 +609,10 @@ $startVotingDisabled = (
 
         <?php if ($adminError !== ''): ?>
             <div class="status-banner error"><?= htmlspecialchars($adminError) ?></div>
+        <?php endif; ?>
+
+        <?php if ($setupLocked): ?>
+            <div class="status-banner">Season Builder voting has already opened. Voting options are now read-only.</div>
         <?php endif; ?>
 
         <?php if (!$seasonBuilderReady): ?>
@@ -706,35 +661,9 @@ $startVotingDisabled = (
             </div>
         <?php endif; ?>
 
-        <section class="admin-panel admin-panel-full">
-            <div class="home-shell-kicker">Status</div>
-            <p>
-                <strong><?= htmlspecialchars($setupSeason['SeasonName']) ?></strong>
-                <span class="pill <?= $setupVotingOpen ? 'pill-open' : 'pill-closed' ?>">
-                    <?= $setupVotingOpen ? 'Voting Open' : 'Voting Closed' ?>
-                </span>
-            </p>
-            <p>Submissions: <strong><?= $submissionCount ?> / <?= $totalUsers ?></strong></p>
-            <p>Configured rounds: <strong><?= $configuredRoundCount ?> / <?= $slotCount ?></strong></p>
-            <?php if ($q1Enabled): ?>
-                <p>User Submitted Round ideas: <strong><?= $configuredCategoryCount ?></strong> / <?= (int)$q1MinimumCategories ?> minimum</p>
-            <?php endif; ?>
-            <?php if ($madlibsEnabled): ?>
-                <p>Madlibs options: <strong><?= $q2Part1Count ?></strong> + <strong><?= $q2Part2Count ?></strong></p>
-            <?php endif; ?>
-            <p>
-                Option Votes: <strong><?= count($optionVoteRounds) ?></strong>
-                <?php if (!empty($optionVoteRounds)): ?>
-                    · Choices: <strong><?= $optionVoteChoiceCount ?></strong>
-                <?php endif; ?>
-            </p>
-            <?php if ($setupIsActive): ?>
-                <p>This season is currently marked as the active voting target.</p>
-            <?php endif; ?>
-        </section>
-
-        <form method="post" action="<?= htmlspecialchars(mlUrl('season-builder/season_options.php?season_id=' . (int)$targetSeasonId . $overrideQuerySuffix)) ?>" class="admin-season-setup-form">
+        <form method="post" action="<?= htmlspecialchars(mlUrl('season-builder/season_options.php?season_id=' . (int)$targetSeasonId)) ?>" class="admin-season-setup-form">
             <input type="hidden" name="season_id" value="<?= (int)$targetSeasonId ?>">
+            <fieldset class="admin-readonly-fieldset" <?= $setupLocked ? 'disabled' : '' ?>>
 
             <?php if ($q1Enabled): ?>
                 <?php
@@ -907,10 +836,16 @@ $startVotingDisabled = (
                 </section>
             <?php endforeach; ?>
 
+            </fieldset>
+
             <div class="admin-setup-actions">
-                <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . (int)$targetSeasonId . $overrideQuerySuffix)) ?>" class="button-secondary">&laquo; Edit Round Structure</a>
-                <button type="submit" name="setup_action" value="save_options" class="button-secondary" <?= (!$seasonBuilderReady || $submissionCount > 0) ? 'disabled' : '' ?>>Save Options</button>
-                <?php if (!$startVotingDisabled): ?>
+                <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . (int)$targetSeasonId)) ?>" class="button-secondary">&laquo; <?= $setupLocked ? 'View' : 'Edit' ?> Round Structure</a>
+                <?php if ($setupLocked): ?>
+                    <a href="<?= htmlspecialchars(mlUrl('season-builder/preview.php?season_id=' . (int)$targetSeasonId)) ?>" class="button-secondary" target="_blank" rel="noopener">Preview Voting</a>
+                    <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . (int)$targetSeasonId)) ?>" class="button-primary">View Season Schedule &rarr;</a>
+                <?php else: ?>
+                    <button type="submit" name="setup_action" value="save_options" class="button-secondary" <?= !$seasonBuilderReady ? 'disabled' : '' ?>>Save Options</button>
+                    <?php if (!$continueDisabled): ?>
                     <button
                         type="submit"
                         name="setup_action"
@@ -919,7 +854,8 @@ $startVotingDisabled = (
                         formtarget="_blank"
                         title="Save these options and preview the player voting experience in a new tab"
                     >Preview Voting</button>
-                    <button type="submit" name="setup_action" value="start_voting" class="button-primary"><?= htmlspecialchars($startButtonLabel) ?></button>
+                    <button type="submit" name="setup_action" value="save_options_continue" class="button-primary">Save Options &amp; Continue &rarr;</button>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         </form>

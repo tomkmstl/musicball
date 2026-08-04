@@ -148,11 +148,14 @@ function mlComputeRoundPresentation(PDO $pdo, array $rounds, int $currentUserId)
 
     foreach ($rounds as $index => $round) {
         $seasonRoundId = (int)$round['SeasonRoundID'];
+        $seasonIsActive = mlSeasonIsActiveForGameplay($pdo, (int)($round['SeasonID'] ?? 0));
         $playlistRecord = $playlistRecords[$seasonRoundId] ?? [];
         $votesDue = mlCreateUtcDate(isset($round['VotesDue']) ? $round['VotesDue'] : null);
         $hasPlaylist = !empty($playlistRecord) && trim((string)($playlistRecord['SpotifyPlaylistURL'] ?? $playlistRecord['SpotifyPlaylistID'] ?? '')) !== '';
 
-        if ($previousVotesDue instanceof DateTimeImmutable && $now <= $previousVotesDue) {
+        if (!$seasonIsActive && (!$votesDue || $now <= $votesDue)) {
+            $roundState = 'upcoming';
+        } elseif ($previousVotesDue instanceof DateTimeImmutable && $now <= $previousVotesDue) {
             $roundState = 'upcoming';
         } elseif ($votesDue instanceof DateTimeImmutable && $now > $votesDue) {
             $roundState = 'closed';
@@ -181,6 +184,7 @@ function mlComputeRoundPresentation(PDO $pdo, array $rounds, int $currentUserId)
         $round['playlist_record'] = $playlistRecord;
         $round['playlist_url'] = (string)($playlistRecord['SpotifyPlaylistURL'] ?? '');
         $round['has_playlist'] = $hasPlaylist;
+        $round['season_is_active'] = $seasonIsActive;
         $round['song_draft'] = [];
         $round['vote_draft'] = [];
         $round['song_saved'] = false;
@@ -214,20 +218,22 @@ function mlComputeRoundPresentation(PDO $pdo, array $rounds, int $currentUserId)
     foreach ($resolved as $index => $resolvedRound) {
         $seasonRoundId = (int)$resolvedRound['SeasonRoundID'];
         $seasonId = (int)$resolvedRound['SeasonID'];
+        $seasonIsActive = !empty($resolvedRound['season_is_active']);
         $playlistRecord = $resolvedRound['playlist_record'] ?? [];
         $roundState = (string)($resolvedRound['round_state'] ?? '');
 
         if ($roundState === 'submission') {
             $songSubmissionCount = mlFetchSongSubmissionCount($pdo, $seasonRoundId);
             $resolvedRound['song_submission_count'] = $songSubmissionCount;
-            $resolvedRound['can_choose_song'] = mlCanChooseSongForRound($resolvedRound, $playlistRecord, $now, $playlistBuildMode, $songSubmissionCount, $expectedPlayers);
+            $resolvedRound['can_choose_song'] = $seasonIsActive
+                && mlCanChooseSongForRound($resolvedRound, $playlistRecord, $now, $playlistBuildMode, $songSubmissionCount, $expectedPlayers);
             $resolvedRound['submission_closed'] = !$resolvedRound['can_choose_song'];
 
             $songDraft = mlGetRoundSongDraft($pdo, $currentUserId, $seasonId, $seasonRoundId);
             $resolvedRound['song_draft'] = $songDraft;
             $resolvedRound['song_saved'] = !empty($songDraft);
 
-            if ($index === $currentRoundIndex) {
+            if ($seasonIsActive && $index === $currentRoundIndex) {
                 $resolvedRound['can_manual_generate_playlist'] = mlCanManuallyGeneratePlaylist($resolvedRound, $playlistRecord, $now, $songSubmissionCount, $expectedPlayers, $playlistBuildMode);
 
                 $allUsers = $allUsers ?? mlLoadAllUsers($pdo);
@@ -238,14 +244,14 @@ function mlComputeRoundPresentation(PDO $pdo, array $rounds, int $currentUserId)
                 $resolvedRound['progress_pending_names'] = $progress['pending_names'];
             }
         } elseif ($roundState === 'upcoming') {
-            $resolvedRound['can_choose_song'] = true;
+            $resolvedRound['can_choose_song'] = $seasonIsActive;
             $songDraft = mlGetRoundSongDraft($pdo, $currentUserId, $seasonId, $seasonRoundId);
             $resolvedRound['song_draft'] = $songDraft;
             $resolvedRound['song_saved'] = !empty($songDraft);
         } elseif ($index === $currentRoundIndex && $roundState === 'voting') {
             $voteSubmissionCount = mlFetchVoteSubmissionCount($pdo, $seasonRoundId);
             $resolvedRound['vote_submission_count'] = $voteSubmissionCount;
-            $resolvedRound['can_vote'] = true;
+            $resolvedRound['can_vote'] = $seasonIsActive;
             $voteDraft = mlGetRoundVoteDraft($currentUserId, $seasonId, $seasonRoundId);
             $resolvedRound['vote_draft'] = $voteDraft;
             $resolvedRound['vote_saved'] = !empty($voteDraft);

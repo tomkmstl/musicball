@@ -228,31 +228,6 @@ function mlGetQaCurrentSeasonRoundId(PDO $pdo): int
     return $value > 0 ? $value : 0;
 }
 
-function mlIsDevMode(PDO $pdo): bool
-{
-    static $isDevMode = null;
-
-    if ($isDevMode !== null) {
-        return $isDevMode;
-    }
-
-    $value = mlGetSettingValue($pdo, 'dev_mode', '0');
-    $isDevMode = ((string)$value === '1');
-
-    return $isDevMode;
-}
-
-function mlSendDevNoCacheHeaders(PDO $pdo): void
-{
-    if (headers_sent() || !mlIsDevMode($pdo)) {
-        return;
-    }
-
-    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-    header('Pragma: no-cache');
-    header('Expires: 0');
-}
-
 function mlNormalizeFsPath(string $path): string
 {
     return rtrim(str_replace('\\', '/', $path), '/');
@@ -329,16 +304,8 @@ function mlUrl(string $path = ''): string
 
 function mlAssetUrl(string $path): string
 {
-    global $pdo;
-
-    $version = '';
-
-    if (isset($pdo) && $pdo instanceof PDO && mlIsDevMode($pdo)) {
-        $version = 'dev=' . time();
-    } else {
-        $fullPath = __DIR__ . '/' . ltrim($path, '/');
-        $version = 'v=' . (is_file($fullPath) ? (string)filemtime($fullPath) : '1');
-    }
+    $fullPath = __DIR__ . '/' . ltrim($path, '/');
+    $version = 'v=' . (is_file($fullPath) ? (string)filemtime($fullPath) : '1');
 
     $assetUrl = mlUrl($path);
 
@@ -662,27 +629,6 @@ function mlGetNextSeason(PDO $pdo): ?array
     return $cached;
 }
 
-function mlGetPreviousSeason(PDO $pdo, int $currentSeasonId): ?array
-{
-    static $cache = [];
-
-    if (array_key_exists($currentSeasonId, $cache)) {
-        return $cache[$currentSeasonId];
-    }
-
-    $stmt = $pdo->prepare("
-        SELECT SeasonID, SeasonName, IsActive
-        FROM ML_Seasons
-        WHERE SeasonID < ?
-        ORDER BY SeasonID DESC
-        LIMIT 1
-    ");
-    $stmt->execute([$currentSeasonId]);
-    $cache[$currentSeasonId] = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-
-    return $cache[$currentSeasonId];
-}
-
 function mlGetSeasonSubmissionCount(PDO $pdo, int $seasonId): int
 {
     static $cache = [];
@@ -741,35 +687,6 @@ function mlGetVotingSeason(PDO $pdo): ?array
     $nextSeason['VotingComplete'] = mlIsSeasonVotingComplete($pdo, $nextSeasonId);
 
     return $nextSeason;
-}
-
-function mlCanRevertToPreviousSeason(PDO $pdo, int $currentSeasonId): bool
-{
-    $previousSeason = mlGetPreviousSeason($pdo, $currentSeasonId);
-    if (!$previousSeason) {
-        return false;
-    }
-
-    $stmt = $pdo->prepare("
-        SELECT SongsDue
-        FROM ML_SeasonRounds
-        WHERE SeasonID = ?
-          AND RoundNumber = 1
-        LIMIT 1
-    ");
-    $stmt->execute([$currentSeasonId]);
-    $songsDue = $stmt->fetchColumn();
-
-    if ($songsDue === false || $songsDue === null || trim((string)$songsDue) === '') {
-        return false;
-    }
-
-    $songsDueTs = strtotime((string)$songsDue . ' UTC');
-    if ($songsDueTs === false) {
-        return false;
-    }
-
-    return time() < $songsDueTs;
 }
 
 function mlWasSeasonVotingClosedEarly(PDO $pdo, int $seasonId): bool

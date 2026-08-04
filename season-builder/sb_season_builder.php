@@ -74,6 +74,51 @@ function mlSeasonBuilderAvailable(PDO $pdo) {
         && mlTableExists($pdo, 'ML_SeasonQ3Options');
 }
 
+function mlIsSeasonBuilderLocked(PDO $pdo, $seasonId) {
+    $seasonId = (int)$seasonId;
+    if ($seasonId <= 0) {
+        return true;
+    }
+
+    if ((string)mlGetSeasonConfig($pdo, $seasonId, 'builder_locked', '0') === '1') {
+        return true;
+    }
+
+    if ((string)mlGetSeasonConfig($pdo, $seasonId, 'voting_open', '0') === '1') {
+        return true;
+    }
+
+    try {
+        $submissionStmt = $pdo->prepare('SELECT COUNT(*) FROM ML_Submissions WHERE SeasonID = ?');
+        $submissionStmt->execute([$seasonId]);
+        if ((int)$submissionStmt->fetchColumn() > 0) {
+            return true;
+        }
+
+        $seasonStmt = $pdo->prepare('SELECT IsActive FROM ML_Seasons WHERE SeasonID = ? LIMIT 1');
+        $seasonStmt->execute([$seasonId]);
+        if ((int)$seasonStmt->fetchColumn() === 1) {
+            return true;
+        }
+
+        if (mlTableExists($pdo, 'ML_SeasonRounds')) {
+            $roundStmt = $pdo->prepare('SELECT COUNT(*) FROM ML_SeasonRounds WHERE SeasonID = ?');
+            $roundStmt->execute([$seasonId]);
+            if ((int)$roundStmt->fetchColumn() > 0) {
+                return true;
+            }
+        }
+    } catch (Throwable $e) {
+        // If legacy tables are incomplete, retain the explicit config checks above.
+    }
+
+    return false;
+}
+
+function mlLockSeasonBuilder(PDO $pdo, $seasonId) {
+    mlSetSeasonConfig($pdo, (int)$seasonId, 'builder_locked', '1');
+}
+
 function mlOrdinalLabel($number) {
     $number = (int)$number;
     $abs = abs($number);

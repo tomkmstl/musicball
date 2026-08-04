@@ -125,7 +125,6 @@ p {
 .round-tag,
 .song-card-meta,
 .game-round-progress-line strong + span,
-.admin-mini-library-tagline,
 .admin-label,
 .step-indicator {
     color: var(--muted);
@@ -599,7 +598,7 @@ body.theme-light.mb-page-leaving::before {
 .game-form-actions,
 .admin-section-actions,
 .admin-setup-actions,
-.admin-season-table-actions {
+.admin-season-card-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
@@ -612,10 +611,6 @@ body.theme-light.mb-page-leaving::before {
 .button-danger:hover:not([disabled]) {
     background: var(--danger);
     filter: brightness(0.9);
-}
-
-.admin-season-table td {
-    vertical-align: middle;
 }
 
 .buttons {
@@ -887,6 +882,96 @@ textarea.admin-input,
     gap: 16px;
 }
 
+.admin-round-card-top-static {
+    align-items: center;
+}
+
+.admin-round-swap-button {
+    appearance: none;
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--brand);
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.admin-round-swap-button:hover {
+    background: var(--surface-3);
+    border-color: var(--brand);
+    color: var(--brand-strong);
+    transform: translateY(-1px);
+}
+
+.admin-round-swap-button:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 3px;
+}
+
+.admin-round-swap-icon {
+    width: 22px;
+    height: 22px;
+    display: block;
+    background: currentColor;
+    -webkit-mask: url('assets/icons/swap.svg') center / contain no-repeat;
+    mask: url('assets/icons/swap.svg') center / contain no-repeat;
+}
+
+.admin-swap-dialog {
+    width: min(520px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    margin: auto;
+    padding: 0;
+    overflow-y: auto;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+}
+
+.admin-swap-dialog::backdrop {
+    background: rgba(3, 10, 18, 0.76);
+    backdrop-filter: blur(2px);
+}
+
+body.theme-light .admin-swap-dialog::backdrop {
+    background: rgba(19, 35, 51, 0.48);
+}
+
+.admin-swap-dialog-form {
+    display: grid;
+    gap: 18px;
+    padding: 22px;
+}
+
+.admin-swap-dialog h2 {
+    margin: 0;
+}
+
+.admin-swap-dialog h2 + p {
+    margin-top: 10px;
+}
+
+.admin-swap-dialog .admin-label {
+    margin-top: 18px;
+}
+
+.admin-swap-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+}
+
 .game-page-topline-compact {
     align-items: center;
 }
@@ -1006,7 +1091,6 @@ textarea.admin-input,
 }
 
 .admin-grid,
-.admin-basics-grid,
 .admin-category-grid,
 .admin-madlib-grid,
 .admin-era-grid,
@@ -1025,16 +1109,10 @@ textarea.admin-input,
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.admin-basics-grid {
-    grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
-    align-items: end;
-}
-
 /* Shared section spacing */
 .admin-panel-full,
 .admin-round-list-committed,
 .admin-season-setup-form,
-.admin-mini-library,
 .admin-round-type-panels,
 .admin-round-grid-common,
 .admin-round-grid-committed,
@@ -1088,6 +1166,73 @@ textarea.admin-input,
 
 .admin-inline-form {
     display: inline;
+}
+
+.admin-readonly-fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.admin-season-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.admin-season-card {
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface-2);
+}
+
+.admin-season-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.admin-season-card-name {
+    min-width: 0;
+    margin: 0;
+    color: var(--text);
+    font-size: 1.08rem;
+    overflow-wrap: anywhere;
+}
+
+.admin-season-card-status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    margin-left: auto;
+    text-align: right;
+}
+
+.admin-season-card-actions {
+    margin-top: 16px;
+}
+
+.admin-season-action-form {
+    display: flex;
+    margin: 0;
+}
+
+@media (max-width: 700px) {
+    .admin-season-card-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .admin-season-card-actions > .admin-table-link,
+    .admin-season-card-actions > .admin-season-action-form,
+    .admin-season-card-actions > .admin-season-action-form > button {
+        width: 100%;
+    }
 }
 
 .admin-label-spaced {
@@ -1201,28 +1346,12 @@ textarea.admin-input,
     border-radius: 10px;
 }
 
-.admin-mini-library {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    max-height: 320px;
-    overflow-y: auto;
-}
-
-.admin-mini-library-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    max-width: 100%;
-    padding: 10px 12px;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-}
-
-.admin-mini-library-tag-title {
-    font-size: 0.9rem;
-    font-weight: 600;
+.admin-input.admin-deadline-locked[readonly] {
+    color: var(--muted);
+    background: var(--surface-3);
+    border-color: var(--line);
+    cursor: not-allowed;
+    opacity: 0.72;
 }
 
 .admin-inline-row {
@@ -1250,19 +1379,15 @@ textarea.admin-input,
     border-radius: 10px;
 }
 
-.admin-season-table-wrap,
 .standings-table-wrap {
     overflow-x: auto;
 }
 
-.admin-season-table,
 .standings-table {
     width: 100%;
     border-collapse: collapse;
 }
 
-.admin-season-table th,
-.admin-season-table td,
 .standings-table th,
 .standings-table td {
     padding: 6px 10px;
@@ -1620,7 +1745,6 @@ textarea.admin-input,
 
 @media (max-width: 800px) {
     .admin-grid,
-    .admin-basics-grid,
     .admin-category-grid,
     .admin-madlib-grid,
     .admin-era-grid,
@@ -1637,7 +1761,12 @@ textarea.admin-input,
         align-items: stretch;
     }
 
-    .admin-season-table-actions {
+    .admin-round-card-top.admin-round-card-top-static {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .admin-season-card-actions {
         justify-content: flex-start;
     }
 }
@@ -3666,6 +3795,7 @@ html[data-theme="dark"] .discord-toggle-warning {
     position: sticky;
     top: 92px;
     align-self: start;
+    min-width: 0;
 }
 
 .admin-roku-mobile-nav {
@@ -3673,131 +3803,19 @@ html[data-theme="dark"] .discord-toggle-warning {
     margin-bottom: 14px;
 }
 
-.admin-roku-mobile-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 16px 16px 10px;
-    border: 1px solid var(--line);
-    border-radius: 18px 18px 0 0;
-    background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface) 100%);
-}
-
-.admin-roku-mobile-title {
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: var(--text);
-}
-
-.admin-roku-mobile-current {
-    max-width: 48%;
-    text-align: right;
-    font-size: 0.88rem;
-    line-height: 1.35;
-    color: var(--muted);
-    font-weight: 700;
-}
-
-.admin-roku-mobile-groups {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    overflow-x: visible;
-    padding: 12px 16px;
-    border-left: 1px solid var(--line);
-    border-right: 1px solid var(--line);
-    background: var(--surface);
-    scrollbar-width: none;
-}
-
-.admin-roku-mobile-groups::-webkit-scrollbar {
-    display: none;
-}
-
-.admin-roku-mobile-group {
-    appearance: none;
-    border: 1px solid var(--line);
-    background: var(--surface-2);
-    color: var(--text);
-    border-radius: 999px;
-    padding: 10px 14px;
-    white-space: normal;
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
-}
-
-.admin-roku-mobile-group.is-active {
-    background: var(--surface);
-    border-color: var(--accent, var(--line-strong));
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, #6ea8ff) 35%, transparent);
-}
-
-.admin-roku-mobile-panels {
-    border: 1px solid var(--line);
-    border-top: 0;
-    border-radius: 0 0 18px 18px;
-    background: var(--surface-2);
-    padding: 12px;
-}
-
-.admin-roku-mobile-panel {
-    display: none;
-    gap: 10px;
-}
-
-.admin-roku-mobile-panel.is-active {
-    display: grid;
-}
-
-.admin-roku-mobile-link {
-    appearance: none;
+.admin-roku-mobile-select {
     width: 100%;
-    border: 1px solid var(--line);
-    background: var(--surface);
-    color: var(--text);
-    text-align: left;
-    font: inherit;
-    border-radius: 16px;
-    padding: 14px 16px;
-    cursor: pointer;
-    font-weight: 700;
-    transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
-}
-
-.admin-roku-mobile-link.is-active {
-    border-color: var(--accent, var(--line-strong));
-    background: color-mix(in srgb, var(--surface) 82%, var(--accent, #6ea8ff) 18%);
+    min-height: 48px;
+    margin: 0;
 }
 
 .admin-roku-nav {
     display: grid;
-    gap: 16px;
+    gap: 8px;
     padding: 16px;
     border: 1px solid var(--line);
     border-radius: 18px;
     background: var(--surface-2);
-}
-
-.admin-roku-group {
-    display: grid;
-    gap: 6px;
-}
-
-.admin-roku-group + .admin-roku-group {
-    padding-top: 16px;
-    border-top: 1px solid var(--line);
-}
-
-.admin-roku-group-title {
-    font-size: 0.78rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    padding: 0 6px 4px;
 }
 
 .admin-roku-link {
@@ -3838,9 +3856,14 @@ html[data-theme="dark"] .discord-toggle-warning {
     display: block;
 }
 
+.admin-admin-view-stack.is-active {
+    display: grid;
+    gap: 18px;
+}
+
 @media (max-width: 900px) {
     .admin-roku-shell {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .admin-roku-sidebar {
@@ -3861,16 +3884,11 @@ html[data-theme="dark"] .discord-toggle-warning {
     .admin-roku-content,
     .admin-admin-view,
     .admin-roku-mobile-nav,
-    .admin-roku-mobile-header,
-    .admin-roku-mobile-groups,
-    .admin-roku-mobile-panels,
-    .admin-roku-mobile-panel,
     .admin-panel,
     .admin-form-stack,
     .admin-form-stack > div,
     .admin-inline-form-wrap,
     .admin-grid,
-    .admin-basics-grid,
     .admin-category-grid,
     .admin-madlib-grid,
     .admin-era-grid,
@@ -3886,59 +3904,16 @@ html[data-theme="dark"] .discord-toggle-warning {
 
     .admin-roku-mobile-nav {
         width: 100%;
+        min-width: 0;
+        max-width: 100%;
         overflow: hidden;
-        border-radius: 18px;
     }
 
-    .admin-roku-mobile-header {
-        width: 100%;
-        flex-direction: column;
-        align-items: flex-start;
-        padding-right: 14px;
-    }
-
-    .admin-roku-mobile-title,
-    .admin-roku-mobile-current,
-    .admin-roku-mobile-link,
     .admin-panel code,
     .admin-discord-log-row,
     .admin-discord-compact-title {
         overflow-wrap: anywhere;
         word-break: break-word;
-    }
-
-    .admin-roku-mobile-current {
-        width: 100%;
-        max-width: none;
-        text-align: left;
-    }
-
-	.admin-roku-mobile-groups {
-		width: 100%;
-		flex-wrap: wrap;
-		overflow-x: visible;
-		padding-top: 10px;
-		padding-bottom: 10px;
-		padding-left: 12px;
-		padding-right: 12px;
-		overscroll-behavior-x: contain;
-	}
-
-	.admin-roku-mobile-group {
-		flex: 1 1 calc(50% - 10px);
-		max-width: 100%;
-		min-width: 0;
-	}
-
-    .admin-roku-mobile-panels {
-        width: 100%;
-        padding: 10px;
-    }
-
-    .admin-roku-mobile-link {
-        min-width: 0;
-        padding: 13px 14px;
-        border-radius: 14px;
     }
 
     .admin-panel {
@@ -3948,7 +3923,6 @@ html[data-theme="dark"] .discord-toggle-warning {
 
     .admin-inline-form-wrap,
     .admin-grid,
-    .admin-basics-grid,
     .admin-category-grid,
     .admin-madlib-grid,
     .admin-era-grid,
@@ -5003,10 +4977,6 @@ body.theme-light .vote-points-btn:focus-visible {
     letter-spacing: 0.1em;
     line-height: 1.2;
     text-transform: uppercase;
-}
-
-.qa-rewind-card .admin-page-intro p {
-    margin: 8px 0 0;
 }
 
 .qa-rewind-toolbar,

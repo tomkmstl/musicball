@@ -1,7 +1,6 @@
 (function () {
     var themeMeta = document.querySelector('meta[name="theme-color"]');
     var body = document.body;
-    var isDevMode = !!window.ML_DEV_MODE;
     var swUrl = window.ML_SW_URL || 'service-worker.js';
 
     var pullThreshold = 110;
@@ -21,16 +20,6 @@
         } else {
             themeMeta.setAttribute('content', '#000614');
         }
-    }
-
-    function clearAllCaches() {
-        if (!('caches' in window)) return Promise.resolve();
-
-        return caches.keys().then(function (keys) {
-            return Promise.all(keys.map(function (key) {
-                return caches.delete(key);
-            }));
-        });
     }
 
     function ensureRefreshIndicator() {
@@ -167,12 +156,7 @@
 
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
-            navigator.serviceWorker.register(swUrl).then(function (registration) {
-                if (isDevMode) {
-                    registration.update();
-                    clearAllCaches().catch(function () { return null; });
-                }
-            }).catch(function (error) {
+            navigator.serviceWorker.register(swUrl).catch(function (error) {
                 console.error('Service worker registration failed:', error);
             });
         });

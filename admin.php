@@ -5,20 +5,12 @@ require_once __DIR__ . '/season-builder/sb_season_builder.php';
 require_once __DIR__ . '/gameplay/bootstrap.php';
 require_once __DIR__ . '/integrations/spotify/client.php';
 require_once __DIR__ . '/integrations/discord/discord.php';
-require_once __DIR__ . '/integrations/push/push.php';
 
 $currentUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : 0;
 if (!mlIsAdminUserId($pdo, $currentUserId)) {
     header('Location: ' . mlUrl('index.php'));
     exit;
 }
-
-$pushStorageReady = mlPushStorageReady($pdo);
-$pushReady = mlPushServerReady($pdo);
-if (empty($_SESSION['ml_push_csrf']) || !is_string($_SESSION['ml_push_csrf'])) {
-    $_SESSION['ml_push_csrf'] = bin2hex(random_bytes(24));
-}
-$pushCsrfToken = (string)$_SESSION['ml_push_csrf'];
 
 if (empty($_SESSION['ml_admin_csrf']) || !is_string($_SESSION['ml_admin_csrf'])) {
     $_SESSION['ml_admin_csrf'] = bin2hex(random_bytes(24));
@@ -52,7 +44,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('There is no open next-season voting cycle to close.');
             }
 
+            if (mlGetSeasonSubmissionCount($pdo, (int)$targetVotingSeason['SeasonID']) <= 0) {
+                throw new RuntimeException('Voting cannot be closed early until at least one player has submitted.');
+            }
+
+            $pdo->beginTransaction();
+            mlLockSeasonBuilder($pdo, (int)$targetVotingSeason['SeasonID']);
             mlSetSeasonConfig($pdo, (int)$targetVotingSeason['SeasonID'], 'voting_open', '0');
+            $pdo->commit();
             $_SESSION['ml_admin_message'] = 'Voting for ' . $targetVotingSeason['SeasonName'] . ' is now closed early. You can still review the partial results and start the season when ready.';
             header('Location: ' . mlUrl('admin.php'));
             exit;
@@ -71,33 +70,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             header('Location: ' . mlUrl('season_rounds.php?season_id=' . $nextSeasonId));
-            exit;
-        }
-
-        if ($action === 'revert_previous_season') {
-            $currentSeasonRow = mlGetCurrentSeason($pdo);
-            if (!$currentSeasonRow) {
-                throw new RuntimeException('No current season was found.');
-            }
-
-            $currentSeasonId = (int)$currentSeasonRow['SeasonID'];
-            if (!mlCanRevertToPreviousSeason($pdo, $currentSeasonId)) {
-                throw new RuntimeException('Revert is only allowed before Round 1 Songs Due for the current season.');
-            }
-
-            $previousSeasonRow = mlGetPreviousSeason($pdo, $currentSeasonId);
-            if (!$previousSeasonRow) {
-                throw new RuntimeException('There is no previous season available to restore.');
-            }
-
-            $pdo->beginTransaction();
-            $pdo->exec('UPDATE ML_Seasons SET IsActive = 0');
-            $activateStmt = $pdo->prepare('UPDATE ML_Seasons SET IsActive = 1 WHERE SeasonID = ?');
-            $activateStmt->execute([(int)$previousSeasonRow['SeasonID']]);
-            $pdo->commit();
-
-            $_SESSION['ml_admin_message'] = $previousSeasonRow['SeasonName'] . ' has been restored as the current season.';
-            header('Location: ' . mlUrl('admin.php'));
             exit;
         }
 
@@ -173,16 +145,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['ml_admin_error'] = 'Discord test failed' . $statusPart . ($errorPart !== '' ? ': ' . $errorPart : '.');
             }
 
-            header('Location: ' . mlUrl('admin.php'));
-            exit;
-        }
-
-        if ($action === 'set_dev_mode') {
-            $devModeEnabled = isset($_POST['dev_mode']) && $_POST['dev_mode'] === '1';
-            mlSetSettingValue($pdo, 'dev_mode', $devModeEnabled ? '1' : '0');
-            $_SESSION['ml_admin_message'] = $devModeEnabled
-                ? 'Dev mode is on. App caching is now minimized for development.'
-                : 'Dev mode is off. Standard app caching is active again.';
             header('Location: ' . mlUrl('admin.php'));
             exit;
         }
@@ -266,6 +228,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $insertSeasonStmt = $pdo->prepare('INSERT INTO ML_Seasons (SeasonID, SeasonName, IsActive) VALUES (?, ?, 0)');
             $insertSeasonStmt->execute([$nextSeasonId, $newSeasonName]);
             mlSetSeasonConfig($pdo, $nextSeasonId, 'voting_open', '0');
+            mlSetSeasonConfig($pdo, $nextSeasonId, 'builder_locked', '0');
 
             $pdo->commit();
 
@@ -289,7 +252,6 @@ $votesPerRoundSetting = max(1, mlGetIntSetting($pdo, 'votes_per_round', 12));
 $voteMaxPerSongSettingRaw = mlGetIntSetting($pdo, 'vote_max_per_song', 0);
 $voteMaxPerSongUnlimited = ($voteMaxPerSongSettingRaw <= 0);
 $voteMaxPerSongSetting = $voteMaxPerSongUnlimited ? $votesPerRoundSetting : min($voteMaxPerSongSettingRaw, $votesPerRoundSetting);
-$devModeEnabled = mlIsDevMode($pdo);
 $discordStatus = mlDiscordGetConfigStatus($pdo);
 $discordHealthClass = '';
 $discordHealthMessage = '';
@@ -368,9 +330,7 @@ $seasonListStmt = $pdo->query("
     SELECT s.SeasonID,
            s.SeasonName,
            s.IsActive,
-           COALESCE(cfg.ConfigValue, '0') AS VotingOpenValue,
-           (SELECT COUNT(*) FROM ML_Q1Categories c WHERE c.SeasonID = s.SeasonID) AS CategoryCount,
-           (SELECT COUNT(DISTINCT sub.UserID) FROM ML_Submissions sub WHERE sub.SeasonID = s.SeasonID) AS SubmissionCount
+           COALESCE(cfg.ConfigValue, '0') AS VotingOpenValue
     FROM ML_Seasons s
     LEFT JOIN ML_Config cfg
       ON cfg.SeasonID = s.SeasonID
@@ -379,26 +339,23 @@ $seasonListStmt = $pdo->query("
 ");
 $seasonList = $seasonListStmt->fetchAll(PDO::FETCH_ASSOC);
 
-foreach ($seasonList as &$seasonRow) {
-    $seasonRow['HasCommittedRounds'] = $seasonRoundsReady && mlSeasonHasCommittedRounds($pdo, (int)$seasonRow['SeasonID']) ? '1' : '0';
-}
-unset($seasonRow);
-
-$totalUsersStmt = $pdo->query('SELECT COUNT(*) FROM ML_Users');
-$totalUsers = (int)$totalUsersStmt->fetchColumn();
-
-$activeSubmissionStmt = $pdo->prepare('SELECT COUNT(DISTINCT UserID) FROM ML_Submissions WHERE SeasonID = ?');
-$activeSubmissionStmt->execute([$seasonId]);
-$activeSubmissionCount = (int)$activeSubmissionStmt->fetchColumn();
-
 $currentSeasonRow = mlGetCurrentSeason($pdo);
 $currentSeasonId = $currentSeasonRow ? (int)$currentSeasonRow['SeasonID'] : 0;
 $nextSeasonRow = mlGetNextSeason($pdo);
 $nextSeasonRowId = $nextSeasonRow ? (int)$nextSeasonRow['SeasonID'] : 0;
-$nextSeasonVotingOpen = $nextSeasonRow ? mlIsSeasonVotingOpen($pdo, $nextSeasonRowId) : false;
-$nextSeasonVotingComplete = $nextSeasonRow ? mlIsSeasonVotingComplete($pdo, $nextSeasonRowId) : false;
-$nextSeasonSubmissionCount = $nextSeasonRow ? mlGetSeasonSubmissionCount($pdo, $nextSeasonRowId) : 0;
-$canRevertCurrentSeason = $currentSeasonId > 0 ? mlCanRevertToPreviousSeason($pdo, $currentSeasonId) : false;
+
+$seasonList = array_values(array_filter(
+    $seasonList,
+    static function (array $row) use ($currentSeasonId, $nextSeasonRowId): bool {
+        $rowSeasonId = (int)$row['SeasonID'];
+        return $rowSeasonId === $currentSeasonId
+            || ($nextSeasonRowId > 0 && $rowSeasonId === $nextSeasonRowId);
+    }
+));
+foreach ($seasonList as &$seasonRow) {
+    $seasonRow['HasCommittedRounds'] = $seasonRoundsReady && mlSeasonHasCommittedRounds($pdo, (int)$seasonRow['SeasonID']) ? '1' : '0';
+}
+unset($seasonRow);
 
 $nextSeasonIdStmt = $pdo->query('SELECT COALESCE(MAX(SeasonID), 0) + 1 FROM ML_Seasons');
 $nextSeasonId = (int)$nextSeasonIdStmt->fetchColumn();
@@ -456,74 +413,19 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
         <div class="admin-roku-shell">
             <aside class="admin-roku-sidebar" aria-label="Admin sections">
                 <div class="admin-roku-mobile-nav" aria-label="Admin sections">
-                    <div class="admin-roku-mobile-header">
-                        <div>
-                            <div class="home-shell-kicker">Admin menu</div>
-                            <div class="admin-roku-mobile-title" id="admin-mobile-current-group">Gameplay</div>
-                        </div>
-                        <div class="admin-roku-mobile-current" id="admin-mobile-current-view">Gameplay settings</div>
-                    </div>
-
-                    <div class="admin-roku-mobile-groups" role="tablist" aria-label="Admin categories">
-                        <button type="button" class="admin-roku-mobile-group is-active" data-admin-mobile-group="gameplay">Gameplay</button>
-                        <button type="button" class="admin-roku-mobile-group" data-admin-mobile-group="season-setup">Season setup</button>
-                        <button type="button" class="admin-roku-mobile-group" data-admin-mobile-group="spotify">Spotify</button>
-                        <button type="button" class="admin-roku-mobile-group" data-admin-mobile-group="discord">Discord</button>
-                        <button type="button" class="admin-roku-mobile-group" data-admin-mobile-group="pwa">PWA</button>
-                    </div>
-
-                    <div class="admin-roku-mobile-panels">
-                        <div class="admin-roku-mobile-panel is-active" data-admin-mobile-panel="gameplay">
-                            <button type="button" class="admin-roku-mobile-link is-active" data-admin-nav="gameplay">Gameplay settings</button>
-                        </div>
-
-                        <div class="admin-roku-mobile-panel" data-admin-mobile-panel="season-setup">
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="season-setup">Season setup</button>
-                        </div>
-
-                        <div class="admin-roku-mobile-panel" data-admin-mobile-panel="spotify">
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="playlist-account">Playlist Account</button>
-                        </div>
-
-                        <div class="admin-roku-mobile-panel" data-admin-mobile-panel="discord">
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="discord-webhook-notifications">Discord Notifications</button>
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="discord-notification-status">Discord notification status</button>
-                        </div>
-
-                        <div class="admin-roku-mobile-panel" data-admin-mobile-panel="pwa">
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="push-notification-tests">Push Notification Tests</button>
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="pwa-dev-mode">PWA Dev Mode</button>
-                        </div>
-                    </div>
+                    <select class="admin-input admin-roku-mobile-select" aria-label="Choose Admin section" data-admin-mobile-select>
+                        <option value="gameplay">Gameplay</option>
+                        <option value="season-setup">Season Setup</option>
+                        <option value="integrations">Integrations</option>
+                        <option value="notification-status">Notification Status</option>
+                    </select>
                 </div>
 
                 <nav class="admin-roku-nav">
-                    <div class="admin-roku-group">
-                        <div class="admin-roku-group-title">Gameplay</div>
-                        <button type="button" class="admin-roku-link is-active" data-admin-nav="gameplay">Gameplay settings</button>
-                    </div>
-
-                    <div class="admin-roku-group">
-                        <div class="admin-roku-group-title">Season setup</div>
-                        <button type="button" class="admin-roku-link" data-admin-nav="season-setup">Season setup</button>
-                    </div>
-
-                    <div class="admin-roku-group">
-                        <div class="admin-roku-group-title">Spotify</div>
-                        <button type="button" class="admin-roku-link" data-admin-nav="playlist-account">Playlist Account</button>
-                    </div>
-
-                    <div class="admin-roku-group">
-                        <div class="admin-roku-group-title">Discord</div>
-                        <button type="button" class="admin-roku-link" data-admin-nav="discord-webhook-notifications">Discord Notifications</button>
-                        <button type="button" class="admin-roku-link" data-admin-nav="discord-notification-status">Discord notification status</button>
-                    </div>
-
-                    <div class="admin-roku-group">
-                        <div class="admin-roku-group-title">PWA</div>
-                        <button type="button" class="admin-roku-link" data-admin-nav="push-notification-tests">Push Notification Tests</button>
-                        <button type="button" class="admin-roku-link" data-admin-nav="pwa-dev-mode">PWA Dev Mode</button>
-                    </div>
+                    <button type="button" class="admin-roku-link is-active" data-admin-nav="gameplay">Gameplay</button>
+                    <button type="button" class="admin-roku-link" data-admin-nav="season-setup">Season Setup</button>
+                    <button type="button" class="admin-roku-link" data-admin-nav="integrations">Integrations</button>
+                    <button type="button" class="admin-roku-link" data-admin-nav="notification-status">Notification Status</button>
                 </nav>
             </aside>
 
@@ -618,142 +520,118 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                 <section class="admin-panel admin-admin-view" data-admin-view="season-setup">
                     <div class="home-shell-kicker">Season setup</div>
                     <h2>Season setup</h2>
+                    <h3>Manage seasons</h3>
+                    <p>
+                        Manage the current season and any next season being prepared.
+                    </p>
+
+                    <div class="admin-season-list">
+                        <?php foreach ($seasonList as $seasonRow): ?>
+                            <?php
+                            $rowSeasonId = (int)$seasonRow['SeasonID'];
+                            $rowType = $rowSeasonId === $currentSeasonId ? 'Current' : 'Next';
+                            $rowVotingOpen = ((string)$seasonRow['VotingOpenValue'] === '1');
+                            $rowVotingComplete = mlIsSeasonVotingComplete($pdo, $rowSeasonId);
+                            $rowBuilderLocked = mlIsSeasonBuilderLocked($pdo, $rowSeasonId);
+                            ?>
+                            <article class="admin-season-card">
+                                <div class="admin-season-card-header">
+                                    <h4 class="admin-season-card-name"><?= htmlspecialchars($seasonRow['SeasonName']) ?></h4>
+                                    <div class="admin-season-card-status">
+                                        <?php if ($rowType === 'Current'): ?>
+                                            <span class="pill pill-open">Current</span>
+                                        <?php else: ?>
+                                            <span class="pill pill-neutral">Next</span>
+                                            <span class="note">
+                                                <?= $rowVotingOpen ? ($rowVotingComplete ? 'Voting complete' : 'Voting open') : ($rowVotingComplete ? 'Voting complete' : ($rowSeasonId === $nextSeasonRowId && mlWasSeasonVotingClosedEarly($pdo, $rowSeasonId) ? 'Voting closed early' : ($rowBuilderLocked ? 'Voting closed' : 'Setup in progress'))) ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <div class="admin-season-card-actions">
+                                    <?php if ($rowType === 'Current'): ?>
+                                        <?php if (!$rowBuilderLocked): ?>
+                                            <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                                Edit Setup
+                                            </a>
+                                        <?php endif; ?>
+                                        <a href="<?= htmlspecialchars(mlUrl('view_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                            View Rounds
+                                        </a>
+                                        <?php if ((string)$seasonRow['HasCommittedRounds'] === '1'): ?>
+                                            <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                                Edit Rounds
+                                            </a>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <?php if (!$rowBuilderLocked): ?>
+                                            <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                                Edit Setup
+                                            </a>
+                                        <?php endif; ?>
+                                        <a href="<?= htmlspecialchars(mlUrl('view_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                            View Rounds
+                                        </a>
+                                        <?php if ($rowVotingOpen && !$rowVotingComplete): ?>
+                                            <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-season-action-form">
+                                                <input type="hidden" name="admin_action" value="close_voting">
+                                                <button type="submit" class="button-secondary">
+                                                    Close Voting Early
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
+                                        <?php if ($rowBuilderLocked && !mlCanStartNextSeason($pdo, $rowSeasonId)): ?>
+                                            <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
+                                                Edit Schedule
+                                            </a>
+                                        <?php endif; ?>
+                                        <?php if (mlCanStartNextSeason($pdo, $rowSeasonId)): ?>
+                                            <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-primary admin-table-link">
+                                                Review Next Season
+                                            </a>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+
                     <?php if (!$nextSeasonRow): ?>
-                        <h3>Create the next season</h3>
-                        <p>
-                            The next available season will use <strong>Season ID <?= $nextSeasonId ?></strong>. Create it first, finish setup on the next page, then start voting only when you are ready.
-                        </p>
+                        <div class="admin-section-divider">
+                            <h3>Create the next season</h3>
+                            <p>
+                                Name the next season now. You can finish its setup before opening voting.
+                            </p>
 
-                        <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-form-stack">
-                            <input type="hidden" name="admin_action" value="create_season">
+                            <form
+                                method="post"
+                                action="<?= htmlspecialchars(mlUrl('admin.php')) ?>"
+                                class="admin-form-stack"
+                                onsubmit="return confirm('Create this new season? You can edit its setup before opening voting.');"
+                            >
+                                <input type="hidden" name="admin_action" value="create_season">
 
-                            <div>
-                                <label class="admin-label" for="new_season_name">Season name</label>
-                                <input
-                                    type="text"
-                                    name="new_season_name"
-                                    id="new_season_name"
-                                    class="admin-input"
-                                    value="<?= htmlspecialchars($nextSeasonDefaultName) ?>"
-                                    required
-                                >
-                            </div>
+                                <div>
+                                    <label class="admin-label" for="new_season_name">Season name</label>
+                                    <input
+                                        type="text"
+                                        name="new_season_name"
+                                        id="new_season_name"
+                                        class="admin-input"
+                                        value="<?= htmlspecialchars($nextSeasonDefaultName) ?>"
+                                        required
+                                    >
+                                </div>
 
-                            <button type="submit" class="button-primary">Create</button>
-                        </form>
-                    <?php else: ?>
-                        <div class="status-banner">
-                            <?= htmlspecialchars((string)$nextSeasonRow['SeasonName']) ?> is already in the Next state. Finish setting it up and start it before creating another one.
+                                <button type="submit" class="button-primary">Create Next Season</button>
+                            </form>
                         </div>
                     <?php endif; ?>
-
-                    <div class="admin-section-divider">
-                        <h3>Manage existing seasons</h3>
-                        <p>
-                            Open a season to edit its setup, save progress, review next-season votes, and control the season lifecycle.
-                        </p>
-
-                    <div class="admin-season-table-wrap">
-                        <table class="admin-season-table">
-                            <thead>
-                                <tr>
-                                    <th>Season</th>
-                                    <th>Status</th>
-                                    <th>Categories</th>
-                                    <th>Submissions</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($seasonList as $seasonRow): ?>
-                                    <?php
-                                    $rowSeasonId = (int)$seasonRow['SeasonID'];
-                                    $rowVotingOpen = ((string)$seasonRow['VotingOpenValue'] === '1');
-                                    $rowVotingComplete = mlIsSeasonVotingComplete($pdo, $rowSeasonId);
-                                    $rowType = 'Past';
-                                    if ($currentSeasonId > 0 && $rowSeasonId === $currentSeasonId) {
-                                        $rowType = 'Current';
-                                    } elseif ($nextSeasonRowId > 0 && $rowSeasonId === $nextSeasonRowId) {
-                                        $rowType = 'Next';
-                                    }
-                                    ?>
-                                    <tr>
-                                        <td>
-                                            <strong><?= htmlspecialchars($seasonRow['SeasonName']) ?></strong><br>
-                                            <span class="note">Season ID <?= $rowSeasonId ?></span>
-                                        </td>
-                                        <td>
-                                            <?php if ($rowType === 'Current'): ?>
-                                                <span class="pill pill-open">Current</span>
-                                            <?php elseif ($rowType === 'Next'): ?>
-                                                <span class="pill pill-neutral">Next</span>
-                                                <div class="note admin-note-top-xs">
-                                                    <?= $rowVotingOpen ? ($rowVotingComplete ? 'Voting complete' : 'Voting open') : ($rowVotingComplete ? 'Voting complete' : ($rowSeasonId === $nextSeasonRowId && mlWasSeasonVotingClosedEarly($pdo, $rowSeasonId) ? 'Voting closed early' : 'Setup in progress')) ?>
-                                                </div>
-                                            <?php else: ?>
-                                                <span class="pill pill-closed">Past</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><?= (int)$seasonRow['CategoryCount'] ?></td>
-                                        <td><?= (int)$seasonRow['SubmissionCount'] ?> / <?= $totalUsers ?></td>
-                                        <td>
-                                            <div class="admin-season-table-actions">
-                                            <?php if ($rowType === 'Current'): ?>
-                                                <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
-                                                    Edit Setup
-                                                </a>
-                                                <?php if ((string)$seasonRow['HasCommittedRounds'] === '1'): ?>
-                                                    <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
-                                                        Edit Rounds
-                                                    </a>
-                                                <?php endif; ?>
-                                                <a href="<?= htmlspecialchars(mlUrl('season.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
-                                                    View
-                                                </a>
-                                                <?php if ($canRevertCurrentSeason): ?>
-                                                    <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-inline-form">
-                                                        <input type="hidden" name="admin_action" value="revert_previous_season">
-                                                        <button type="submit" class="button-primary">
-                                                            Revert to Previous Season
-                                                        </button>
-                                                    </form>
-                                                <?php endif; ?>
-                                            <?php elseif ($rowType === 'Next'): ?>
-                                                <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
-                                                    Edit Setup
-                                                </a>
-                                                <a href="<?= htmlspecialchars(mlUrl('final.php?preview=1')) ?>" class="button-secondary admin-table-link">
-                                                    View Votes
-                                                </a>
-                                                <?php if ($rowVotingOpen && !$rowVotingComplete): ?>
-                                                    <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-inline-form">
-                                                        <input type="hidden" name="admin_action" value="close_voting">
-                                                        <button type="submit" class="button-secondary">
-                                                            Close Voting Early
-                                                        </button>
-                                                    </form>
-                                                <?php endif; ?>
-                                                <?php if (mlCanStartNextSeason($pdo, $rowSeasonId)): ?>
-                                                    <a href="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . $rowSeasonId)) ?>" class="button-primary admin-table-link">
-                                                        Review Next Season
-                                                    </a>
-                                                <?php endif; ?>
-                                            <?php else: ?>
-                                                <a href="<?= htmlspecialchars(mlUrl('season.php?season_id=' . $rowSeasonId)) ?>" class="button-secondary admin-table-link">
-                                                    View
-                                                </a>
-                                            <?php endif; ?>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    </div>
                 </section>
 
-                <section class="admin-panel admin-admin-view" data-admin-view="playlist-account">
+                <div class="admin-admin-view admin-admin-view-stack" data-admin-view="integrations">
+                <section class="admin-panel">
                     <div class="home-shell-kicker">Spotify</div>
                     <h2>Playlist Account</h2>
                     <p>
@@ -799,7 +677,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                     <?php endif; ?>
                 </section>
 
-                <section class="admin-panel admin-admin-view" data-admin-view="discord-webhook-notifications">
+                <section class="admin-panel">
                     <div class="home-shell-kicker">Discord</div>
                     <h2>Discord Notifications</h2>
 
@@ -991,8 +869,9 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                         </form>
                     </div>
                 </section>
+                </div>
 
-                <section class="admin-panel admin-admin-view" data-admin-view="discord-notification-status">
+                <section class="admin-panel admin-admin-view" data-admin-view="notification-status">
                     <div class="home-shell-kicker">Discord</div>
                     <h2>Discord notification status</h2>
 
@@ -1046,55 +925,6 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                     <?php endif; ?>
                 </section>
 
-                <section class="admin-panel admin-admin-view" data-admin-view="push-notification-tests">
-                    <div class="home-shell-kicker">PWA</div>
-                    <h2>Push Notification Tests</h2>
-                    <p>
-                        Send any supported notification to this admin device. Push Notifications must be on for this device in Settings.
-                    </p>
-
-                    <div class="admin-push-test-control" data-push-admin-test>
-                        <div class="admin-push-test-status" data-push-admin-status>Checking this device...</div>
-                        <div class="admin-inline-form admin-inline-form-wrap">
-                            <div class="admin-inline-field">
-                                <label class="admin-label" for="admin_push_test_notification">Notification type</label>
-                                <select id="admin_push_test_notification" class="admin-input admin-select-compact" data-push-admin-type>
-                                    <?php foreach (mlPushTestNotificationOptions() as $notificationType => $notificationLabel): ?>
-                                        <option value="<?= htmlspecialchars($notificationType) ?>"><?= htmlspecialchars($notificationLabel) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <button type="button" class="button-secondary" data-push-admin-send disabled>Send Test</button>
-                        </div>
-                    </div>
-
-                    <?php if (!$pushStorageReady): ?>
-                        <p class="admin-form-top-sm">Push notification storage is not ready yet.</p>
-                    <?php endif; ?>
-                </section>
-
-                <section class="admin-panel admin-admin-view" data-admin-view="pwa-dev-mode">
-                    <div class="home-shell-kicker">PWA</div>
-                    <h2>PWA Dev Mode</h2>
-                    <p>
-                        Disables app caching and service worker behavior for testing changes.
-                    </p>
-
-                    <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-form-stack">
-                        <input type="hidden" name="admin_action" value="set_dev_mode">
-                        <div class="theme-toggle-row admin-theme-toggle-row">
-                            <div class="theme-toggle-copy">
-                                <span class="theme-toggle-label">PWA Force Clear <?= $devModeEnabled ? 'On' : 'Off' ?></span>
-                                <span class="theme-toggle-note">When on, the app avoids sticky cached files during development.</span>
-                            </div>
-                            <label class="theme-switch" for="dev_mode_toggle" aria-label="Toggle development mode">
-                                <input type="checkbox" id="dev_mode_toggle" name="dev_mode_toggle" value="1" <?= $devModeEnabled ? 'checked' : '' ?> onchange="this.form.dev_mode.value = this.checked ? '1' : '0'; this.form.submit();">
-                                <input type="hidden" name="dev_mode" value="<?= $devModeEnabled ? '1' : '0' ?>">
-                                <span class="theme-switch-track"></span>
-                            </label>
-                        </div>
-                    </form>
-                </section>
             </div>
         </div>
     </div>
@@ -1215,24 +1045,15 @@ document.addEventListener('DOMContentLoaded', function () {
     var storageKey = 'musicballAdminView';
     var navButtons = document.querySelectorAll('[data-admin-nav]');
     var viewPanels = document.querySelectorAll('[data-admin-view]');
-    var mobileGroupButtons = document.querySelectorAll('[data-admin-mobile-group]');
-    var mobilePanels = document.querySelectorAll('[data-admin-mobile-panel]');
-    var mobileCurrentGroup = document.getElementById('admin-mobile-current-group');
-    var mobileCurrentView = document.getElementById('admin-mobile-current-view');
-    var viewToGroupMap = {
-        'gameplay': { group: 'gameplay', label: 'Gameplay settings', groupLabel: 'Gameplay' },
-        'season-setup': { group: 'season-setup', label: 'Season setup', groupLabel: 'Season setup' },
-        'playlist-account': { group: 'spotify', label: 'Playlist Account', groupLabel: 'Spotify' },
-        'discord-webhook-notifications': { group: 'discord', label: 'Discord Notifications', groupLabel: 'Discord' },
-        'discord-notification-status': { group: 'discord', label: 'Discord notification status', groupLabel: 'Discord' },
-        'push-notification-tests': { group: 'pwa', label: 'Push Notification Tests', groupLabel: 'PWA' },
-        'pwa-dev-mode': { group: 'pwa', label: 'PWA Dev Mode', groupLabel: 'PWA' }
-    };
+    var mobileNavSelect = document.querySelector('[data-admin-mobile-select]');
     var legacyViewMap = {
         'round-voting-settings': 'gameplay',
         'playlist-timing': 'gameplay',
         'create-next-season': 'season-setup',
-        'manage-existing-seasons': 'season-setup'
+        'manage-existing-seasons': 'season-setup',
+        'playlist-account': 'integrations',
+        'discord-webhook-notifications': 'integrations',
+        'discord-notification-status': 'notification-status'
     };
 
     function activateAdminView(viewName) {
@@ -1258,30 +1079,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         navButtons.forEach(function (button) {
-            button.classList.toggle('is-active', button.getAttribute('data-admin-nav') === viewName);
+            var isActive = button.getAttribute('data-admin-nav') === viewName;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
 
-        var viewConfig = viewToGroupMap[viewName] || viewToGroupMap[defaultView];
-        if (viewConfig) {
-            mobileGroupButtons.forEach(function (button) {
-                button.classList.toggle('is-active', button.getAttribute('data-admin-mobile-group') === viewConfig.group);
-            });
-
-            mobilePanels.forEach(function (panel) {
-                panel.classList.toggle('is-active', panel.getAttribute('data-admin-mobile-panel') === viewConfig.group);
-            });
-
-            document.querySelectorAll('.admin-roku-mobile-link').forEach(function (button) {
-                button.classList.toggle('is-active', button.getAttribute('data-admin-nav') === viewName);
-            });
-
-            if (mobileCurrentGroup) {
-                mobileCurrentGroup.textContent = viewConfig.groupLabel;
-            }
-
-            if (mobileCurrentView) {
-                mobileCurrentView.textContent = viewConfig.label;
-            }
+        if (mobileNavSelect && mobileNavSelect.value !== viewName) {
+            mobileNavSelect.value = viewName;
         }
 
         try {
@@ -1296,37 +1100,22 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    mobileGroupButtons.forEach(function (button) {
-        button.addEventListener('click', function () {
-            var groupName = button.getAttribute('data-admin-mobile-group');
-            var activePanel = document.querySelector('[data-admin-mobile-panel="' + groupName + '"]');
-            var firstLink = activePanel ? activePanel.querySelector('[data-admin-nav]') : null;
-
-            mobileGroupButtons.forEach(function (groupButton) {
-                groupButton.classList.toggle('is-active', groupButton === button);
-            });
-
-            mobilePanels.forEach(function (panel) {
-                panel.classList.toggle('is-active', panel.getAttribute('data-admin-mobile-panel') === groupName);
-            });
-
-            if (firstLink) {
-                activateAdminView(firstLink.getAttribute('data-admin-nav'));
-            }
+    if (mobileNavSelect) {
+        mobileNavSelect.addEventListener('change', function () {
+            activateAdminView(mobileNavSelect.value);
         });
-    });
-
-    document.querySelectorAll('.admin-roku-mobile-link').forEach(function (button) {
-        button.addEventListener('click', function () {
-            activateAdminView(button.getAttribute('data-admin-nav'));
-        });
-    });
+    }
 
     var initialView = defaultView;
     try {
-        var storedView = window.localStorage.getItem(storageKey);
-        if (storedView) {
-            initialView = legacyViewMap[storedView] || storedView;
+        var requestedView = new URLSearchParams(window.location.search).get('view');
+        if (requestedView) {
+            initialView = legacyViewMap[requestedView] || requestedView;
+        } else {
+            var storedView = window.localStorage.getItem(storageKey);
+            if (storedView) {
+                initialView = legacyViewMap[storedView] || storedView;
+            }
         }
     } catch (error) {
     }
@@ -1334,13 +1123,5 @@ document.addEventListener('DOMContentLoaded', function () {
     activateAdminView(initialView);
 });
 </script>
-<script>
-window.ML_PUSH_ADMIN_TEST = <?= json_encode([
-    'ready' => $pushReady,
-    'endpoint' => mlUrl('integrations/push/subscription.php'),
-    'csrfToken' => $pushCsrfToken,
-], JSON_UNESCAPED_SLASHES) ?>;
-</script>
-<script src="<?= htmlspecialchars(mlAssetUrl('assets/js/push-admin-test.js')) ?>" defer></script>
 </body>
 </html>

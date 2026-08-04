@@ -527,6 +527,10 @@ function mlGeneratePlaylistForRound(PDO $pdo, array $round, bool $force = false)
     require_once __DIR__ . '/../integrations/discord/discord.php';
 
     $seasonRoundId = (int)$round['SeasonRoundID'];
+    $roundSeasonId = (int)($round['SeasonID'] ?? 0);
+    if (!mlSeasonIsActiveForGameplay($pdo, $roundSeasonId)) {
+        throw new RuntimeException('Playlists can only be generated for the active season.');
+    }
     $playlistRecord = mlGetRoundPlaylistRecord($pdo, $seasonRoundId, true);
     if (!empty($playlistRecord)) {
         try {
@@ -618,6 +622,9 @@ function mlMaybeAutoGeneratePlaylists(PDO $pdo, array $presentedRounds, int $cur
     $generatedAny = false;
 
     foreach ($presentedRounds as $round) {
+        if (empty($round['season_is_active'])) {
+            continue;
+        }
         if (($round['round_state'] ?? '') !== 'submission') {
             continue;
         }
@@ -646,6 +653,9 @@ function mlMaybeAutoGeneratePlaylists(PDO $pdo, array $presentedRounds, int $cur
 }
 function mlHandleManualPlaylistTrigger(PDO $pdo, array $presentedRounds): array {
     foreach ($presentedRounds as $round) {
+        if (empty($round['season_is_active'])) {
+            continue;
+        }
         if (($round['round_state'] ?? '') !== 'submission') {
             continue;
         }
