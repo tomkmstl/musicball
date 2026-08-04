@@ -125,7 +125,6 @@ p {
 .round-tag,
 .song-card-meta,
 .game-round-progress-line strong + span,
-.admin-mini-library-tagline,
 .admin-label,
 .step-indicator {
     color: var(--muted);
@@ -883,6 +882,96 @@ textarea.admin-input,
     gap: 16px;
 }
 
+.admin-round-card-top-static {
+    align-items: center;
+}
+
+.admin-round-swap-button {
+    appearance: none;
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--brand);
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.admin-round-swap-button:hover {
+    background: var(--surface-3);
+    border-color: var(--brand);
+    color: var(--brand-strong);
+    transform: translateY(-1px);
+}
+
+.admin-round-swap-button:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 3px;
+}
+
+.admin-round-swap-icon {
+    width: 22px;
+    height: 22px;
+    display: block;
+    background: currentColor;
+    -webkit-mask: url('assets/icons/swap.svg') center / contain no-repeat;
+    mask: url('assets/icons/swap.svg') center / contain no-repeat;
+}
+
+.admin-swap-dialog {
+    width: min(520px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    margin: auto;
+    padding: 0;
+    overflow-y: auto;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+}
+
+.admin-swap-dialog::backdrop {
+    background: rgba(3, 10, 18, 0.76);
+    backdrop-filter: blur(2px);
+}
+
+body.theme-light .admin-swap-dialog::backdrop {
+    background: rgba(19, 35, 51, 0.48);
+}
+
+.admin-swap-dialog-form {
+    display: grid;
+    gap: 18px;
+    padding: 22px;
+}
+
+.admin-swap-dialog h2 {
+    margin: 0;
+}
+
+.admin-swap-dialog h2 + p {
+    margin-top: 10px;
+}
+
+.admin-swap-dialog .admin-label {
+    margin-top: 18px;
+}
+
+.admin-swap-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+}
+
 .game-page-topline-compact {
     align-items: center;
 }
@@ -1002,7 +1091,6 @@ textarea.admin-input,
 }
 
 .admin-grid,
-.admin-basics-grid,
 .admin-category-grid,
 .admin-madlib-grid,
 .admin-era-grid,
@@ -1021,16 +1109,10 @@ textarea.admin-input,
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.admin-basics-grid {
-    grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
-    align-items: end;
-}
-
 /* Shared section spacing */
 .admin-panel-full,
 .admin-round-list-committed,
 .admin-season-setup-form,
-.admin-mini-library,
 .admin-round-type-panels,
 .admin-round-grid-common,
 .admin-round-grid-committed,
@@ -1270,30 +1352,6 @@ textarea.admin-input,
     border-color: var(--line);
     cursor: not-allowed;
     opacity: 0.72;
-}
-
-.admin-mini-library {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    max-height: 320px;
-    overflow-y: auto;
-}
-
-.admin-mini-library-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    max-width: 100%;
-    padding: 10px 12px;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-}
-
-.admin-mini-library-tag-title {
-    font-size: 0.9rem;
-    font-weight: 600;
 }
 
 .admin-inline-row {
@@ -1687,7 +1745,6 @@ textarea.admin-input,
 
 @media (max-width: 800px) {
     .admin-grid,
-    .admin-basics-grid,
     .admin-category-grid,
     .admin-madlib-grid,
     .admin-era-grid,
@@ -1702,6 +1759,11 @@ textarea.admin-input,
     .admin-round-card-top {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .admin-round-card-top.admin-round-card-top-static {
+        flex-direction: row;
+        align-items: center;
     }
 
     .admin-season-card-actions {
@@ -3827,7 +3889,6 @@ html[data-theme="dark"] .discord-toggle-warning {
     .admin-form-stack > div,
     .admin-inline-form-wrap,
     .admin-grid,
-    .admin-basics-grid,
     .admin-category-grid,
     .admin-madlib-grid,
     .admin-era-grid,
@@ -3862,7 +3923,6 @@ html[data-theme="dark"] .discord-toggle-warning {
 
     .admin-inline-form-wrap,
     .admin-grid,
-    .admin-basics-grid,
     .admin-category-grid,
     .admin-madlib-grid,
     .admin-era-grid,
@@ -4917,10 +4977,6 @@ body.theme-light .vote-points-btn:focus-visible {
     letter-spacing: 0.1em;
     line-height: 1.2;
     text-transform: uppercase;
-}
-
-.qa-rewind-card .admin-page-intro p {
-    margin: 8px 0 0;
 }
 
 .qa-rewind-toolbar,

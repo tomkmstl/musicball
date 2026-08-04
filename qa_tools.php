@@ -1284,9 +1284,7 @@ foreach ($qaAvailableRounds as $availableRound) {
     <div class="card admin-card qa-rewind-card">
         <div class="admin-page-topline admin-page-topline-compact">
             <div class="admin-page-intro">
-                <span class="qa-rewind-kicker">Quality assurance</span>
                 <h1>QA Tools</h1>
-                <p>Test past gameplay states and device notifications.</p>
             </div>
         </div>
 

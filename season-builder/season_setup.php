@@ -94,6 +94,16 @@ function mlBuildRoundSlotsFromPost($slotCount, array $existingSlots = []) {
     return $slots;
 }
 
+function mlIndexFixedRoundsById(array $fixedRoundLibrary) {
+    $fixedRoundsById = [];
+
+    foreach ($fixedRoundLibrary as $fixedRound) {
+        $fixedRoundsById[(int)$fixedRound['FixedRoundID']] = $fixedRound;
+    }
+
+    return $fixedRoundsById;
+}
+
 $seasonStmt = $pdo->prepare('SELECT SeasonID, SeasonName, IsActive FROM ML_Seasons WHERE SeasonID = ? LIMIT 1');
 $seasonStmt->execute([$targetSeasonId]);
 $setupSeason = $seasonStmt->fetch(PDO::FETCH_ASSOC);
@@ -105,6 +115,7 @@ if (!$setupSeason) {
 }
 
 $fixedRoundLibrary = mlLoadFixedRoundLibrary($pdo);
+$fixedRoundsById = mlIndexFixedRoundsById($fixedRoundLibrary);
 $roundSlots = mlLoadSeasonRoundSlots($pdo, $targetSeasonId, $slotCount);
 $hasSavedSlots = false;
 foreach ($roundSlots as $slot) {
@@ -132,22 +143,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if ($setupLocked) {
             throw new RuntimeException('Season structure is read-only because Season Builder voting has already opened.');
-        }
-
-        if ($setupAction === 'create_fixed_round') {
-            $newFixedTitle = trim((string)($_POST['new_fixed_title'] ?? ''));
-            $newFixedTag = trim((string)($_POST['new_fixed_tagline'] ?? ''));
-
-            if ($newFixedTitle === '') {
-                throw new RuntimeException('Enter a fixed round title before saving it to the library.');
-            }
-
-            $insertFixedStmt = $pdo->prepare('INSERT INTO ML_FixedRounds (Title, Tagline, CreatedSeasonID, IsActive) VALUES (?, ?, ?, 1)');
-            $insertFixedStmt->execute([$newFixedTitle, $newFixedTag !== '' ? $newFixedTag : null, $targetSeasonId]);
-
-            $_SESSION['ml_admin_message'] = 'Fixed round saved to the library: ' . $newFixedTitle;
-            header('Location: ' . mlUrl('season-builder/season_setup.php?season_id=' . $targetSeasonId));
-            exit;
         }
 
         if ($setupAction !== 'save_structure_continue') {
@@ -202,8 +197,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Round ' . $roundNumber . ' has an invalid round type.');
             }
 
-            if ($roundType === 'fixed' && $slot['fixed_round_id'] === '') {
-                throw new RuntimeException('Round ' . $roundNumber . ' is fixed, but no fixed round was selected.');
+            if ($roundType === 'fixed') {
+                $selectedFixedRoundId = (int)$slot['fixed_round_id'];
+                $selectedFixedRound = $selectedFixedRoundId > 0
+                    ? ($fixedRoundsById[$selectedFixedRoundId] ?? null)
+                    : null;
+
+                if ($selectedFixedRoundId > 0 && !$selectedFixedRound) {
+                    throw new RuntimeException('Round ' . $roundNumber . ' uses a fixed round that no longer exists.');
+                }
+
+                $typedFixedTitle = $slot['title_override'];
+                if ($typedFixedTitle === '' && $selectedFixedRound) {
+                    $slot['title_override'] = trim((string)$selectedFixedRound['Title']);
+                    if ($slot['tag_override'] === '') {
+                        $slot['tag_override'] = trim((string)($selectedFixedRound['Tagline'] ?? ''));
+                    }
+                }
+
+                if ($slot['title_override'] === '') {
+                    throw new RuntimeException('Round ' . $roundNumber . ' needs a title or a previous fixed round.');
+                }
             }
 
             if ($roundType === 'q1_ranked_category') {
@@ -243,6 +257,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $updateSeasonStmt = $pdo->prepare('UPDATE ML_Seasons SET SeasonName = ? WHERE SeasonID = ?');
         $updateSeasonStmt->execute([$postedSeasonName, $targetSeasonId]);
+
+        $findFixedRoundStmt = $pdo->prepare(
+            "SELECT FixedRoundID
+             FROM ML_FixedRounds
+             WHERE Title = ? AND COALESCE(Tagline, '') = ?
+             ORDER BY FixedRoundID ASC
+             LIMIT 1"
+        );
+        $insertFixedRoundStmt = $pdo->prepare(
+            'INSERT INTO ML_FixedRounds (Title, Tagline, CreatedSeasonID, IsActive) VALUES (?, ?, ?, 1)'
+        );
+
+        foreach ($roundSlots as &$slot) {
+            if ($slot['round_type'] !== 'fixed') {
+                continue;
+            }
+
+            $fixedTitle = trim((string)$slot['title_override']);
+            $fixedTag = trim((string)$slot['tag_override']);
+            $findFixedRoundStmt->execute([$fixedTitle, $fixedTag]);
+            $fixedRoundId = (int)$findFixedRoundStmt->fetchColumn();
+
+            if ($fixedRoundId <= 0) {
+                $insertFixedRoundStmt->execute([
+                    $fixedTitle,
+                    $fixedTag !== '' ? $fixedTag : null,
+                    $targetSeasonId,
+                ]);
+                $fixedRoundId = (int)$pdo->lastInsertId();
+            }
+
+            $slot['fixed_round_id'] = (string)$fixedRoundId;
+        }
+        unset($slot);
 
         // Keep the existing round-slot rows in place so child configuration
         // (such as ML_SeasonRoundOptionChoices) is not cascade-deleted when
@@ -290,27 +338,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $setupSeason['SeasonName'] = $postedSeasonName;
         }
         $fixedRoundLibrary = mlLoadFixedRoundLibrary($pdo);
+        $fixedRoundsById = mlIndexFixedRoundsById($fixedRoundLibrary);
     }
 }
 
 $seasonStmt->execute([$targetSeasonId]);
 $setupSeason = $seasonStmt->fetch(PDO::FETCH_ASSOC);
-$setupVotingOpen = ((string)mlGetSeasonConfig($pdo, $targetSeasonId, 'voting_open', '0') === '1');
-$setupIsActive = ((int)$setupSeason['IsActive'] === 1);
-
-$totalUsersStmt = $pdo->query('SELECT COUNT(*) FROM ML_Users');
-$totalUsers = (int)$totalUsersStmt->fetchColumn();
-
-$submissionStmt = $pdo->prepare('SELECT COUNT(DISTINCT UserID) FROM ML_Submissions WHERE SeasonID = ?');
-$submissionStmt->execute([$targetSeasonId]);
-$submissionCount = (int)$submissionStmt->fetchColumn();
-
-$configuredRoundCount = 0;
-foreach ($roundSlots as $slot) {
-    if ($slot['round_type'] !== '') {
-        $configuredRoundCount++;
-    }
-}
 
 ?>
 <!DOCTYPE html>
@@ -332,10 +365,9 @@ foreach ($roundSlots as $slot) {
                 <div class="home-shell-kicker">Season setup</div>
                 <h1><?= htmlspecialchars($setupSeason['SeasonName']) ?></h1>
                 <p>
-                    Step 1 of 3: define the season basics and round structure. Save the structure to continue to the voting options.
+                    Step 1 of 3: define the round structure. Save it to continue to the voting options.
                 </p>
             </div>
-            <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="button-secondary admin-back-link">&laquo; Back to Admin</a>
         </div>
 
         <?php if ($adminMessage !== ''): ?>
@@ -362,74 +394,10 @@ foreach ($roundSlots as $slot) {
             </div>
         <?php endif; ?>
 
-        <div class="admin-grid admin-grid-tight">
-            <section class="admin-panel">
-                <div class="home-shell-kicker">Status</div>
-                <p>
-                    <strong><?= htmlspecialchars($setupSeason['SeasonName']) ?></strong>
-                    <span class="pill <?= $setupVotingOpen ? 'pill-open' : 'pill-closed' ?>">
-                        <?= $setupVotingOpen ? 'Voting Open' : 'Voting Closed' ?>
-                    </span>
-                </p>
-                <p>Submissions: <strong><?= $submissionCount ?> / <?= $totalUsers ?></strong></p>
-                <p>Configured rounds: <strong><?= $configuredRoundCount ?> / <?= $slotCount ?></strong></p>
-                <?php if ($setupIsActive): ?>
-                    <p>This season is currently marked as the active voting target.</p>
-                <?php endif; ?>
-            </section>
-
-            <section class="admin-panel">
-                <div class="home-shell-kicker">Reusable fixed rounds</div>
-                <h2>Add to the fixed round library</h2>
-                <form method="post" action="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . (int)$targetSeasonId)) ?>" class="admin-form-stack admin-form-stack-tight">
-                    <input type="hidden" name="season_id" value="<?= (int)$targetSeasonId ?>">
-                    <input type="hidden" name="setup_action" value="create_fixed_round">
-
-                    <div>
-                        <label class="admin-label" for="new_fixed_title">New fixed round title</label>
-                        <input type="text" name="new_fixed_title" id="new_fixed_title" class="admin-input" placeholder="Songs in the Queue s5e1" <?= $setupLocked ? 'disabled' : '' ?>>
-                    </div>
-                    <div>
-                        <label class="admin-label" for="new_fixed_tagline">Optional tagline</label>
-                        <input type="text" name="new_fixed_tagline" id="new_fixed_tagline" class="admin-input" placeholder="Optional subtitle / instruction" <?= $setupLocked ? 'disabled' : '' ?>>
-                    </div>
-                    <button type="submit" class="button-secondary" <?= (!$seasonBuilderReady || $setupLocked) ? 'disabled' : '' ?>>Save to Fixed Library</button>
-                </form>
-
-                <div class="admin-mini-library">
-                    <?php if (empty($fixedRoundLibrary)): ?>
-                        <p>No fixed rounds saved yet.</p>
-                    <?php else: ?>
-                        <?php foreach ($fixedRoundLibrary as $fixedRound): ?>
-                            <div class="admin-mini-library-tag"<?php if (!empty($fixedRound['Tagline'])): ?> title="<?= htmlspecialchars($fixedRound['Tagline']) ?>"<?php endif; ?>>
-                                <span class="admin-mini-library-tag-title"><?= htmlspecialchars($fixedRound['Title']) ?></span>
-                                <?php if (!empty($fixedRound['Tagline'])): ?>
-                                    <span class="admin-mini-library-tagline"><?= htmlspecialchars($fixedRound['Tagline']) ?></span>
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-            </section>
-        </div>
-
         <form method="post" action="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . (int)$targetSeasonId)) ?>" class="admin-season-setup-form">
             <input type="hidden" name="season_id" value="<?= (int)$targetSeasonId ?>">
+            <input type="hidden" name="season_name" value="<?= htmlspecialchars($setupSeason['SeasonName']) ?>">
             <fieldset class="admin-readonly-fieldset" <?= $setupLocked ? 'disabled' : '' ?>>
-
-            <section class="admin-panel admin-panel-full">
-                <div class="home-shell-kicker">Basics</div>
-                <div class="admin-basics-grid">
-                    <div>
-                        <label class="admin-label" for="season_name">Season name</label>
-                        <input type="text" name="season_name" id="season_name" class="admin-input" value="<?= htmlspecialchars($setupSeason['SeasonName']) ?>" required>
-                    </div>
-                    <div>
-                        <label class="admin-label">Season ID</label>
-                        <div class="admin-readonly-field"><?= (int)$setupSeason['SeasonID'] ?></div>
-                    </div>
-                </div>
-            </section>
 
             <section class="admin-panel admin-panel-full">
                 <div class="admin-section-header admin-section-header-stack-mobile">
@@ -459,27 +427,45 @@ foreach ($roundSlots as $slot) {
 
                             <div class="admin-round-type-panels">
                                 <div class="admin-round-type-panel" data-round-panel="fixed">
-                                    <label class="admin-label">Saved fixed round</label>
-                                    <select name="rounds[<?= $roundNumber ?>][fixed_round_id]" class="admin-input" data-round-config-input>
-                                        <option value="">Select a saved fixed round</option>
-                                        <?php foreach ($fixedRoundLibrary as $fixedRound): ?>
-                                            <option value="<?= (int)$fixedRound['FixedRoundID'] ?>" <?= (string)$slot['fixed_round_id'] === (string)$fixedRound['FixedRoundID'] ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($fixedRound['Title']) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <p>Use a saved fixed round from your library for this slot.</p>
+                                    <?php
+                                    $selectedFixedRoundId = (int)$slot['fixed_round_id'];
+                                    $selectedFixedRound = $selectedFixedRoundId > 0
+                                        ? ($fixedRoundsById[$selectedFixedRoundId] ?? null)
+                                        : null;
+                                    $fixedTitleValue = $slot['title_override'] !== ''
+                                        ? $slot['title_override']
+                                        : (string)($selectedFixedRound['Title'] ?? '');
+                                    $fixedTagValue = $slot['tag_override'] !== ''
+                                        ? $slot['tag_override']
+                                        : (string)($selectedFixedRound['Tagline'] ?? '');
+                                    ?>
 
                                     <div class="admin-round-grid admin-round-grid-fixed">
                                         <div>
-                                            <label class="admin-label">Title override</label>
-                                            <input type="text" name="rounds[<?= $roundNumber ?>][title_override]" class="admin-input" value="<?= htmlspecialchars($slot['title_override']) ?>" placeholder="Optional override title" data-round-config-input>
+                                            <label class="admin-label">Title <span class="admin-label-optional">(optional if choosing a previous round)</span></label>
+                                            <input type="text" name="rounds[<?= $roundNumber ?>][title_override]" class="admin-input" value="<?= htmlspecialchars($fixedTitleValue) ?>" placeholder="Fixed round title" data-fixed-title-input data-round-config-input>
                                         </div>
                                         <div>
-                                            <label class="admin-label">Tag override</label>
-                                            <input type="text" name="rounds[<?= $roundNumber ?>][tag_override]" class="admin-input" value="<?= htmlspecialchars($slot['tag_override']) ?>" placeholder="Optional subtitle / annotation" data-round-config-input>
+                                            <label class="admin-label">Tag <span class="admin-label-optional">(optional)</span></label>
+                                            <input type="text" name="rounds[<?= $roundNumber ?>][tag_override]" class="admin-input" value="<?= htmlspecialchars($fixedTagValue) ?>" placeholder="Subtitle or instruction" data-fixed-tag-input data-round-config-input>
                                         </div>
                                     </div>
+
+                                    <label class="admin-label">Start from a previous fixed round <span class="admin-label-optional">(optional)</span></label>
+                                    <select name="rounds[<?= $roundNumber ?>][fixed_round_id]" class="admin-input" data-fixed-round-select data-round-config-input>
+                                        <option value="">Choose a previous fixed round</option>
+                                        <?php foreach ($fixedRoundLibrary as $fixedRound): ?>
+                                            <option
+                                                value="<?= (int)$fixedRound['FixedRoundID'] ?>"
+                                                data-fixed-title="<?= htmlspecialchars((string)$fixedRound['Title']) ?>"
+                                                data-fixed-tag="<?= htmlspecialchars((string)($fixedRound['Tagline'] ?? '')) ?>"
+                                                <?= (string)$slot['fixed_round_id'] === (string)$fixedRound['FixedRoundID'] ? 'selected' : '' ?>
+                                            >
+                                                <?= htmlspecialchars($fixedRound['Title']) ?><?php if (trim((string)($fixedRound['Tagline'] ?? '')) !== ''): ?> — <?= htmlspecialchars((string)$fixedRound['Tagline']) ?><?php endif; ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <p>Choosing one fills the title and tag above. You can edit either field afterward.</p>
                                 </div>
 
                                 <div class="admin-round-type-panel" data-round-panel="q1_ranked_category">
@@ -607,6 +593,26 @@ foreach ($roundSlots as $slot) {
             typeSelect.addEventListener('change', function () {
                 syncRoundCard(card);
                 syncMadlibsAvailability();
+            });
+        }
+
+        var fixedRoundSelect = card.querySelector('[data-fixed-round-select]');
+        if (fixedRoundSelect) {
+            fixedRoundSelect.addEventListener('change', function () {
+                if (fixedRoundSelect.value === '') {
+                    return;
+                }
+
+                var selectedOption = fixedRoundSelect.options[fixedRoundSelect.selectedIndex];
+                var titleInput = card.querySelector('[data-fixed-title-input]');
+                var tagInput = card.querySelector('[data-fixed-tag-input]');
+
+                if (titleInput) {
+                    titleInput.value = selectedOption.getAttribute('data-fixed-title') || '';
+                }
+                if (tagInput) {
+                    tagInput.value = selectedOption.getAttribute('data-fixed-tag') || '';
+                }
             });
         }
     });

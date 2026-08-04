@@ -815,9 +815,6 @@ foreach ($storedRoundRows as $roundNumber => $storedRoundRow) {
     }
 }
 
-$totalUsers = mlGetTotalUserCount($pdo);
-$submissionCount = mlGetSeasonSubmissionCount($pdo, $targetSeasonId);
-
 $swapEligibleRounds = [];
 if ($contentEditable && $roundsTableReady) {
     if ($canStartSeasonHere) {
@@ -896,7 +893,6 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
                     <?php endif; ?>
                 </p>
             </div>
-            <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="button-secondary admin-back-link">&laquo; Back to Admin</a>
         </div>
 
         <?php if ($adminMessage !== ''): ?>
@@ -931,72 +927,6 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
             <div class="status-banner error"><?= htmlspecialchars($nextSeasonPastDeadlineWarning) ?></div>
         <?php endif; ?>
 
-        <div class="admin-grid admin-grid-tight">
-            <section class="admin-panel">
-                <div class="home-shell-kicker">Status</div>
-                <p>
-                    <strong><?= htmlspecialchars($seasonRow['SeasonName']) ?></strong>
-                    <?php if ($seasonIsActive): ?>
-                        <span class="pill pill-open">Current</span>
-                    <?php elseif ($builderVotingOpen): ?>
-                        <span class="pill pill-open">Voting Open</span>
-                    <?php elseif ($builderResultsFinal): ?>
-                        <span class="pill pill-complete">Results Final</span>
-                    <?php else: ?>
-                        <span class="pill pill-neutral">Setup</span>
-                    <?php endif; ?>
-                </p>
-                <p>Season Builder submissions: <strong><?= (int)$submissionCount ?> / <?= (int)$totalUsers ?></strong></p>
-                <p>Gameplay rounds committed: <strong><?= $hasCommittedRounds ? 'Yes' : 'No' ?></strong></p>
-                <?php if ($isNextSeason && $currentSeasonFinalVotesDue): ?>
-                    <p>Current season ends: <strong><?= htmlspecialchars(mlRoundsPageFormatUtc($currentSeasonFinalVotesDue)) ?></strong></p>
-                <?php endif; ?>
-            </section>
-
-            <section class="admin-panel">
-                <div class="home-shell-kicker">What stays together</div>
-                <p>Round title, description, saved songs, and comments form one content package. Swapping content does not move the deadlines assigned to each round position.</p>
-            </section>
-        </div>
-
-        <?php if (count($swapEligibleRounds) >= 2): ?>
-            <section class="admin-panel admin-panel-full">
-                <div class="home-shell-kicker">Round placement</div>
-                <h2>Swap round content</h2>
-                <p>Choose two eligible rounds. Their complete content packages will trade positions while each position keeps its current deadlines. Save any other round edits before swapping.</p>
-                <form
-                    method="post"
-                    action="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . (int)$targetSeasonId)) ?>"
-                    class="admin-form-stack"
-                    onsubmit="return confirm('Swap these two round content packages? Their round positions will keep the same deadlines.');"
-                >
-                    <input type="hidden" name="season_id" value="<?= (int)$targetSeasonId ?>">
-                    <input type="hidden" name="rounds_action" value="swap_content">
-                    <div class="admin-round-grid">
-                        <div>
-                            <label class="admin-label" for="source_round_number">First round</label>
-                            <select class="admin-input" id="source_round_number" name="source_round_number" required>
-                                <option value="">Choose a round</option>
-                                <?php foreach ($swapEligibleRounds as $roundNumber => $roundRow): ?>
-                                    <option value="<?= (int)$roundNumber ?>">Round <?= (int)$roundNumber ?> - <?= htmlspecialchars($roundRow['title']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="admin-label" for="target_round_number">Swap with</label>
-                            <select class="admin-input" id="target_round_number" name="target_round_number" required>
-                                <option value="">Choose a round</option>
-                                <?php foreach ($swapEligibleRounds as $roundNumber => $roundRow): ?>
-                                    <option value="<?= (int)$roundNumber ?>">Round <?= (int)$roundNumber ?> - <?= htmlspecialchars($roundRow['title']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-                    <button type="submit" class="button-secondary">Swap Content</button>
-                </form>
-            </section>
-        <?php endif; ?>
-
         <form method="post" action="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . (int)$targetSeasonId)) ?>" class="admin-season-setup-form">
             <input type="hidden" name="season_id" value="<?= (int)$targetSeasonId ?>">
             <input type="hidden" name="browser_timezone" value="" data-browser-timezone>
@@ -1027,6 +957,19 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
                         <div class="admin-round-card admin-round-card-committed">
                             <div class="admin-round-card-top admin-round-card-top-static">
                                 <div class="admin-category-number">Round <?= (int)$roundNumber ?></div>
+                                <?php if (count($swapEligibleRounds) >= 2 && isset($swapEligibleRounds[$roundNumber])): ?>
+                                    <button
+                                        type="button"
+                                        class="admin-round-swap-button"
+                                        aria-label="Swap Round <?= (int)$roundNumber ?> content"
+                                        title="Swap round content"
+                                        data-swap-round-trigger
+                                        data-round-number="<?= (int)$roundNumber ?>"
+                                        data-round-title="<?= htmlspecialchars($roundRow['title']) ?>"
+                                    >
+                                        <span class="admin-round-swap-icon" aria-hidden="true"></span>
+                                    </button>
+                                <?php endif; ?>
                             </div>
 
                             <div class="admin-round-grid admin-round-grid-fixed admin-round-grid-committed">
@@ -1108,6 +1051,48 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
                 </div>
             <?php endif; ?>
         </form>
+
+        <?php if (count($swapEligibleRounds) >= 2): ?>
+            <dialog class="admin-swap-dialog" data-swap-dialog aria-labelledby="swap-dialog-title">
+                <form method="post" action="<?= htmlspecialchars(mlUrl('season_rounds.php?season_id=' . (int)$targetSeasonId)) ?>" class="admin-swap-dialog-form" data-swap-form>
+                    <input type="hidden" name="season_id" value="<?= (int)$targetSeasonId ?>">
+                    <input type="hidden" name="rounds_action" value="swap_content">
+                    <input type="hidden" name="source_round_number" value="" data-swap-source-input>
+
+                    <div data-swap-step="choose">
+                        <div class="home-shell-kicker">Round placement</div>
+                        <h2 id="swap-dialog-title" data-swap-dialog-title>Swap round content</h2>
+                        <p data-swap-source-summary></p>
+
+                        <label class="admin-label" for="swap-target-round">Swap with</label>
+                        <select class="admin-input" id="swap-target-round" name="target_round_number" required data-swap-target-select>
+                            <option value="">Choose an eligible round</option>
+                            <?php foreach ($swapEligibleRounds as $roundNumber => $roundRow): ?>
+                                <option value="<?= (int)$roundNumber ?>">Round <?= (int)$roundNumber ?> — <?= htmlspecialchars($roundRow['title']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <p class="note">Only untouched upcoming rounds are available. Save any other page edits before swapping.</p>
+
+                        <div class="admin-swap-dialog-actions">
+                            <button type="button" class="button-secondary" data-swap-cancel>Cancel</button>
+                            <button type="button" class="button-primary" data-swap-review disabled>Review swap</button>
+                        </div>
+                    </div>
+
+                    <div data-swap-step="confirm" hidden>
+                        <div class="home-shell-kicker">Confirm swap</div>
+                        <h2>Move these round contents?</h2>
+                        <p><strong data-swap-confirm-source></strong> and <strong data-swap-confirm-target></strong> will trade complete content packages.</p>
+                        <p class="note">Titles, descriptions, saved songs, and comments move together. The deadlines assigned to each round position stay where they are.</p>
+
+                        <div class="admin-swap-dialog-actions">
+                            <button type="button" class="button-secondary" data-swap-back>Back</button>
+                            <button type="submit" class="button-primary">Confirm swap</button>
+                        </div>
+                    </div>
+                </form>
+            </dialog>
+        <?php endif; ?>
     </div>
 </div>
 <script>
@@ -1192,6 +1177,94 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
     var weeklyScheduleButton = document.querySelector('[data-create-weekly-schedule]');
     if (weeklyScheduleButton) {
         weeklyScheduleButton.addEventListener('click', createWeeklySchedule);
+    }
+
+    var swapDialog = document.querySelector('[data-swap-dialog]');
+    if (swapDialog) {
+        var swapTriggers = document.querySelectorAll('[data-swap-round-trigger]');
+        var swapForm = swapDialog.querySelector('[data-swap-form]');
+        var swapSourceInput = swapDialog.querySelector('[data-swap-source-input]');
+        var swapTargetSelect = swapDialog.querySelector('[data-swap-target-select]');
+        var swapChooseStep = swapDialog.querySelector('[data-swap-step="choose"]');
+        var swapConfirmStep = swapDialog.querySelector('[data-swap-step="confirm"]');
+        var swapTitle = swapDialog.querySelector('[data-swap-dialog-title]');
+        var swapSourceSummary = swapDialog.querySelector('[data-swap-source-summary]');
+        var swapConfirmSource = swapDialog.querySelector('[data-swap-confirm-source]');
+        var swapConfirmTarget = swapDialog.querySelector('[data-swap-confirm-target]');
+        var swapReviewButton = swapDialog.querySelector('[data-swap-review]');
+        var swapCancelButton = swapDialog.querySelector('[data-swap-cancel]');
+        var swapBackButton = swapDialog.querySelector('[data-swap-back]');
+        var lastSwapTrigger = null;
+        var activeSwapSourceLabel = '';
+
+        function showSwapStep(stepName) {
+            swapChooseStep.hidden = stepName !== 'choose';
+            swapConfirmStep.hidden = stepName !== 'confirm';
+        }
+
+        function closeSwapDialog() {
+            swapDialog.close();
+        }
+
+        swapTriggers.forEach(function (trigger) {
+            trigger.addEventListener('click', function () {
+                var sourceRoundNumber = trigger.getAttribute('data-round-number') || '';
+                var sourceRoundTitle = trigger.getAttribute('data-round-title') || '';
+                lastSwapTrigger = trigger;
+                activeSwapSourceLabel = 'Round ' + sourceRoundNumber + ' — ' + sourceRoundTitle;
+                swapSourceInput.value = sourceRoundNumber;
+                swapTargetSelect.value = '';
+                swapReviewButton.disabled = true;
+                swapTitle.textContent = 'Swap Round ' + sourceRoundNumber;
+                swapSourceSummary.textContent = 'Choose where to move “' + sourceRoundTitle + '.”';
+
+                Array.prototype.forEach.call(swapTargetSelect.options, function (option) {
+                    var isSourceRound = option.value === sourceRoundNumber;
+                    option.disabled = isSourceRound;
+                    option.hidden = isSourceRound;
+                });
+
+                showSwapStep('choose');
+                swapDialog.showModal();
+            });
+        });
+
+        swapTargetSelect.addEventListener('change', function () {
+            swapReviewButton.disabled = swapTargetSelect.value === '';
+        });
+
+        function reviewSwap() {
+            if (swapTargetSelect.value === '') {
+                return;
+            }
+
+            var targetOption = swapTargetSelect.options[swapTargetSelect.selectedIndex];
+            swapConfirmSource.textContent = activeSwapSourceLabel;
+            swapConfirmTarget.textContent = targetOption.textContent.trim();
+            showSwapStep('confirm');
+        }
+
+        swapReviewButton.addEventListener('click', reviewSwap);
+
+        swapForm.addEventListener('submit', function (event) {
+            if (!swapConfirmStep.hidden) {
+                return;
+            }
+
+            event.preventDefault();
+            reviewSwap();
+        });
+
+        swapBackButton.addEventListener('click', function () {
+            showSwapStep('choose');
+        });
+
+        swapCancelButton.addEventListener('click', closeSwapDialog);
+        swapDialog.addEventListener('close', function () {
+            if (lastSwapTrigger) {
+                lastSwapTrigger.focus();
+            }
+        });
     }
 })();
 </script>

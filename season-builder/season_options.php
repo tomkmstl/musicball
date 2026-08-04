@@ -533,12 +533,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$setupVotingOpen = ((string)mlGetSeasonConfig($pdo, $targetSeasonId, 'voting_open', '0') === '1');
-$setupIsActive = ((int)$setupSeason['IsActive'] === 1);
-
-$totalUsersStmt = $pdo->query('SELECT COUNT(*) FROM ML_Users');
-$totalUsers = (int)$totalUsersStmt->fetchColumn();
-
 $submissionStmt = $pdo->prepare('SELECT COUNT(DISTINCT UserID) FROM ML_Submissions WHERE SeasonID = ?');
 $submissionStmt->execute([$targetSeasonId]);
 $submissionCount = (int)$submissionStmt->fetchColumn();
@@ -559,11 +553,9 @@ foreach ($q2OptionsForSetup[2] as $label) {
     if ($label !== '') { $q2Part2Count++; }
 }
 
-$optionVoteChoiceCount = 0;
 $optionVoteIncompleteRounds = [];
 foreach ($optionVoteRounds as $roundNumber => $optionVote) {
     $choiceCount = count($optionVote['choices']);
-    $optionVoteChoiceCount += $choiceCount;
 
     $selectionCount = max(1, (int)($optionVote['selections_per_player'] ?? 1));
     if ($choiceCount <= $selectionCount) {
@@ -608,10 +600,6 @@ $continueDisabled = (
                 <div class="home-shell-kicker">Season options</div>
                 <h1><?= htmlspecialchars($setupSeason['SeasonName']) ?></h1>
                 <p>Step 2 of 3: configure the voting choices for the season structure you just saved.</p>
-            </div>
-            <div class="admin-section-actions">
-                <a href="<?= htmlspecialchars(mlUrl('season-builder/season_setup.php?season_id=' . (int)$targetSeasonId)) ?>" class="button-secondary admin-back-link">&laquo; <?= $setupLocked ? 'View' : 'Edit' ?> Round Structure</a>
-                <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="button-secondary admin-back-link">Back to Admin</a>
             </div>
         </div>
 
@@ -672,33 +660,6 @@ $continueDisabled = (
                 Player submissions already exist for this season, so voting options are now locked to protect submitted votes.
             </div>
         <?php endif; ?>
-
-        <section class="admin-panel admin-panel-full">
-            <div class="home-shell-kicker">Status</div>
-            <p>
-                <strong><?= htmlspecialchars($setupSeason['SeasonName']) ?></strong>
-                <span class="pill <?= $setupVotingOpen ? 'pill-open' : 'pill-closed' ?>">
-                    <?= $setupVotingOpen ? 'Voting Open' : 'Voting Closed' ?>
-                </span>
-            </p>
-            <p>Submissions: <strong><?= $submissionCount ?> / <?= $totalUsers ?></strong></p>
-            <p>Configured rounds: <strong><?= $configuredRoundCount ?> / <?= $slotCount ?></strong></p>
-            <?php if ($q1Enabled): ?>
-                <p>User Submitted Round ideas: <strong><?= $configuredCategoryCount ?></strong> / <?= (int)$q1MinimumCategories ?> minimum</p>
-            <?php endif; ?>
-            <?php if ($madlibsEnabled): ?>
-                <p>Madlibs options: <strong><?= $q2Part1Count ?></strong> + <strong><?= $q2Part2Count ?></strong></p>
-            <?php endif; ?>
-            <p>
-                Option Votes: <strong><?= count($optionVoteRounds) ?></strong>
-                <?php if (!empty($optionVoteRounds)): ?>
-                    · Choices: <strong><?= $optionVoteChoiceCount ?></strong>
-                <?php endif; ?>
-            </p>
-            <?php if ($setupIsActive): ?>
-                <p>This season is currently marked as the active voting target.</p>
-            <?php endif; ?>
-        </section>
 
         <form method="post" action="<?= htmlspecialchars(mlUrl('season-builder/season_options.php?season_id=' . (int)$targetSeasonId)) ?>" class="admin-season-setup-form">
             <input type="hidden" name="season_id" value="<?= (int)$targetSeasonId ?>">
