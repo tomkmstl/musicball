@@ -1,5 +1,4 @@
 <?php
-$mlDevModeEnabled = isset($pdo) && ($pdo instanceof PDO) && mlIsDevMode($pdo);
 $mlThemeColor = mlGetThemeMode() === 'light' ? '#f4f7fb' : '#000614';
 ?>
 <link rel="icon" type="image/x-icon" href="<?= htmlspecialchars(mlAssetUrl('assets/pwa/icons/favicon.ico')) ?>">
@@ -28,7 +27,6 @@ $mlThemeColor = mlGetThemeMode() === 'light' ? '#f4f7fb' : '#000614';
 <link rel="apple-touch-startup-image" href="<?= htmlspecialchars(mlAssetUrl('assets/pwa/splash/apple-splash-1668x2388.png')) ?>" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
 <link rel="apple-touch-startup-image" href="<?= htmlspecialchars(mlAssetUrl('assets/pwa/splash/apple-splash-2048x2732.png')) ?>" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
 <script>
-window.ML_DEV_MODE = <?= $mlDevModeEnabled ? 'true' : 'false' ?>;
-window.ML_SW_URL = <?= json_encode(mlAssetUrl('service-worker.js') . ($mlDevModeEnabled ? '&dev_mode=1' : '')) ?>;
+window.ML_SW_URL = <?= json_encode(mlAssetUrl('service-worker.js')) ?>;
 </script>
 <script src="<?= htmlspecialchars(mlAssetUrl('assets/js/pwa.js')) ?>" defer></script>

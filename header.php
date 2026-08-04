@@ -18,7 +18,7 @@ if ($headerScriptName === 'season.php') {
 $headerUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : (isset($_SESSION['ml_user_id']) ? (int)$_SESSION['ml_user_id'] : 0);
 $isAdminUser = mlIsAdminUserId($pdo, $headerUserId);
 $mlIsQaMode = function_exists('mlIsQaMode') && mlIsQaMode();
-$showAdminToolsBanner = !$mlIsQaMode && $headerScriptName === 'admin.php';
+$showAdminBanner = !$mlIsQaMode && $headerScriptName === 'admin.php';
 $nextSeasonImageSrc = 'assets/images/navigation/next_season.png';
 $nextSeasonImagePath = __DIR__ . '/assets/images/navigation/next_season.png';
 $hasNextSeasonImage = is_file($nextSeasonImagePath);
@@ -61,9 +61,9 @@ if ($headerNextSeason) {
         <a href="<?= htmlspecialchars(mlUrl('qa_tools.php?testing=qa')) ?>" style="color:#fff;text-decoration:underline;">QA MODE</a> ACTIVE &nbsp;|&nbsp; <a href="<?= htmlspecialchars(mlUrl('admin.php?testing=live')) ?>" style="color:#fff;text-decoration:underline;">Return to live</a>
     </div>
 <?php endif; ?>
-<?php if ($showAdminToolsBanner): ?>
+<?php if ($showAdminBanner): ?>
     <div class="ml-admin-tools-banner" style="background:#12324f;color:#fff;padding:10px 14px;text-align:center;font-weight:700;letter-spacing:.02em;">
-        ADMIN TOOLS &nbsp;|&nbsp; <a href="<?= htmlspecialchars(mlUrl('season.php?testing=live')) ?>" style="color:#fff;text-decoration:underline;">Return Home</a>
+        ADMIN &nbsp;|&nbsp; <a href="<?= htmlspecialchars(mlUrl('season.php?testing=live')) ?>" style="color:#fff;text-decoration:underline;">Return Home</a>
     </div>
 <?php endif; ?>
 <header class="mb-header">
@@ -189,11 +189,12 @@ if ($headerNextSeason) {
                 <nav class="mb-account-menu-panel" aria-label="Account menu">
                     <a href="<?= htmlspecialchars(mlUrl('playlists.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'playlists' ? ' is-active' : '' ?>">Playlists</a>
                     <a href="<?= htmlspecialchars(mlUrl('league-database.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'league-database' ? ' is-active' : '' ?>">League Database</a>
-                    <?php if ($isAdminUser): ?>
-                        <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'admin' && $headerScriptName !== 'qa_tools.php' ? ' is-active' : '' ?>">Admin Tools</a>
-                        <a href="<?= htmlspecialchars(mlUrl('qa_tools.php?testing=qa')) ?>" class="mb-account-menu-link<?= $headerScriptName === 'qa_tools.php' ? ' is-active' : '' ?>">Rewind Musicball</a>
-                    <?php endif; ?>
                     <a href="<?= htmlspecialchars(mlUrl('settings.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'settings' ? ' is-active' : '' ?>">Settings</a>
+                    <?php if ($isAdminUser): ?>
+                        <div class="mb-account-menu-divider" aria-hidden="true"></div>
+                        <a href="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'admin' && $headerScriptName !== 'qa_tools.php' ? ' is-active' : '' ?>">Admin</a>
+                        <a href="<?= htmlspecialchars(mlUrl('qa_tools.php?testing=qa')) ?>" class="mb-account-menu-link<?= $headerScriptName === 'qa_tools.php' ? ' is-active' : '' ?>">QA Tools</a>
+                    <?php endif; ?>
                     <div class="mb-account-menu-divider" aria-hidden="true"></div>
                     <a href="<?= htmlspecialchars(mlUrl('logout.php')) ?>" class="mb-account-menu-link">Logout</a>
                 </nav>

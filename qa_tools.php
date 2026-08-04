@@ -4,12 +4,20 @@ require_once 'session_boot.php';
 $_GET['testing'] = 'qa';
 require_once 'config.php';
 require_once __DIR__ . '/gameplay/bootstrap.php';
+require_once __DIR__ . '/integrations/push/push.php';
 
 $currentUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : 0;
 if (!mlIsAdminUserId($pdo, $currentUserId)) {
     header('Location: ' . mlUrl('index.php'));
     exit;
 }
+
+$pushStorageReady = mlPushStorageReady($pdo);
+$pushReady = mlPushServerReady($pdo);
+if (empty($_SESSION['ml_push_csrf']) || !is_string($_SESSION['ml_push_csrf'])) {
+    $_SESSION['ml_push_csrf'] = bin2hex(random_bytes(24));
+}
+$pushCsrfToken = (string)$_SESSION['ml_push_csrf'];
 
 $livePdo = mlGetLivePdo();
 
@@ -1276,11 +1284,16 @@ foreach ($qaAvailableRounds as $availableRound) {
     <div class="card admin-card qa-rewind-card">
         <div class="admin-page-topline admin-page-topline-compact">
             <div class="admin-page-intro">
-                <span class="qa-rewind-kicker">Past-state testing</span>
-                <h1>Rewind Musicball</h1>
-                <p>Load a past round exactly where you need it.</p>
+                <span class="qa-rewind-kicker">Quality assurance</span>
+                <h1>QA Tools</h1>
+                <p>Test past gameplay states and device notifications.</p>
             </div>
         </div>
+
+        <section class="admin-section-divider">
+        <div class="qa-rewind-kicker">Past-state testing</div>
+        <h2>Musicball Rewind</h2>
+        <p>Load a past round exactly where you need it.</p>
 
         <div class="qa-rewind-toolbar">
             <span class="pill pill-open">QA mode</span>
@@ -1376,7 +1389,32 @@ foreach ($qaAvailableRounds as $availableRound) {
                 </div>
             </form>
         <?php endif; ?>
+        </section>
 
+        <section class="admin-section-divider">
+            <div class="qa-rewind-kicker">Push notifications</div>
+            <h2>Push Notification Test</h2>
+            <p>Send any supported notification to this admin device. Push Notifications must be on for this device in Settings.</p>
+
+            <div class="admin-push-test-control" data-push-admin-test>
+                <div class="admin-push-test-status" data-push-admin-status>Checking this device...</div>
+                <div class="admin-inline-form admin-inline-form-wrap">
+                    <div class="admin-inline-field">
+                        <label class="admin-label" for="admin_push_test_notification">Notification type</label>
+                        <select id="admin_push_test_notification" class="admin-input admin-select-compact" data-push-admin-type>
+                            <?php foreach (mlPushTestNotificationOptions() as $notificationType => $notificationLabel): ?>
+                                <option value="<?= htmlspecialchars($notificationType) ?>"><?= htmlspecialchars($notificationLabel) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <button type="button" class="button-secondary" data-push-admin-send disabled>Send Test</button>
+                </div>
+            </div>
+
+            <?php if (!$pushStorageReady): ?>
+                <p class="admin-form-top-sm">Push notification storage is not ready yet.</p>
+            <?php endif; ?>
+        </section>
     </div>
 </div>
 <script>
@@ -1400,5 +1438,13 @@ foreach ($qaAvailableRounds as $availableRound) {
     syncProgressVisibility();
 })();
 </script>
+<script>
+window.ML_PUSH_ADMIN_TEST = <?= json_encode([
+    'ready' => $pushReady,
+    'endpoint' => mlUrl('integrations/push/subscription.php'),
+    'csrfToken' => $pushCsrfToken,
+], JSON_UNESCAPED_SLASHES) ?>;
+</script>
+<script src="<?= htmlspecialchars(mlAssetUrl('assets/js/push-admin-test.js')) ?>" defer></script>
 </body>
 </html>

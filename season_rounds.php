@@ -1073,7 +1073,18 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
 
             <?php if ($scheduleEditable): ?>
                 <div class="admin-setup-actions">
-                    <?php if (!$builderLocked): ?>
+                    <?php if ($canStartSeasonHere): ?>
+                        <a href="<?= htmlspecialchars(mlUrl('view_rounds.php?season_id=' . (int)$targetSeasonId)) ?>" class="button-secondary">View Rounds</a>
+                        <button type="submit" name="rounds_action" value="save_rounds" class="button-secondary">Save Season Changes</button>
+                        <button
+                            type="submit"
+                            name="rounds_action"
+                            value="start_season"
+                            class="button-primary"
+                            <?= !$canStartSeasonNow ? 'disabled' : '' ?>
+                            onclick="return confirm('Start this season with these rounds and deadlines?');"
+                        >Start <?= htmlspecialchars($seasonRow['SeasonName']) ?></button>
+                    <?php elseif (!$builderLocked): ?>
                         <a href="<?= htmlspecialchars(mlUrl('season-builder/season_options.php?season_id=' . (int)$targetSeasonId)) ?>" class="button-secondary">&laquo; Edit Voting Options</a>
                     <?php elseif ($isNextSeason): ?>
                         <a href="<?= htmlspecialchars(mlUrl('season-builder/season_options.php?season_id=' . (int)$targetSeasonId)) ?>" class="button-secondary">View Voting Options</a>
@@ -1091,16 +1102,6 @@ $pageKicker = $seasonIsActive ? 'Manage season rounds' : ($canStartSeasonHere ? 
                                 onclick="return confirm('Open Season Builder voting? Round structure and voting options will become permanently read-only.');"
                             >Start Season Builder Voting</button>
                         <?php endif; ?>
-                    <?php elseif ($canStartSeasonHere): ?>
-                        <button type="submit" name="rounds_action" value="save_rounds" class="button-secondary">Save Round Changes</button>
-                        <button
-                            type="submit"
-                            name="rounds_action"
-                            value="start_season"
-                            class="button-primary"
-                            <?= !$canStartSeasonNow ? 'disabled' : '' ?>
-                            onclick="return confirm('Start this season with these rounds and deadlines?');"
-                        >Start <?= htmlspecialchars($seasonRow['SeasonName']) ?></button>
                     <?php elseif ($seasonIsActive): ?>
                         <button type="submit" name="rounds_action" value="save_rounds" class="button-primary" <?= $activeSeasonChangesLocked ? 'disabled' : '' ?>>Save Season Changes</button>
                     <?php endif; ?>

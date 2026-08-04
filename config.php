@@ -228,31 +228,6 @@ function mlGetQaCurrentSeasonRoundId(PDO $pdo): int
     return $value > 0 ? $value : 0;
 }
 
-function mlIsDevMode(PDO $pdo): bool
-{
-    static $isDevMode = null;
-
-    if ($isDevMode !== null) {
-        return $isDevMode;
-    }
-
-    $value = mlGetSettingValue($pdo, 'dev_mode', '0');
-    $isDevMode = ((string)$value === '1');
-
-    return $isDevMode;
-}
-
-function mlSendDevNoCacheHeaders(PDO $pdo): void
-{
-    if (headers_sent() || !mlIsDevMode($pdo)) {
-        return;
-    }
-
-    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-    header('Pragma: no-cache');
-    header('Expires: 0');
-}
-
 function mlNormalizeFsPath(string $path): string
 {
     return rtrim(str_replace('\\', '/', $path), '/');
@@ -329,16 +304,8 @@ function mlUrl(string $path = ''): string
 
 function mlAssetUrl(string $path): string
 {
-    global $pdo;
-
-    $version = '';
-
-    if (isset($pdo) && $pdo instanceof PDO && mlIsDevMode($pdo)) {
-        $version = 'dev=' . time();
-    } else {
-        $fullPath = __DIR__ . '/' . ltrim($path, '/');
-        $version = 'v=' . (is_file($fullPath) ? (string)filemtime($fullPath) : '1');
-    }
+    $fullPath = __DIR__ . '/' . ltrim($path, '/');
+    $version = 'v=' . (is_file($fullPath) ? (string)filemtime($fullPath) : '1');
 
     $assetUrl = mlUrl($path);
 

@@ -108,8 +108,13 @@ if ($seasonIsActive || $hasCommittedRounds) {
 <?php $currentPage = 'admin'; include 'header.php'; ?>
 <div class="wrapper">
     <div class="card final-wrapper">
-        <div class="home-shell-kicker">View rounds</div>
-        <h1 class="final-title"><?= htmlspecialchars($seasonName, ENT_QUOTES, 'UTF-8') ?></h1>
+        <div class="admin-page-topline">
+            <div>
+                <div class="home-shell-kicker">View rounds</div>
+                <h1 class="final-title"><?= htmlspecialchars($seasonName, ENT_QUOTES, 'UTF-8') ?></h1>
+            </div>
+            <a href="<?= htmlspecialchars(mlUrl('admin.php?view=season-setup')) ?>" class="button-secondary admin-back-link">&laquo; Back to Season Setup</a>
+        </div>
         <p><span class="pill <?= htmlspecialchars($statusClass) ?>"><?= htmlspecialchars($statusLabel) ?></span></p>
         <p><?= htmlspecialchars($summary, ENT_QUOTES, 'UTF-8') ?></p>
 

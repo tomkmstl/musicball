@@ -5,20 +5,12 @@ require_once __DIR__ . '/season-builder/sb_season_builder.php';
 require_once __DIR__ . '/gameplay/bootstrap.php';
 require_once __DIR__ . '/integrations/spotify/client.php';
 require_once __DIR__ . '/integrations/discord/discord.php';
-require_once __DIR__ . '/integrations/push/push.php';
 
 $currentUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : 0;
 if (!mlIsAdminUserId($pdo, $currentUserId)) {
     header('Location: ' . mlUrl('index.php'));
     exit;
 }
-
-$pushStorageReady = mlPushStorageReady($pdo);
-$pushReady = mlPushServerReady($pdo);
-if (empty($_SESSION['ml_push_csrf']) || !is_string($_SESSION['ml_push_csrf'])) {
-    $_SESSION['ml_push_csrf'] = bin2hex(random_bytes(24));
-}
-$pushCsrfToken = (string)$_SESSION['ml_push_csrf'];
 
 if (empty($_SESSION['ml_admin_csrf']) || !is_string($_SESSION['ml_admin_csrf'])) {
     $_SESSION['ml_admin_csrf'] = bin2hex(random_bytes(24));
@@ -157,16 +149,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        if ($action === 'set_dev_mode') {
-            $devModeEnabled = isset($_POST['dev_mode']) && $_POST['dev_mode'] === '1';
-            mlSetSettingValue($pdo, 'dev_mode', $devModeEnabled ? '1' : '0');
-            $_SESSION['ml_admin_message'] = $devModeEnabled
-                ? 'Dev mode is on. App caching is now minimized for development.'
-                : 'Dev mode is off. Standard app caching is active again.';
-            header('Location: ' . mlUrl('admin.php'));
-            exit;
-        }
-
         if ($action === 'save_vote_settings') {
             $votesPerRound = isset($_POST['votes_per_round']) ? (int)$_POST['votes_per_round'] : 0;
             $noSongMax = isset($_POST['vote_max_per_song_unlimited']) && $_POST['vote_max_per_song_unlimited'] === '1';
@@ -270,7 +252,6 @@ $votesPerRoundSetting = max(1, mlGetIntSetting($pdo, 'votes_per_round', 12));
 $voteMaxPerSongSettingRaw = mlGetIntSetting($pdo, 'vote_max_per_song', 0);
 $voteMaxPerSongUnlimited = ($voteMaxPerSongSettingRaw <= 0);
 $voteMaxPerSongSetting = $voteMaxPerSongUnlimited ? $votesPerRoundSetting : min($voteMaxPerSongSettingRaw, $votesPerRoundSetting);
-$devModeEnabled = mlIsDevMode($pdo);
 $discordStatus = mlDiscordGetConfigStatus($pdo);
 $discordHealthClass = '';
 $discordHealthMessage = '';
@@ -435,71 +416,23 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                     <div class="admin-roku-mobile-header">
                         <div>
                             <div class="home-shell-kicker">Admin menu</div>
-                            <div class="admin-roku-mobile-title" id="admin-mobile-current-group">Gameplay</div>
+                            <div class="admin-roku-mobile-title" id="admin-mobile-current-view">Gameplay</div>
                         </div>
-                        <div class="admin-roku-mobile-current" id="admin-mobile-current-view">Gameplay settings</div>
                     </div>
 
-                    <div class="admin-roku-mobile-groups" role="tablist" aria-label="Admin categories">
-                        <button type="button" class="admin-roku-mobile-group is-active" data-admin-mobile-group="gameplay">Gameplay</button>
-                        <button type="button" class="admin-roku-mobile-group" data-admin-mobile-group="season-setup">Season setup</button>
-                        <button type="button" class="admin-roku-mobile-group" data-admin-mobile-group="spotify">Spotify</button>
-                        <button type="button" class="admin-roku-mobile-group" data-admin-mobile-group="discord">Discord</button>
-                        <button type="button" class="admin-roku-mobile-group" data-admin-mobile-group="pwa">PWA</button>
-                    </div>
-
-                    <div class="admin-roku-mobile-panels">
-                        <div class="admin-roku-mobile-panel is-active" data-admin-mobile-panel="gameplay">
-                            <button type="button" class="admin-roku-mobile-link is-active" data-admin-nav="gameplay">Gameplay settings</button>
-                        </div>
-
-                        <div class="admin-roku-mobile-panel" data-admin-mobile-panel="season-setup">
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="season-setup">Season setup</button>
-                        </div>
-
-                        <div class="admin-roku-mobile-panel" data-admin-mobile-panel="spotify">
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="playlist-account">Playlist Account</button>
-                        </div>
-
-                        <div class="admin-roku-mobile-panel" data-admin-mobile-panel="discord">
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="discord-webhook-notifications">Discord Notifications</button>
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="discord-notification-status">Discord notification status</button>
-                        </div>
-
-                        <div class="admin-roku-mobile-panel" data-admin-mobile-panel="pwa">
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="push-notification-tests">Push Notification Tests</button>
-                            <button type="button" class="admin-roku-mobile-link" data-admin-nav="pwa-dev-mode">PWA Dev Mode</button>
-                        </div>
+                    <div class="admin-roku-mobile-groups" role="tablist" aria-label="Admin sections">
+                        <button type="button" class="admin-roku-mobile-group is-active" data-admin-nav="gameplay">Gameplay</button>
+                        <button type="button" class="admin-roku-mobile-group" data-admin-nav="season-setup">Season Setup</button>
+                        <button type="button" class="admin-roku-mobile-group" data-admin-nav="integrations">Integrations</button>
+                        <button type="button" class="admin-roku-mobile-group" data-admin-nav="notification-status">Notification Status</button>
                     </div>
                 </div>
 
                 <nav class="admin-roku-nav">
-                    <div class="admin-roku-group">
-                        <div class="admin-roku-group-title">Gameplay</div>
-                        <button type="button" class="admin-roku-link is-active" data-admin-nav="gameplay">Gameplay settings</button>
-                    </div>
-
-                    <div class="admin-roku-group">
-                        <div class="admin-roku-group-title">Season setup</div>
-                        <button type="button" class="admin-roku-link" data-admin-nav="season-setup">Season setup</button>
-                    </div>
-
-                    <div class="admin-roku-group">
-                        <div class="admin-roku-group-title">Spotify</div>
-                        <button type="button" class="admin-roku-link" data-admin-nav="playlist-account">Playlist Account</button>
-                    </div>
-
-                    <div class="admin-roku-group">
-                        <div class="admin-roku-group-title">Discord</div>
-                        <button type="button" class="admin-roku-link" data-admin-nav="discord-webhook-notifications">Discord Notifications</button>
-                        <button type="button" class="admin-roku-link" data-admin-nav="discord-notification-status">Discord notification status</button>
-                    </div>
-
-                    <div class="admin-roku-group">
-                        <div class="admin-roku-group-title">PWA</div>
-                        <button type="button" class="admin-roku-link" data-admin-nav="push-notification-tests">Push Notification Tests</button>
-                        <button type="button" class="admin-roku-link" data-admin-nav="pwa-dev-mode">PWA Dev Mode</button>
-                    </div>
+                    <button type="button" class="admin-roku-link is-active" data-admin-nav="gameplay">Gameplay</button>
+                    <button type="button" class="admin-roku-link" data-admin-nav="season-setup">Season Setup</button>
+                    <button type="button" class="admin-roku-link" data-admin-nav="integrations">Integrations</button>
+                    <button type="button" class="admin-roku-link" data-admin-nav="notification-status">Notification Status</button>
                 </nav>
             </aside>
 
@@ -704,7 +637,8 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                     <?php endif; ?>
                 </section>
 
-                <section class="admin-panel admin-admin-view" data-admin-view="playlist-account">
+                <div class="admin-admin-view admin-admin-view-stack" data-admin-view="integrations">
+                <section class="admin-panel">
                     <div class="home-shell-kicker">Spotify</div>
                     <h2>Playlist Account</h2>
                     <p>
@@ -750,7 +684,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                     <?php endif; ?>
                 </section>
 
-                <section class="admin-panel admin-admin-view" data-admin-view="discord-webhook-notifications">
+                <section class="admin-panel">
                     <div class="home-shell-kicker">Discord</div>
                     <h2>Discord Notifications</h2>
 
@@ -942,8 +876,9 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                         </form>
                     </div>
                 </section>
+                </div>
 
-                <section class="admin-panel admin-admin-view" data-admin-view="discord-notification-status">
+                <section class="admin-panel admin-admin-view" data-admin-view="notification-status">
                     <div class="home-shell-kicker">Discord</div>
                     <h2>Discord notification status</h2>
 
@@ -997,55 +932,6 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                     <?php endif; ?>
                 </section>
 
-                <section class="admin-panel admin-admin-view" data-admin-view="push-notification-tests">
-                    <div class="home-shell-kicker">PWA</div>
-                    <h2>Push Notification Tests</h2>
-                    <p>
-                        Send any supported notification to this admin device. Push Notifications must be on for this device in Settings.
-                    </p>
-
-                    <div class="admin-push-test-control" data-push-admin-test>
-                        <div class="admin-push-test-status" data-push-admin-status>Checking this device...</div>
-                        <div class="admin-inline-form admin-inline-form-wrap">
-                            <div class="admin-inline-field">
-                                <label class="admin-label" for="admin_push_test_notification">Notification type</label>
-                                <select id="admin_push_test_notification" class="admin-input admin-select-compact" data-push-admin-type>
-                                    <?php foreach (mlPushTestNotificationOptions() as $notificationType => $notificationLabel): ?>
-                                        <option value="<?= htmlspecialchars($notificationType) ?>"><?= htmlspecialchars($notificationLabel) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <button type="button" class="button-secondary" data-push-admin-send disabled>Send Test</button>
-                        </div>
-                    </div>
-
-                    <?php if (!$pushStorageReady): ?>
-                        <p class="admin-form-top-sm">Push notification storage is not ready yet.</p>
-                    <?php endif; ?>
-                </section>
-
-                <section class="admin-panel admin-admin-view" data-admin-view="pwa-dev-mode">
-                    <div class="home-shell-kicker">PWA</div>
-                    <h2>PWA Dev Mode</h2>
-                    <p>
-                        Disables app caching and service worker behavior for testing changes.
-                    </p>
-
-                    <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-form-stack">
-                        <input type="hidden" name="admin_action" value="set_dev_mode">
-                        <div class="theme-toggle-row admin-theme-toggle-row">
-                            <div class="theme-toggle-copy">
-                                <span class="theme-toggle-label">PWA Force Clear <?= $devModeEnabled ? 'On' : 'Off' ?></span>
-                                <span class="theme-toggle-note">When on, the app avoids sticky cached files during development.</span>
-                            </div>
-                            <label class="theme-switch" for="dev_mode_toggle" aria-label="Toggle development mode">
-                                <input type="checkbox" id="dev_mode_toggle" name="dev_mode_toggle" value="1" <?= $devModeEnabled ? 'checked' : '' ?> onchange="this.form.dev_mode.value = this.checked ? '1' : '0'; this.form.submit();">
-                                <input type="hidden" name="dev_mode" value="<?= $devModeEnabled ? '1' : '0' ?>">
-                                <span class="theme-switch-track"></span>
-                            </label>
-                        </div>
-                    </form>
-                </section>
             </div>
         </div>
     </div>
@@ -1166,24 +1052,21 @@ document.addEventListener('DOMContentLoaded', function () {
     var storageKey = 'musicballAdminView';
     var navButtons = document.querySelectorAll('[data-admin-nav]');
     var viewPanels = document.querySelectorAll('[data-admin-view]');
-    var mobileGroupButtons = document.querySelectorAll('[data-admin-mobile-group]');
-    var mobilePanels = document.querySelectorAll('[data-admin-mobile-panel]');
-    var mobileCurrentGroup = document.getElementById('admin-mobile-current-group');
     var mobileCurrentView = document.getElementById('admin-mobile-current-view');
-    var viewToGroupMap = {
-        'gameplay': { group: 'gameplay', label: 'Gameplay settings', groupLabel: 'Gameplay' },
-        'season-setup': { group: 'season-setup', label: 'Season setup', groupLabel: 'Season setup' },
-        'playlist-account': { group: 'spotify', label: 'Playlist Account', groupLabel: 'Spotify' },
-        'discord-webhook-notifications': { group: 'discord', label: 'Discord Notifications', groupLabel: 'Discord' },
-        'discord-notification-status': { group: 'discord', label: 'Discord notification status', groupLabel: 'Discord' },
-        'push-notification-tests': { group: 'pwa', label: 'Push Notification Tests', groupLabel: 'PWA' },
-        'pwa-dev-mode': { group: 'pwa', label: 'PWA Dev Mode', groupLabel: 'PWA' }
+    var viewLabels = {
+        'gameplay': 'Gameplay',
+        'season-setup': 'Season Setup',
+        'integrations': 'Integrations',
+        'notification-status': 'Notification Status'
     };
     var legacyViewMap = {
         'round-voting-settings': 'gameplay',
         'playlist-timing': 'gameplay',
         'create-next-season': 'season-setup',
-        'manage-existing-seasons': 'season-setup'
+        'manage-existing-seasons': 'season-setup',
+        'playlist-account': 'integrations',
+        'discord-webhook-notifications': 'integrations',
+        'discord-notification-status': 'notification-status'
     };
 
     function activateAdminView(viewName) {
@@ -1212,27 +1095,8 @@ document.addEventListener('DOMContentLoaded', function () {
             button.classList.toggle('is-active', button.getAttribute('data-admin-nav') === viewName);
         });
 
-        var viewConfig = viewToGroupMap[viewName] || viewToGroupMap[defaultView];
-        if (viewConfig) {
-            mobileGroupButtons.forEach(function (button) {
-                button.classList.toggle('is-active', button.getAttribute('data-admin-mobile-group') === viewConfig.group);
-            });
-
-            mobilePanels.forEach(function (panel) {
-                panel.classList.toggle('is-active', panel.getAttribute('data-admin-mobile-panel') === viewConfig.group);
-            });
-
-            document.querySelectorAll('.admin-roku-mobile-link').forEach(function (button) {
-                button.classList.toggle('is-active', button.getAttribute('data-admin-nav') === viewName);
-            });
-
-            if (mobileCurrentGroup) {
-                mobileCurrentGroup.textContent = viewConfig.groupLabel;
-            }
-
-            if (mobileCurrentView) {
-                mobileCurrentView.textContent = viewConfig.label;
-            }
+        if (mobileCurrentView) {
+            mobileCurrentView.textContent = viewLabels[viewName] || viewLabels[defaultView];
         }
 
         try {
@@ -1247,37 +1111,16 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    mobileGroupButtons.forEach(function (button) {
-        button.addEventListener('click', function () {
-            var groupName = button.getAttribute('data-admin-mobile-group');
-            var activePanel = document.querySelector('[data-admin-mobile-panel="' + groupName + '"]');
-            var firstLink = activePanel ? activePanel.querySelector('[data-admin-nav]') : null;
-
-            mobileGroupButtons.forEach(function (groupButton) {
-                groupButton.classList.toggle('is-active', groupButton === button);
-            });
-
-            mobilePanels.forEach(function (panel) {
-                panel.classList.toggle('is-active', panel.getAttribute('data-admin-mobile-panel') === groupName);
-            });
-
-            if (firstLink) {
-                activateAdminView(firstLink.getAttribute('data-admin-nav'));
-            }
-        });
-    });
-
-    document.querySelectorAll('.admin-roku-mobile-link').forEach(function (button) {
-        button.addEventListener('click', function () {
-            activateAdminView(button.getAttribute('data-admin-nav'));
-        });
-    });
-
     var initialView = defaultView;
     try {
-        var storedView = window.localStorage.getItem(storageKey);
-        if (storedView) {
-            initialView = legacyViewMap[storedView] || storedView;
+        var requestedView = new URLSearchParams(window.location.search).get('view');
+        if (requestedView) {
+            initialView = legacyViewMap[requestedView] || requestedView;
+        } else {
+            var storedView = window.localStorage.getItem(storageKey);
+            if (storedView) {
+                initialView = legacyViewMap[storedView] || storedView;
+            }
         }
     } catch (error) {
     }
@@ -1285,13 +1128,5 @@ document.addEventListener('DOMContentLoaded', function () {
     activateAdminView(initialView);
 });
 </script>
-<script>
-window.ML_PUSH_ADMIN_TEST = <?= json_encode([
-    'ready' => $pushReady,
-    'endpoint' => mlUrl('integrations/push/subscription.php'),
-    'csrfToken' => $pushCsrfToken,
-], JSON_UNESCAPED_SLASHES) ?>;
-</script>
-<script src="<?= htmlspecialchars(mlAssetUrl('assets/js/push-admin-test.js')) ?>" defer></script>
 </body>
 </html>
