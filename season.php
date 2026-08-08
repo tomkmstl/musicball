@@ -5,6 +5,10 @@ require_once __DIR__ . '/integrations/discord/discord.php';
 $currentUser = mlRequireAuthenticatedUser($pdo);
 $currentPage = 'season';
 $isAdminUser = mlUserIsAdmin($currentUser);
+if ($isAdminUser && (empty($_SESSION['ml_season_csrf']) || !is_string($_SESSION['ml_season_csrf']))) {
+    $_SESSION['ml_season_csrf'] = bin2hex(random_bytes(24));
+}
+$seasonCsrfToken = $isAdminUser ? (string)$_SESSION['ml_season_csrf'] : '';
 
 $seasonMessage = isset($_SESSION['ml_season_message']) ? (string)$_SESSION['ml_season_message'] : '';
 unset($_SESSION['ml_season_message']);
@@ -23,6 +27,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdminUser) {
 
     try {
         if ($action === 'generate_current_playlist') {
+            $submittedCsrfToken = isset($_POST['season_csrf']) ? (string)$_POST['season_csrf'] : '';
+            if ($submittedCsrfToken === '' || !hash_equals($seasonCsrfToken, $submittedCsrfToken)) {
+                throw new RuntimeException('The playlist request expired. Refresh the Season page and try again.');
+            }
+
             $adminRounds = mlComputeRoundPresentation($pdo, mlLoadSeasonRoundsForGameplay($pdo, $selectedSeasonId), (int)$currentUser['UserID']);
             $playlistResult = mlHandleManualPlaylistTrigger($pdo, $adminRounds);
 

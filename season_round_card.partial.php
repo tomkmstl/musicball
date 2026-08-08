@@ -117,13 +117,20 @@ $chosenSongSpotifyUrl = $hasChosenSong && preg_match('/^[A-Za-z0-9]{22}$/', $cho
         <?php endif; ?>
     </div>
 
-    <?php if (!empty($isAdminUser) && ($round['round_state'] ?? '') === 'submission' && !empty($round['can_manual_generate_playlist'])): ?>
+    <?php if (!empty($isAdminUser) && ($round['round_state'] ?? '') === 'submission' && !empty($round['songs_due_passed']) && (int)($round['song_submission_count'] ?? 0) === 0): ?>
+        <div class="game-round-admin-build">
+            <div class="note note-bottom-sm">
+                <strong>Admin: no songs have been submitted.</strong> A playlist cannot be generated yet, so this round will remain in the song submission stage.
+            </div>
+        </div>
+    <?php elseif (!empty($isAdminUser) && ($round['round_state'] ?? '') === 'submission' && !empty($round['can_manual_generate_playlist'])): ?>
         <div class="game-round-admin-build">
             <div class="note note-bottom-sm">
                 Admin: this playlist can be generated now. This works either because everyone has already submitted, or because the Songs Due deadline has passed.
             </div>
             <form method="post" action="season.php?season_id=<?= (int)($round['SeasonID'] ?? 0) ?>">
                 <input type="hidden" name="season_action" value="generate_current_playlist">
+                <input type="hidden" name="season_csrf" value="<?= htmlspecialchars($seasonCsrfToken) ?>">
                 <button type="submit" class="button-secondary">Generate Current Playlist</button>
             </form>
         </div>

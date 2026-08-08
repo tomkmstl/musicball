@@ -184,25 +184,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        if ($action === 'generate_current_playlist') {
-            $submittedCsrfToken = isset($_POST['admin_csrf']) ? (string)$_POST['admin_csrf'] : '';
-            if ($submittedCsrfToken === '' || !hash_equals($adminCsrfToken, $submittedCsrfToken)) {
-                throw new RuntimeException('The playlist request expired. Refresh Admin and try again.');
-            }
-
-            $adminRounds = mlComputeRoundPresentation($pdo, mlLoadSeasonRoundsForGameplay($pdo, $seasonId), $currentUserId);
-            $playlistResult = mlHandleManualPlaylistTrigger($pdo, $adminRounds);
-
-            if (!empty($playlistResult['already_generated'])) {
-                $_SESSION['ml_admin_message'] = 'Playlist already exists for ' . $playlistResult['title'] . '.';
-            } else {
-                $_SESSION['ml_admin_message'] = 'Playlist generated for ' . $playlistResult['title'] . '.';
-            }
-
-            header('Location: ' . mlUrl('admin.php'));
-            exit;
-        }
-
         if ($action === 'create_season') {
             $newSeasonName = isset($_POST['new_season_name']) ? trim((string)$_POST['new_season_name']) : '';
 
@@ -317,14 +298,6 @@ $spotifyConfigured = mlSpotifyAppConfigured();
 $spotifyConnection = mlSpotifyConnectionSummary($pdo);
 $playlistBuildMode = mlGetPlaylistBuildMode($pdo);
 $playlistBuildModeLabel = mlGetPlaylistBuildModeLabel($pdo);
-$adminRounds = mlComputeRoundPresentation($pdo, mlLoadSeasonRoundsForGameplay($pdo, $seasonId), $currentUserId);
-$manualPlaylistRound = null;
-foreach ($adminRounds as $adminRound) {
-    if (($adminRound['round_state'] ?? '') === 'submission' && !empty($adminRound['can_manual_generate_playlist'])) {
-        $manualPlaylistRound = $adminRound;
-        break;
-    }
-}
 
 $seasonListStmt = $pdo->query("
     SELECT s.SeasonID,
@@ -477,7 +450,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                     <div class="admin-section-divider">
                         <h3>Playlist timing</h3>
                         <p>
-                            Choose when a round becomes ready for a one-time playlist build. The playlist itself is only created when you trigger it, and the saved URL stays fixed afterward.
+                            Choose whether Musicball builds the playlist from the songs received at Songs Due or waits for every player. Eligible manual builds are controlled from the active round on the Season page, and the saved playlist stays fixed afterward.
                         </p>
 
                         <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-form-stack">
@@ -494,26 +467,6 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
 
                             <button type="submit" class="button-primary">Save Playlist Timing</button>
                         </form>
-
-                        <?php if ($manualPlaylistRound): ?>
-                            <div class="admin-section-divider">
-                                <div class="admin-stat-line">
-                                    <strong>Manual build ready:</strong> <?= htmlspecialchars($manualPlaylistRound['Title']) ?>
-                                </div>
-                                <p>
-                                    You can generate the playlist now either because everyone has already submitted, or because the Songs Due deadline has passed. If some players have not submitted yet, the playlist will still build using the songs already received. After build, the stored playlist URL stays fixed across the app.
-                                </p>
-                                <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-form-top-sm">
-                                    <input type="hidden" name="admin_action" value="generate_current_playlist">
-                                    <input type="hidden" name="admin_csrf" value="<?= htmlspecialchars($adminCsrfToken) ?>">
-                                    <button
-                                        type="submit"
-                                        class="button-secondary"
-                                        onclick="return confirm('Generate this Spotify playlist now? Its saved URL will become the fixed playlist for this round.');"
-                                    >Generate Current Playlist</button>
-                                </form>
-                            </div>
-                        <?php endif; ?>
                     </div>
                 </section>
 

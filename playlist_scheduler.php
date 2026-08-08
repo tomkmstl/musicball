@@ -1,7 +1,7 @@
 <?php
 // playlist_scheduler.php
 // Run from Windows Task Scheduler every 30 minutes.
-// Auto-generates a playlist only when SongsDue has passed AND every player has submitted.
+// At SongsDue, builds from received songs in "due" mode or waits for everyone in "wait" mode.
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -53,8 +53,9 @@ try {
         throw new RuntimeException('Spotify is not connected.');
     }
 
+    $playlistBuildMode = mlGetPlaylistBuildMode($pdo);
     $expectedPlayers = mlGetExpectedPlayerCount($pdo);
-    if ($expectedPlayers <= 0) {
+    if ($playlistBuildMode === 'wait' && $expectedPlayers <= 0) {
         throw new RuntimeException('Expected player count is 0.');
     }
 
@@ -96,7 +97,12 @@ try {
         $songSubmissionCount = (int)$round['SongSubmissionCount'];
         $title = trim((string)($round['Title'] ?? 'Round ' . (int)$round['RoundNumber']));
 
-        if ($songSubmissionCount < $expectedPlayers) {
+        if ($songSubmissionCount <= 0) {
+            mlSchedulerLog('Skipped ' . $title . ' (SeasonRoundID ' . $seasonRoundId . '): no songs have been submitted, so the round remains in song submission.');
+            continue;
+        }
+
+        if ($playlistBuildMode === 'wait' && $songSubmissionCount < $expectedPlayers) {
             mlSchedulerLog('Skipped ' . $title . ' (SeasonRoundID ' . $seasonRoundId . '): only ' . $songSubmissionCount . ' of ' . $expectedPlayers . ' songs submitted.');
             continue;
         }
