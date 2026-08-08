@@ -4278,6 +4278,15 @@ body.theme-light .standings-round-breakdown-table td.is-round-winner.is-current-
    PLAYLISTS PAGE
 ========================= */
 
+.library-playlists {
+    margin-top: 28px;
+}
+
+.library-section-heading p {
+    margin: 8px 0 0;
+    color: var(--muted);
+}
+
 .playlist-section + .playlist-section {
     margin-top: 24px;
 }
@@ -4397,7 +4406,6 @@ body.playlist-page-loading .playlist-cta-button {
 .song-database-shell {
     position: relative;
     margin-top: 22px;
-    border-left: 4px solid rgba(56, 189, 248, 0.72);
     background:
         linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(15, 23, 42, 0) 42%),
         var(--surface);
@@ -4444,6 +4452,7 @@ body.playlist-page-loading .playlist-cta-button {
     grid-template-columns: minmax(220px, 460px) auto;
     gap: 12px;
     align-items: center;
+    max-width: 620px;
     margin-top: 14px;
 }
 
@@ -4526,11 +4535,6 @@ body.playlist-page-loading .playlist-cta-button {
 }
 
 @media (max-width: 700px) {
-    .song-database-shell {
-        border-left-width: 0;
-        border-top: 4px solid rgba(56, 189, 248, 0.72);
-    }
-
     .song-database-badge {
         width: 54px;
         height: 54px;

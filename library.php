@@ -1,0 +1,289 @@
+<?php
+require_once __DIR__ . '/gameplay/bootstrap.php';
+
+$currentUser = mlRequireAuthenticatedUser($pdo);
+$currentPage = 'library';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $playlistAction = trim((string)($_POST['playlist_action'] ?? ''));
+
+    try {
+        $playlistUrl = '';
+
+        if ($playlistAction === 'go_to_scone_ghetto') {
+            $syncResult = mlCreateOrSyncSconeGhettoPlaylist($pdo);
+            $playlistUrl = trim((string)($syncResult['SpotifyPlaylistURL'] ?? ''));
+
+            if ($playlistUrl === '') {
+                throw new RuntimeException('Spotify did not return a playlist URL for Scone Ghetto.');
+            }
+        } elseif ($playlistAction === 'go_to_player_playlist') {
+            $playerUserId = (int)($_POST['playlist_user_id'] ?? 0);
+            $syncResult = mlCreateOrSyncPlayerSongsPlaylist($pdo, $playerUserId);
+            $playlistUrl = trim((string)($syncResult['SpotifyPlaylistURL'] ?? ''));
+            $playerName = trim((string)($syncResult['PlaylistName'] ?? 'that playlist'));
+
+            if ($playlistUrl === '') {
+                throw new RuntimeException('Spotify did not return a playlist URL for ' . $playerName . '.');
+            }
+        }
+
+        if ($playlistUrl !== '') {
+            header('Location: ' . $playlistUrl);
+            exit;
+        }
+    } catch (Throwable $e) {
+        header('Location: ' . mlUrl('library.php?status=error&message=' . rawurlencode(trim((string)$e->getMessage()))));
+        exit;
+    }
+}
+
+$statusType = trim((string)($_GET['status'] ?? ''));
+$statusMessage = trim((string)($_GET['message'] ?? ''));
+if (!in_array($statusType, ['success', 'error'], true)) {
+    $statusType = '';
+}
+if ($statusMessage === '') {
+    $statusType = '';
+}
+
+$leagueName = mlGetLeagueName($pdo);
+$hasRequiredTables = (
+    mlTableExists($pdo, 'ML_RoundPlaylists') &&
+    mlTableExists($pdo, 'ML_RoundPlaylistItems') &&
+    mlTableExists($pdo, 'ML_SeasonRounds') &&
+    mlTableExists($pdo, 'ML_Users')
+);
+
+$sconeSongCount = 0;
+$sconePlaylistRecord = [];
+$sconePlaylistUrl = '';
+$players = [];
+
+if ($hasRequiredTables) {
+    $sconePlaylistRecord = mlGetAggregatePlaylistRecord($pdo, 'all_time', null, true);
+    $sconePlaylistUrl = trim((string)($sconePlaylistRecord['SpotifyPlaylistURL'] ?? ''));
+
+    $sconeStmt = $pdo->query(
+        "SELECT COUNT(*)
+        FROM ML_RoundPlaylistItems rpi
+        INNER JOIN ML_RoundPlaylists rp ON rp.RoundPlaylistID = rpi.RoundPlaylistID"
+    );
+    $sconeSongCount = $sconeStmt ? (int)$sconeStmt->fetchColumn() : 0;
+
+    $usersStmt = $pdo->query(
+        "SELECT UserID, UserName, ProfileImageFilename
+        FROM ML_Users
+        ORDER BY UserID ASC"
+    );
+    $allUsers = $usersStmt ? $usersStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+
+    foreach ($allUsers as $userRow) {
+        $userId = (int)$userRow['UserID'];
+        $playerPlaylistRecord = mlGetAggregatePlaylistRecord($pdo, 'player', $userId, true);
+        $players[$userId] = [
+            'user_id' => $userId,
+            'user_name' => (string)$userRow['UserName'],
+            'profile_image_path' => mlGetUserProfilePath($userId, $userRow['ProfileImageFilename'] ?? null),
+            'song_count' => 0,
+            'playlist_url' => trim((string)($playerPlaylistRecord['SpotifyPlaylistURL'] ?? ''))
+        ];
+    }
+
+    $playerCountsStmt = $pdo->query(
+        "SELECT rpi.UserID, COUNT(*) AS SongCount
+        FROM ML_RoundPlaylistItems rpi
+        INNER JOIN ML_RoundPlaylists rp ON rp.RoundPlaylistID = rpi.RoundPlaylistID
+        INNER JOIN ML_SeasonRounds sr ON sr.SeasonRoundID = rp.SeasonRoundID
+        WHERE (
+            sr.RoundState = 'closed'
+            OR (sr.VotesDue IS NOT NULL AND sr.VotesDue < UTC_TIMESTAMP())
+        )
+        GROUP BY rpi.UserID
+        ORDER BY rpi.UserID ASC"
+    );
+    $playerCounts = $playerCountsStmt ? $playerCountsStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+
+    foreach ($playerCounts as $countRow) {
+        $userId = (int)$countRow['UserID'];
+        if (!isset($players[$userId])) {
+            continue;
+        }
+
+        $players[$userId]['song_count'] = (int)$countRow['SongCount'];
+    }
+}
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Music Ball - League Library</title>
+    <link rel="stylesheet" href="<?= htmlspecialchars(mlAssetUrl('styles.css')) ?>">
+    <?php require_once 'pwa_head.php'; ?>
+</head>
+<body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?>">
+<?php include 'header.php'; ?>
+<div class="wrapper playlists-page library-page">
+    <div class="card game-card game-card-wide">
+        <div class="game-page-topline">
+            <div class="game-page-intro">
+                <div class="home-shell-kicker"><?= htmlspecialchars($leagueName, ENT_QUOTES, 'UTF-8') ?></div>
+                <h1 class="game-page-title">League Library</h1>
+                <p>Search past picks or listen back to the music your league has collected.</p>
+            </div>
+        </div>
+
+        <?php if ($statusType !== '' && $statusMessage !== ''): ?>
+            <div class="status-banner <?= $statusType === 'success' ? 'success' : 'error' ?>"><?= htmlspecialchars($statusMessage) ?></div>
+        <?php endif; ?>
+
+        <section class="admin-panel admin-panel-full song-database-shell" aria-labelledby="league-library-search-title">
+            <img src="<?= htmlspecialchars(mlAssetUrl('assets/images/leagues/scone-ghetto.jpg')) ?>" alt="" class="song-database-badge" aria-hidden="true">
+            <div class="home-shell-kicker">Past Picks</div>
+            <h2 id="league-library-search-title">Search the Archive</h2>
+            <p class="song-database-intro">Check whether a song or artist has already appeared in a completed Musicball round.</p>
+
+            <div class="song-database-form-live">
+                <div>
+                    <label for="league_song_database_query" class="game-visually-hidden">Search past league picks</label>
+                    <input
+                        type="text"
+                        id="league_song_database_query"
+                        class="admin-input song-database-input"
+                        placeholder="Look up a used song or artist"
+                        autocomplete="off"
+                    >
+                </div>
+                <button type="button" class="button-secondary song-database-submit" onclick="document.getElementById('league_song_database_query').focus();">Look Up</button>
+            </div>
+
+            <div id="league_song_database_status" class="spotify-search-status muted"></div>
+            <div id="league_song_database_results" class="spotify-search-results song-database-results"></div>
+            <div id="league_song_database_details" class="song-database-details"></div>
+        </section>
+
+        <section class="library-playlists" aria-labelledby="league-library-playlists-title">
+            <div class="playlist-section-heading-wrap library-section-heading">
+                <div>
+                    <div class="home-shell-kicker">Listen Back</div>
+                    <h2 id="league-library-playlists-title">Playlists</h2>
+                    <p>Open the complete league playlist or revisit the songs picked by each player.</p>
+                </div>
+            </div>
+
+            <?php if (!$hasRequiredTables): ?>
+                <div class="status-banner error">The playlists could not load because one or more required Musicball tables are missing.</div>
+            <?php elseif ($sconeSongCount === 0): ?>
+                <div class="status-banner">No generated round playlists exist yet, so there is nothing to preview here yet.</div>
+            <?php else: ?>
+                <div class="playlist-section">
+                    <article class="playlist-overview-card">
+                        <div class="playlist-card-main">
+                            <div class="playlist-card-copy">
+                                <div class="home-shell-kicker">All-Time League Playlist</div>
+                                <h3 class="playlist-card-title">Scone Ghetto</h3>
+                                <div class="playlist-card-subtitle"><?= (int)$sconeSongCount ?> song<?= $sconeSongCount === 1 ? '' : 's' ?></div>
+                                <p>Every song from every generated round playlist, in league order from the first eligible round to the latest eligible round.</p>
+                            </div>
+
+                            <div class="playlist-card-cta-wrap">
+                                <form method="post" action="<?= htmlspecialchars(mlUrl('library.php')) ?>" target="_blank" class="playlist-cta-form">
+                                    <input type="hidden" name="playlist_action" value="go_to_scone_ghetto">
+                                    <button type="submit" class="playlist-cta-button game-round-action-link" aria-label="Go to Scone Ghetto on Spotify">
+                                        <span class="game-round-action-icon playlist-interface-icon" aria-hidden="true"></span>
+                                        <span class="game-round-action-label">Playlist</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="playlist-section">
+                    <div class="playlist-section-heading-wrap">
+                        <h3>Player Playlists</h3>
+                    </div>
+
+                    <div class="player-playlist-grid">
+                        <?php foreach ($players as $player): ?>
+                            <article class="player-playlist-card">
+                                <div class="playlist-card-main playlist-card-main-player">
+                                    <div class="player-playlist-user">
+                                        <img src="<?= htmlspecialchars($player['profile_image_path']) ?>" alt="<?= htmlspecialchars($player['user_name']) ?>" class="profile-avatar profile-avatar-result-submitter">
+                                        <div class="playlist-card-copy">
+                                            <h4 class="player-playlist-title"><?= htmlspecialchars($player['user_name']) ?>&#039;s Songs</h4>
+                                            <div class="playlist-card-subtitle"><?= (int)$player['song_count'] ?> song<?= (int)$player['song_count'] === 1 ? '' : 's' ?></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="playlist-card-cta-wrap">
+                                        <form method="post" action="<?= htmlspecialchars(mlUrl('library.php')) ?>" target="_blank" class="playlist-cta-form">
+                                            <input type="hidden" name="playlist_action" value="go_to_player_playlist">
+                                            <input type="hidden" name="playlist_user_id" value="<?= (int)$player['user_id'] ?>">
+                                            <button type="submit" class="playlist-cta-button game-round-action-link" aria-label="Go to <?= htmlspecialchars($player['user_name']) ?>'s playlist on Spotify">
+                                                <span class="game-round-action-icon playlist-interface-icon" aria-hidden="true"></span>
+                                                <span class="game-round-action-label">Playlist</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </section>
+    </div>
+</div>
+
+<script src="<?= htmlspecialchars(mlAssetUrl('assets/js/song_database.js')) ?>"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var playlistForms = Array.prototype.slice.call(document.querySelectorAll('.playlist-cta-form'));
+    if (!playlistForms.length) {
+        return;
+    }
+
+    function clearPlaylistLoadingState() {
+        document.body.classList.remove('playlist-page-loading');
+        playlistForms.forEach(function (form) {
+            var button = form.querySelector('.playlist-cta-button');
+            if (button) {
+                button.classList.remove('is-pressed', 'is-loading');
+                button.disabled = false;
+                button.removeAttribute('aria-busy');
+            }
+        });
+    }
+
+    playlistForms.forEach(function (form) {
+        form.addEventListener('submit', function () {
+            var button = form.querySelector('.playlist-cta-button');
+            document.body.classList.add('playlist-page-loading');
+
+            playlistForms.forEach(function (otherForm) {
+                var otherButton = otherForm.querySelector('.playlist-cta-button');
+                if (!otherButton) {
+                    return;
+                }
+
+                if (otherButton === button) {
+                    otherButton.classList.add('is-pressed', 'is-loading');
+                    otherButton.setAttribute('aria-busy', 'true');
+                } else {
+                    otherButton.classList.remove('is-pressed');
+                    otherButton.classList.add('is-loading');
+                }
+
+                otherButton.disabled = true;
+            });
+
+            window.setTimeout(clearPlaylistLoadingState, 1800);
+        });
+    });
+});
+</script>
+</body>
+</html>
