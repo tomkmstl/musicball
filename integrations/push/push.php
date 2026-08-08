@@ -321,6 +321,29 @@ function mlPushLoadActiveSubscription(PDO $pdo, int $userId, string $endpoint): 
     return $row ?: null;
 }
 
+function mlPushLoadActiveAdminSubscriptions(PDO $pdo): array
+{
+    if (!mlUsersHasIsAdminColumn($pdo) || !mlPushTableExists($pdo, 'ML_PushSubscriptions')) {
+        return [];
+    }
+
+    $stmt = $pdo->query(
+        "SELECT ps.PushSubscriptionID,
+                ps.UserID,
+                ps.Endpoint,
+                ps.PublicKey,
+                ps.AuthToken,
+                ps.ContentEncoding
+         FROM ML_PushSubscriptions ps
+         INNER JOIN ML_Users u ON u.UserID = ps.UserID
+         WHERE ps.DisabledAt IS NULL
+           AND u.IsAdmin = 1
+         ORDER BY ps.UserID ASC, ps.PushSubscriptionID ASC"
+    );
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+}
+
 function mlPushCreateWebPushClient(): Minishlink\WebPush\WebPush
 {
     if (!class_exists('Minishlink\\WebPush\\WebPush')) {

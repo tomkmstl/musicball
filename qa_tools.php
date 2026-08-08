@@ -12,8 +12,8 @@ if (!mlIsAdminUserId($pdo, $currentUserId)) {
     exit;
 }
 
-// The admin test targets this device's real subscription. Rewind snapshots
-// must not determine whether a live PWA subscription is available.
+// The admin test targets real subscribed admin devices. Rewind snapshots
+// must not determine which live push subscriptions are available.
 $livePdo = mlGetLivePdo();
 $pushStorageReady = mlPushStorageReady($livePdo);
 $pushReady = mlPushServerReady($livePdo);
@@ -1393,7 +1393,7 @@ foreach ($qaAvailableRounds as $availableRound) {
         <section class="admin-section-divider">
             <div class="qa-rewind-kicker">Push notifications</div>
             <h2>Push Notification Test</h2>
-            <p>Send any supported reminder, deadline notice, or playlist/voting timing fallback to this admin device. Push Notifications must be on for this device in Live Mode Settings.</p>
+            <p>Send any supported reminder, deadline notice, or playlist/voting timing fallback to every admin device with Push Notifications enabled. The QA Tools page can send from a desktop browser and does not need its own push subscription.</p>
 
             <div class="admin-push-test-control" data-push-admin-test>
                 <div class="admin-push-test-status" data-push-admin-status>Checking this device...</div>

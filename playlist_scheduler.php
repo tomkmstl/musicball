@@ -55,20 +55,7 @@ function mlSchedulerSendAdminFallbackPush(
         return $result;
     }
 
-    $stmt = $pdo->query(
-        "SELECT ps.PushSubscriptionID,
-                ps.UserID,
-                ps.Endpoint,
-                ps.PublicKey,
-                ps.AuthToken,
-                ps.ContentEncoding
-         FROM ML_PushSubscriptions ps
-         INNER JOIN ML_Users u ON u.UserID = ps.UserID
-         WHERE ps.DisabledAt IS NULL
-           AND u.IsAdmin = 1
-         ORDER BY ps.UserID ASC, ps.PushSubscriptionID ASC"
-    );
-    $subscriptions = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $subscriptions = mlPushLoadActiveAdminSubscriptions($pdo);
     $result['available'] = true;
     $result['eligible'] = count($subscriptions);
 
