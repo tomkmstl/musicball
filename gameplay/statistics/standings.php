@@ -27,7 +27,7 @@
 					$isActiveSort = ($sortKey === $columnKey);
 					?>
 					<th class="standings-sortable-heading<?= $isActiveSort ? ' is-active-sort' : '' ?>">
-					    <a href="<?= htmlspecialchars(mlStandingsSortUrl($columnKey, $sortKey, $sortDir, $showAllTimeStandings, $seasonRow)) ?>" class="standings-sort-link<?= $isActiveSort ? ' is-active-sort' : '' ?>">
+					    <a href="<?= htmlspecialchars(mlLeagueStandingsSortUrl($columnKey, $sortKey, $sortDir, $showAllTimeStandings, $seasonRow)) ?>" class="standings-sort-link<?= $isActiveSort ? ' is-active-sort' : '' ?>">
 					        <span><?= htmlspecialchars($columnLabel) ?></span>
 					    </a>
 					</th>

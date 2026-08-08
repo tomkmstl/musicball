@@ -1,1 +1,1 @@
-<div class="status-banner">Trends statistics are coming soon.</div>
+<div class="status-banner">League trends are coming soon.</div>
