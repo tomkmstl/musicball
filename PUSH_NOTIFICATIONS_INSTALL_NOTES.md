@@ -1,6 +1,6 @@
 # Push notification setup
 
-Musicball's push notifications are intentionally limited to personalized reminders for unfinished song submissions and voting.
+Musicball's push notifications include personalized advance reminders and deadline-reached notices for unfinished song submissions and voting, plus admin-only gameplay alerts for automatic playlist and voting timing fallbacks.
 
 ## Server requirements
 
@@ -56,3 +56,7 @@ php /path/to/musicball/push_scheduler.php --mode=qa
 ```
 
 Add `--dry-run` to either command to count eligible device reminders without sending or recording them.
+
+The reminder scheduler checks a 30-minute lookback window for deadlines. With the 15-minute cron cadence, this delivers one deduplicated deadline-reached notice to each subscribed player who is still incomplete without replaying stale notices after an extended scheduler outage.
+
+The playlist scheduler also advances gameplay phases and uses the shared push service for timing fallbacks. In `Wait for everyone`, song submissions fall back 12 hours before Votes Due, while voting falls back 12 hours before the following round's Songs Due. With partial participation, the scheduler changes the league to `Build at Songs Due`, advances with the available work, and alerts subscribed admin devices. Push delivery is best-effort and never blocks the setting change or phase transition.

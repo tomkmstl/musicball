@@ -1393,7 +1393,7 @@ foreach ($qaAvailableRounds as $availableRound) {
         <section class="admin-section-divider">
             <div class="qa-rewind-kicker">Push notifications</div>
             <h2>Push Notification Test</h2>
-            <p>Send any supported notification to this admin device. Push Notifications must be on for this device in Live Mode Settings.</p>
+            <p>Send any supported reminder, deadline notice, or playlist/voting timing fallback to this admin device. Push Notifications must be on for this device in Live Mode Settings.</p>
 
             <div class="admin-push-test-control" data-push-admin-test>
                 <div class="admin-push-test-status" data-push-admin-status>Checking this device...</div>

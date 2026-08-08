@@ -175,11 +175,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($action === 'save_playlist_settings') {
             $playlistBuildMode = isset($_POST['playlist_build_mode']) ? strtolower(trim((string)$_POST['playlist_build_mode'])) : 'due';
             if (!in_array($playlistBuildMode, ['due', 'wait'], true)) {
-                throw new RuntimeException('Choose a valid playlist timing option.');
+                throw new RuntimeException('Choose a valid round timing option.');
             }
 
             mlSetSettingValue($pdo, 'playlist_build_mode', $playlistBuildMode);
-            $_SESSION['ml_admin_message'] = 'Playlist timing saved.';
+            $_SESSION['ml_admin_message'] = 'Round timing saved.';
             header('Location: ' . mlUrl('admin.php'));
             exit;
         }
@@ -448,16 +448,19 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                     </form>
 
                     <div class="admin-section-divider">
-                        <h3>Playlist timing</h3>
+                        <h3>Round timing</h3>
                         <p>
-                            Choose whether Musicball builds the playlist from the songs received at Songs Due or waits for every player. Eligible manual builds are controlled from the active round on the Season page, and the saved playlist stays fixed afterward.
+                            Choose whether Musicball advances each phase at its scheduled deadline or waits for every player. Build at Songs Due builds the playlist from songs received at Songs Due and finalizes voting at Votes Due. Wait for everyone keeps each phase open until every player finishes. Eligible manual playlist builds and round finalizations are controlled from the active round on the Season page.
+                        </p>
+                        <p class="note">
+                            Wait for everyone falls back with partial participation 12 hours before the next phase deadline: Votes Due for song submissions, then the following round's Songs Due for voting. Musicball advances with the available work, changes the league to Build at Songs Due for future phases, and attempts to notify subscribed admins. A phase with zero participation is skipped at its next deadline.
                         </p>
 
                         <form method="post" action="<?= htmlspecialchars(mlUrl('admin.php')) ?>" class="admin-form-stack">
                             <input type="hidden" name="admin_action" value="save_playlist_settings">
 
                             <div>
-                                <label class="admin-label" for="playlist_build_mode">Playlist timing</label>
+                                <label class="admin-label" for="playlist_build_mode">Round timing</label>
                                 <select name="playlist_build_mode" id="playlist_build_mode" class="admin-input">
                                     <option value="due" <?= $playlistBuildMode === 'due' ? 'selected' : '' ?>>Build at Songs Due</option>
                                     <option value="wait" <?= $playlistBuildMode === 'wait' ? 'selected' : '' ?>>Wait for everyone</option>
@@ -465,7 +468,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                                 <p>Current mode: <strong><?= htmlspecialchars($playlistBuildModeLabel) ?></strong></p>
                             </div>
 
-                            <button type="submit" class="button-primary">Save Playlist Timing</button>
+                            <button type="submit" class="button-primary">Save Round Timing</button>
                         </form>
                     </div>
                 </section>

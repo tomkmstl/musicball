@@ -85,6 +85,10 @@ function mlPushTestNotificationOptions(): array
 {
     return [
         'connection_test' => 'Connection test',
+        'playlist_mode_fallback' => 'Round timing changed - playlist fallback',
+        'voting_mode_fallback' => 'Round timing changed - voting fallback',
+        'song_deadline' => 'Song deadline reached - incomplete',
+        'vote_deadline' => 'Voting deadline reached - incomplete',
         'song_24h' => 'Song reminder — 24 hours',
         'song_2h' => 'Song reminder — 2 hours',
         'vote_24h' => 'Voting reminder — 24 hours',
@@ -120,10 +124,28 @@ function mlPushBuildNotificationCopy(
                 'body' => $roundLabel . ' songs due in 2 hours!',
             ];
 
+        case 'song_deadline':
+            return [
+                'title' => 'SONG DEADLINE REACHED',
+                'body' => $roundLabel . ' reached Songs Due, and you have not submitted a song.',
+            ];
+
         case 'vote_24h':
             return [
                 'title' => 'Finish Your Votes',
                 'body' => $roundLabel . ' closes in about 24 hours.',
+            ];
+
+        case 'playlist_mode_fallback':
+            return [
+                'title' => 'ROUND TIMING CHANGED',
+                'body' => $roundLabel . ' reached the playlist fallback. Musicball changed future phases to Build at Songs Due and will generate the available submissions.',
+            ];
+
+        case 'voting_mode_fallback':
+            return [
+                'title' => 'ROUND TIMING CHANGED',
+                'body' => $roundLabel . ' reached the voting fallback before the next Songs Due deadline. Musicball finalized the available votes and changed future phases to Build at Songs Due.',
             ];
 
         case 'vote_2h':
@@ -131,9 +153,33 @@ function mlPushBuildNotificationCopy(
                 'title' => 'VOTES ARE DUE',
                 'body' => $roundLabel . ' votes are due in 2 hours!',
             ];
+
+        case 'vote_deadline':
+            return [
+                'title' => 'VOTING DEADLINE REACHED',
+                'body' => $roundLabel . ' reached Votes Due, and your votes have not been submitted.',
+            ];
     }
 
     throw new InvalidArgumentException('Unsupported notification type.');
+}
+
+function mlPushResolveReminderWindow(DateTimeImmutable $dueAt, DateTimeImmutable $now): ?array
+{
+    $remainingSeconds = $dueAt->getTimestamp() - $now->getTimestamp();
+    if ($remainingSeconds <= 0) {
+        return $remainingSeconds >= -1800 ? ['key' => 'deadline'] : null;
+    }
+
+    if ($remainingSeconds > 86400) {
+        return null;
+    }
+
+    if ($remainingSeconds <= 7200) {
+        return ['key' => '2h'];
+    }
+
+    return ['key' => '24h'];
 }
 
 function mlPushEndpointHostAllowed(string $endpoint): bool

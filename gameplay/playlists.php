@@ -452,6 +452,16 @@ function mlGetPlaylistBuildMode(PDO $pdo): string {
     $mode = strtolower(trim((string)mlGetSettingValue($pdo, 'playlist_build_mode', 'due')));
     return in_array($mode, ['due', 'wait'], true) ? $mode : 'due';
 }
+function mlGetPlaylistWaitFallbackAt(array $round): ?DateTimeImmutable {
+    $songsDue = mlCreateUtcDate(isset($round['SongsDue']) ? (string)$round['SongsDue'] : null);
+    $votesDue = mlCreateUtcDate(isset($round['VotesDue']) ? (string)$round['VotesDue'] : null);
+    if (!$songsDue instanceof DateTimeImmutable || !$votesDue instanceof DateTimeImmutable) {
+        return null;
+    }
+
+    $fallbackAt = $votesDue->modify('-12 hours');
+    return $fallbackAt < $songsDue ? $songsDue : $fallbackAt;
+}
 function mlAcquireRoundPlaylistLock(PDO $pdo, int $seasonRoundId, int $timeoutSeconds = 10): bool {
     try {
         $stmt = $pdo->prepare('SELECT GET_LOCK(?, ?) AS lock_status');

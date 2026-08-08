@@ -1,6 +1,6 @@
 <?php
 // Run every 15 minutes from the server scheduler.
-// Sends personalized reminders only to players whose song or votes are unfinished.
+// Sends personalized reminders and deadline notices only to players whose song or votes are unfinished.
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -57,20 +57,6 @@ function mlPushSchedulerLog(string $mode, string $message): void
     echo $line;
 }
 
-function mlPushResolveReminderWindow(DateTimeImmutable $dueAt, DateTimeImmutable $now): ?array
-{
-    $remainingSeconds = $dueAt->getTimestamp() - $now->getTimestamp();
-    if ($remainingSeconds <= 0 || $remainingSeconds > 86400) {
-        return null;
-    }
-
-    if ($remainingSeconds <= 7200) {
-        return ['key' => '2h'];
-    }
-
-    return ['key' => '24h'];
-}
-
 function mlPushLoadIncompleteSubscriptions(PDO $pdo, int $seasonRoundId, string $task): array
 {
     if ($task === 'song') {
@@ -110,8 +96,8 @@ try {
     }
 
     $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+    $earliestDue = $now->modify('-30 minutes')->format('Y-m-d H:i:s');
     $latestDue = $now->modify('+24 hours')->format('Y-m-d H:i:s');
-    $nowSql = $now->format('Y-m-d H:i:s');
 
     $roundStmt = $pdo->prepare(
         "SELECT sr.SeasonRoundID,
@@ -127,12 +113,12 @@ try {
          LEFT JOIN ML_RoundPlaylists rp ON rp.SeasonRoundID = sr.SeasonRoundID
          WHERE s.IsActive = 1
            AND (
-                (sr.SongsDue > ? AND sr.SongsDue <= ?)
-                OR (sr.VotesDue > ? AND sr.VotesDue <= ?)
+                (sr.SongsDue >= ? AND sr.SongsDue <= ?)
+                OR (sr.VotesDue >= ? AND sr.VotesDue <= ?)
            )
          ORDER BY sr.RoundNumber ASC"
     );
-    $roundStmt->execute([$nowSql, $latestDue, $nowSql, $latestDue]);
+    $roundStmt->execute([$earliestDue, $latestDue, $earliestDue, $latestDue]);
     $rounds = $roundStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
     $client = $dryRun ? null : mlPushCreateWebPushClient();
@@ -147,27 +133,28 @@ try {
         $roundTitle = trim((string)$round['Title']);
         $tasks = [];
 
-        if ((int)$round['HasPlaylist'] === 0) {
-            $songsDue = mlCreateUtcDate((string)($round['SongsDue'] ?? ''));
-            if ($songsDue instanceof DateTimeImmutable) {
-                $window = mlPushResolveReminderWindow($songsDue, $now);
-                if ($window !== null) {
-                    $isUrgent = $window['key'] === '2h';
-                    $notificationType = $isUrgent ? 'song_2h' : 'song_24h';
-                    $notificationCopy = mlPushBuildNotificationCopy(
-                        $notificationType,
-                        $roundNumber,
-                        $roundTitle
-                    );
-                    $tasks[] = [
-                        'type' => 'song',
-                        'due_at' => $songsDue,
-                        'window' => $window,
-                        'title' => $notificationCopy['title'],
-                        'body' => $notificationCopy['body'],
-                        'url' => mlUrl('song.php?season_round_id=' . $seasonRoundId),
-                    ];
+        $songsDue = mlCreateUtcDate((string)($round['SongsDue'] ?? ''));
+        if ($songsDue instanceof DateTimeImmutable) {
+            $window = mlPushResolveReminderWindow($songsDue, $now);
+            if ($window !== null && ($window['key'] === 'deadline' || (int)$round['HasPlaylist'] === 0)) {
+                if ($window['key'] === 'deadline') {
+                    $notificationType = 'song_deadline';
+                } else {
+                    $notificationType = $window['key'] === '2h' ? 'song_2h' : 'song_24h';
                 }
+                $notificationCopy = mlPushBuildNotificationCopy(
+                    $notificationType,
+                    $roundNumber,
+                    $roundTitle
+                );
+                $tasks[] = [
+                    'type' => 'song',
+                    'due_at' => $songsDue,
+                    'window' => $window,
+                    'title' => $notificationCopy['title'],
+                    'body' => $notificationCopy['body'],
+                    'url' => mlUrl('song.php?season_round_id=' . $seasonRoundId),
+                ];
             }
         }
 
@@ -176,8 +163,11 @@ try {
             if ($votesDue instanceof DateTimeImmutable) {
                 $window = mlPushResolveReminderWindow($votesDue, $now);
                 if ($window !== null) {
-                    $isUrgent = $window['key'] === '2h';
-                    $notificationType = $isUrgent ? 'vote_2h' : 'vote_24h';
+                    if ($window['key'] === 'deadline') {
+                        $notificationType = 'vote_deadline';
+                    } else {
+                        $notificationType = $window['key'] === '2h' ? 'vote_2h' : 'vote_24h';
+                    }
                     $notificationCopy = mlPushBuildNotificationCopy(
                         $notificationType,
                         $roundNumber,

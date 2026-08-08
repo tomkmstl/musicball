@@ -44,6 +44,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdminUser) {
             $redirectSeasonId = $requestedSeasonId > 0 ? $requestedSeasonId : $seasonId;
             header('Location: ' . mlUrl('season.php?season_id=' . $redirectSeasonId));
             exit;
+        } elseif ($action === 'finalize_current_round') {
+            $submittedCsrfToken = isset($_POST['season_csrf']) ? (string)$_POST['season_csrf'] : '';
+            if ($submittedCsrfToken === '' || !hash_equals($seasonCsrfToken, $submittedCsrfToken)) {
+                throw new RuntimeException('The round finalization request expired. Refresh the Season page and try again.');
+            }
+
+            $targetSeasonRoundId = isset($_POST['season_round_id']) ? (int)$_POST['season_round_id'] : 0;
+            $finalizeResult = mlHandleManualRoundFinalization($pdo, $targetSeasonRoundId, $selectedSeasonId);
+            $finalizedRound = $finalizeResult['round'] ?? [];
+            $roundTitle = trim((string)($finalizedRound['Title'] ?? ''));
+            $roundLabel = $roundTitle !== '' ? $roundTitle : 'Round ' . (int)($finalizedRound['RoundNumber'] ?? 0);
+
+            $_SESSION['ml_season_message'] = !empty($finalizeResult['already_finalized'])
+                ? $roundLabel . ' is already finalized.'
+                : $roundLabel . ' was finalized with the votes received.';
+
+            header('Location: ' . mlUrl('season.php?season_id=' . $selectedSeasonId));
+            exit;
         }
     } catch (Throwable $e) {
         $_SESSION['ml_season_error'] = $e->getMessage();
@@ -119,7 +137,9 @@ foreach ($presentedRounds as $round) {
     $isClosed = (($round['status_key'] ?? '') === 'closed');
 
     if ($isClosed) {
-        $completedRounds[] = $round;
+        if (mlRoundIsFinishedForDisplay($round)) {
+            $completedRounds[] = $round;
+        }
         continue;
     }
 
