@@ -4090,88 +4090,6 @@ html[data-theme="dark"] .discord-toggle-warning {
     overflow-wrap: anywhere;
 }
 
-.standings-breakdown-heading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    min-width: 72px;
-}
-
-.profile-avatar-standings-mini {
-    width: 32px;
-    height: 32px;
-    flex: 0 0 32px;
-}
-
-.standings-round-breakdown-table th,
-.standings-round-breakdown-table td {
-    text-align: center;
-    vertical-align: middle;
-}
-
-.standings-round-number-heading,
-.standings-round-number-cell {
-    display: none;
-}
-
-.standings-round-breakdown-table .standings-round-label-heading,
-.standings-round-breakdown-table .standings-round-label-cell {
-    text-align: left;
-    min-width: 220px;
-    position: sticky;
-    left: 0;
-    z-index: 1;
-    background: var(--surface);
-}
-
-.standings-round-breakdown-table .is-current-user-heading,
-.standings-round-breakdown-table .is-current-user-cell {
-    background: rgba(61, 172, 236, 0.08);
-}
-
-.standings-round-breakdown-table td.is-round-winner {
-    background: rgba(96, 211, 141, 0.16);
-    box-shadow: inset 0 0 0 1px rgba(96, 211, 141, 0.26);
-}
-
-.standings-round-breakdown-table td.is-round-winner.is-current-user-cell {
-    background: linear-gradient(180deg, rgba(61, 172, 236, 0.12) 0%, rgba(96, 211, 141, 0.18) 100%);
-}
-
-.standings-round-label {
-    font-size: 0.73rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--muted);
-}
-
-.standings-round-title {
-    margin-top: 3px;
-    font-weight: 700;
-}
-
-.standings-round-score-value {
-    font-size: 1rem;
-    font-weight: 800;
-    line-height: 1.1;
-}
-
-.standings-round-score-meta {
-    margin-top: 4px;
-    font-size: 0.72rem;
-    color: var(--muted);
-    white-space: nowrap;
-}
-
-.standings-round-score-empty {
-    color: var(--muted);
-    font-weight: 700;
-}
-
-
-
 @media (max-width: 700px) {
     .standings-rank-heading span,
     .standings-player-heading span {
@@ -4202,80 +4120,9 @@ html[data-theme="dark"] .discord-toggle-warning {
         min-width: 10ch;
     }
 }
-body.theme-light .standings-round-breakdown-table .standings-round-label-heading,
-body.theme-light .standings-round-breakdown-table .standings-round-label-cell,
-body.theme-light .standings-round-breakdown-table .standings-round-number-heading,
-body.theme-light .standings-round-breakdown-table .standings-round-number-cell {
-    background: #ffffff;
-}
-
-body.theme-light .standings-round-breakdown-table .is-current-user-heading,
-body.theme-light .standings-round-breakdown-table .is-current-user-cell {
-    background: rgba(61, 172, 236, 0.12);
-}
-
-body.theme-light .standings-round-breakdown-table td.is-round-winner {
-    background: rgba(86, 194, 113, 0.16);
-    box-shadow: inset 0 0 0 1px rgba(86, 194, 113, 0.26);
-}
-
-body.theme-light .standings-round-breakdown-table td.is-round-winner.is-current-user-cell {
-    background: linear-gradient(180deg, rgba(61, 172, 236, 0.14) 0%, rgba(86, 194, 113, 0.18) 100%);
-}
-
-@media (max-width: 700px) {
-    .standings-round-breakdown-table .standings-round-number-heading,
-    .standings-round-breakdown-table .standings-round-number-cell {
-        display: table-cell;
-        min-width: 46px;
-        width: 46px;
-        position: sticky;
-        left: 0;
-        z-index: 2;
-        background: var(--surface);
-        text-align: center;
-        font-weight: 800;
-        box-shadow: 1px 0 0 var(--line);
-    }
-	
-
-	th.standings-round-number-heading {
-		font-size: 8px;
-		padding-top: 55px;
-	}
-
-    .standings-round-breakdown-table .standings-round-label-heading,
-    .standings-round-breakdown-table .standings-round-label-cell {
-        min-width: 132px;
-        position: static;
-        left: auto;
-        z-index: auto;
-        box-shadow: none;
-    }
-
-    .standings-round-breakdown-table .standings-round-label-cell .standings-round-label {
-        display: none;
-    }
-
-    .standings-round-breakdown-table .standings-round-title {
-        margin-top: 0;
-    }
-
-    .standings-breakdown-heading {
-        min-width: 58px;
-    }
-
-    .standings-round-score-value {
-        font-size: 0.95rem;
-    }
-
-    .standings-round-score-meta {
-        font-size: 0.68rem;
-    }
-}
 
 /* =========================
-   PLAYLISTS PAGE
+   LEAGUE SONGS / PLAYLISTS
 ========================= */
 
 .library-playlists {
@@ -4611,14 +4458,14 @@ body.playlist-page-loading .playlist-cta-button {
     text-underline-offset: 3px;
 }
 
-.standings-section-nav {
+.league-section-nav {
     display: flex;
     align-items: stretch;
     width: 100%;
     border-bottom: 1px solid var(--line);
 }
 
-.standings-section-nav-link {
+.league-section-nav-link {
     flex: 1 1 25%;
     display: flex;
     align-items: center;
@@ -4633,33 +4480,33 @@ body.playlist-page-loading .playlist-cta-button {
     transition: background 0.18s ease, color 0.18s ease;
 }
 
-.standings-section-nav-link + .standings-section-nav-link {
+.league-section-nav-link + .league-section-nav-link {
     border-left: 1px solid rgba(255,255,255,0.05);
 }
 
-.standings-section-nav-link:hover {
+.league-section-nav-link:hover {
     color: var(--text);
 }
 
-.standings-section-nav-link-active {
+.league-section-nav-link-active {
     background: rgba(61,172,236,0.14);
     color: var(--brand);
 }
 
-body.theme-light .standings-section-nav-link {
+body.theme-light .league-section-nav-link {
     background: rgba(18,32,51,0.025);
 }
 
-body.theme-light .standings-section-nav-link + .standings-section-nav-link {
+body.theme-light .league-section-nav-link + .league-section-nav-link {
     border-left: 1px solid rgba(18,32,51,0.06);
 }
 
-body.theme-light .standings-section-nav-link-active {
+body.theme-light .league-section-nav-link-active {
     background: rgba(61,172,236,0.12);
 }
 
 @media (min-width: 900px) {
-    .standings-section-nav {
+    .league-section-nav {
         justify-content: center;
         gap: 56px;
         width: auto;
@@ -4667,7 +4514,7 @@ body.theme-light .standings-section-nav-link-active {
         border: 0;
     }
 
-    .standings-section-nav-link {
+    .league-section-nav-link {
         flex: 0 0 auto;
         padding: 0;
         background: transparent;
@@ -4677,16 +4524,16 @@ body.theme-light .standings-section-nav-link-active {
         position: relative;
     }
 
-    .standings-section-nav-link + .standings-section-nav-link {
+    .league-section-nav-link + .league-section-nav-link {
         border-left: 0;
     }
 
-    .standings-section-nav-link-active {
+    .league-section-nav-link-active {
         background: transparent;
         color: var(--text);
     }
 
-    .standings-section-nav-link-active::after {
+    .league-section-nav-link-active::after {
         content: '';
         position: absolute;
         left: 0;

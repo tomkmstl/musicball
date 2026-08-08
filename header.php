@@ -12,8 +12,8 @@ $headerScriptName = basename((string)($_SERVER['PHP_SELF'] ?? ''));
 $headerActivePrimaryPage = '';
 if ($headerScriptName === 'season.php') {
     $headerActivePrimaryPage = 'season';
-} elseif ($headerScriptName === 'standings.php' || $headerScriptName === 'statistics.php') {
-    $headerActivePrimaryPage = 'standings';
+} elseif ($headerScriptName === 'league.php') {
+    $headerActivePrimaryPage = 'league';
 }
 $headerUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : (isset($_SESSION['ml_user_id']) ? (int)$_SESSION['ml_user_id'] : 0);
 $isAdminUser = mlIsAdminUserId($pdo, $headerUserId);
@@ -187,7 +187,6 @@ if ($headerNextSeason) {
                     <span class="mb-menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
                 </summary>
                 <nav class="mb-account-menu-panel" aria-label="Account menu">
-                    <a href="<?= htmlspecialchars(mlUrl('library.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'library' ? ' is-active' : '' ?>">League Library</a>
                     <a href="<?= htmlspecialchars(mlUrl('settings.php')) ?>" class="mb-account-menu-link<?= $currentPage === 'settings' ? ' is-active' : '' ?>">Settings</a>
                     <?php if ($isAdminUser): ?>
                         <div class="mb-account-menu-divider" aria-hidden="true"></div>
@@ -206,8 +205,8 @@ if ($headerNextSeason) {
             <a href="<?= htmlspecialchars(mlUrl('season.php')) ?>" class="mb-subnav-card<?= $headerActivePrimaryPage === 'season' ? ' is-active' : '' ?>">
                 Season
             </a>
-            <a href="<?= htmlspecialchars(mlUrl('statistics.php')) ?>" class="mb-subnav-card<?= $headerActivePrimaryPage === 'standings' ? ' is-active' : '' ?>">
-                Statistics
+            <a href="<?= htmlspecialchars(mlUrl('league.php')) ?>" class="mb-subnav-card<?= $headerActivePrimaryPage === 'league' ? ' is-active' : '' ?>">
+                League
             </a>
         </div>
     </div>

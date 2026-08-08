@@ -57,7 +57,7 @@ function mlRankOverallStandings(array &$standings): void {
     }
     unset($row);
 }
-function mlBuildStandingsDataFromFinalRounds(PDO $pdo, array $finalRounds, int $currentUserId, bool $includeRoundBreakdown = true): array {
+function mlBuildStandingsDataFromFinalRounds(PDO $pdo, array $finalRounds, int $currentUserId): array {
     $users = mlLoadAllUsers($pdo);
     $playerStats = [];
 
@@ -80,7 +80,6 @@ function mlBuildStandingsDataFromFinalRounds(PDO $pdo, array $finalRounds, int $
 
     $result = [
         'standings' => [],
-        'round_breakdown' => [],
         'final_round_count' => count($finalRounds),
     ];
 
@@ -179,21 +178,11 @@ function mlBuildStandingsDataFromFinalRounds(PDO $pdo, array $finalRounds, int $
         // Leave voter_ids empty if this query fails.
     }
 
-    $roundBreakdown = [];
-    foreach ($finalRounds as $seasonRoundId => $round) {
+    foreach (array_keys($finalRounds) as $seasonRoundId) {
         $submittedEntries = [];
-        $playerCells = [];
 
         foreach ($playerStats as $userId => $_unused) {
             $entry = $roundSongStats[$seasonRoundId][$userId] ?? null;
-            $points = $entry ? (int)$entry['points'] : null;
-            $voterCount = $entry ? (int)$entry['voter_count'] : 0;
-            $playerCells[$userId] = [
-                'user_id' => $userId,
-                'points' => $points,
-                'voter_count' => $voterCount,
-                'is_winner' => false,
-            ];
 
             if ($entry !== null) {
                 $submittedEntries[] = [
@@ -210,9 +199,6 @@ function mlBuildStandingsDataFromFinalRounds(PDO $pdo, array $finalRounds, int $
             $winnerUserId = (int)$submittedEntries[0]['user_id'];
             if (isset($playerStats[$winnerUserId])) {
                 $playerStats[$winnerUserId]['round_wins'] += 1;
-            }
-            if (isset($playerCells[$winnerUserId])) {
-                $playerCells[$winnerUserId]['is_winner'] = true;
             }
 
             $podiumCount = min(3, count($submittedEntries));
@@ -247,15 +233,6 @@ function mlBuildStandingsDataFromFinalRounds(PDO $pdo, array $finalRounds, int $
                 unset($candidateStats);
             }
         }
-
-        if ($includeRoundBreakdown) {
-            $roundBreakdown[] = [
-                'season_round_id' => $seasonRoundId,
-                'round_number' => (int)($round['RoundNumber'] ?? 0),
-                'title' => (string)($round['Title'] ?? ('Round ' . (int)($round['RoundNumber'] ?? 0))),
-                'players' => $playerCells,
-            ];
-        }
     }
 
     $standings = array_values($playerStats);
@@ -263,7 +240,6 @@ function mlBuildStandingsDataFromFinalRounds(PDO $pdo, array $finalRounds, int $
 
     return [
         'standings' => $standings,
-        'round_breakdown' => $roundBreakdown,
         'final_round_count' => count($finalRounds),
     ];
 }
@@ -284,7 +260,7 @@ function mlBuildStandingsData(PDO $pdo, int $seasonId, int $currentUserId): arra
         }
     }
 
-    $cache[$cacheKey] = mlBuildStandingsDataFromFinalRounds($pdo, $finalRounds, $currentUserId, true);
+    $cache[$cacheKey] = mlBuildStandingsDataFromFinalRounds($pdo, $finalRounds, $currentUserId);
     return $cache[$cacheKey];
 }
 function mlBuildAllTimeStandingsData(PDO $pdo, int $currentUserId): array {
@@ -329,16 +305,12 @@ function mlBuildAllTimeStandingsData(PDO $pdo, int $currentUserId): array {
         });
     }
 
-    $cache[$cacheKey] = mlBuildStandingsDataFromFinalRounds($pdo, $finalRounds, $currentUserId, false);
+    $cache[$cacheKey] = mlBuildStandingsDataFromFinalRounds($pdo, $finalRounds, $currentUserId);
     return $cache[$cacheKey];
 }
 function mlBuildStandingsPreview(PDO $pdo, int $seasonId, int $currentUserId): array {
     $data = mlBuildStandingsData($pdo, $seasonId, $currentUserId);
     return $data['standings'] ?? [];
-}
-function mlBuildStandingsBreakdown(PDO $pdo, int $seasonId, int $currentUserId): array {
-    $data = mlBuildStandingsData($pdo, $seasonId, $currentUserId);
-    return $data['round_breakdown'] ?? [];
 }
 function mlRoundIsFinishedForDisplay(array $round): bool {
     if (($round['status_key'] ?? '') === 'closed') {
