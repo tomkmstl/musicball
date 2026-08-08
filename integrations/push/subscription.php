@@ -14,6 +14,45 @@ function mlPushApiRespond(int $statusCode, array $payload): void
     exit;
 }
 
+function mlPushLoadAdminTestTargets(PDO $requestPdo): array
+{
+    $sourcePdos = [];
+    if (function_exists('mlGetLivePdo')) {
+        $livePdo = mlGetLivePdo();
+        $sourcePdos[spl_object_hash($livePdo)] = $livePdo;
+    }
+    $sourcePdos[spl_object_hash($requestPdo)] = $requestPdo;
+
+    $ready = false;
+    $targets = [];
+    $seenEndpoints = [];
+
+    foreach ($sourcePdos as $sourcePdo) {
+        if (!mlPushServerReady($sourcePdo)) {
+            continue;
+        }
+
+        $ready = true;
+        foreach (mlPushLoadActiveAdminSubscriptions($sourcePdo) as $subscriptionRow) {
+            $endpointHash = hash('sha256', (string)($subscriptionRow['Endpoint'] ?? ''));
+            if (isset($seenEndpoints[$endpointHash])) {
+                continue;
+            }
+
+            $seenEndpoints[$endpointHash] = true;
+            $targets[] = [
+                'pdo' => $sourcePdo,
+                'subscription' => $subscriptionRow,
+            ];
+        }
+    }
+
+    return [
+        'ready' => $ready,
+        'targets' => $targets,
+    ];
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     mlPushApiRespond(405, ['ok' => false, 'error' => 'Method not allowed.']);
 }
@@ -42,28 +81,27 @@ if ($action === 'test' && !$isAdminTestRequest) {
     mlPushApiRespond(400, ['ok' => false, 'error' => 'Invalid admin test request.']);
 }
 
-// QA Tools sends from the desktop to subscribed admin devices in live data.
-// Rewound QA snapshots must not determine the available recipients. All ordinary
-// status, subscribe, and unsubscribe requests continue using the active data mode.
-$pushPdo = $isAdminTestRequest && function_exists('mlGetLivePdo') ? mlGetLivePdo() : $pdo;
+// QA Tools sends from the desktop to subscribed admin devices found in either
+// live or QA push data. Rewound gameplay snapshots do not include these tables.
+$pushPdo = $pdo;
 
-if ($isAdminTestRequest && (!mlIsAdminUserId($pdo, $userId) || !mlIsAdminUserId($pushPdo, $userId))) {
+if ($isAdminTestRequest && !mlIsAdminUserId($pdo, $userId)) {
     mlPushApiRespond(403, ['ok' => false, 'error' => 'Administrator access is required.']);
 }
 
-if (!mlPushTableExists($pushPdo, 'ML_PushSubscriptions')) {
+if (!$isAdminTestRequest && !mlPushTableExists($pushPdo, 'ML_PushSubscriptions')) {
     mlPushApiRespond(503, ['ok' => false, 'error' => 'Deadline reminder storage is not available yet.']);
 }
 
 try {
     if ($action === 'status') {
         if ($isAdminTestRequest) {
-            $adminSubscriptions = mlPushLoadActiveAdminSubscriptions($pushPdo);
+            $adminTest = mlPushLoadAdminTestTargets($pdo);
             mlPushApiRespond(200, [
                 'ok' => true,
-                'ready' => mlPushServerReady($pushPdo),
-                'subscribed' => !empty($adminSubscriptions),
-                'recipient_count' => count($adminSubscriptions),
+                'ready' => !empty($adminTest['ready']),
+                'subscribed' => !empty($adminTest['targets']),
+                'recipient_count' => count($adminTest['targets']),
             ]);
         }
 
@@ -91,12 +129,13 @@ try {
     }
 
     if ($action === 'test') {
-        if (!mlPushServerReady($pushPdo)) {
+        $adminTest = mlPushLoadAdminTestTargets($pdo);
+        if (empty($adminTest['ready'])) {
             mlPushApiRespond(503, ['ok' => false, 'error' => 'Deadline reminders are not available yet.']);
         }
 
-        $adminSubscriptions = mlPushLoadActiveAdminSubscriptions($pushPdo);
-        if (empty($adminSubscriptions)) {
+        $adminTargets = $adminTest['targets'];
+        if (empty($adminTargets)) {
             mlPushApiRespond(404, ['ok' => false, 'error' => 'No admin devices currently have Push Notifications enabled.']);
         }
 
@@ -112,7 +151,8 @@ try {
         $failedCount = 0;
         $expiredCount = 0;
 
-        foreach ($adminSubscriptions as $subscriptionRow) {
+        foreach ($adminTargets as $adminTarget) {
+            $subscriptionRow = $adminTarget['subscription'];
             $result = mlPushSendNotification($client, $subscriptionRow, [
                 'title' => $notificationCopy['title'],
                 'body' => $notificationCopy['body'],
@@ -127,7 +167,7 @@ try {
             }
 
             if (!empty($result['expired'])) {
-                mlPushDisableSubscriptionById($pushPdo, (int)$subscriptionRow['PushSubscriptionID']);
+                mlPushDisableSubscriptionById($adminTarget['pdo'], (int)$subscriptionRow['PushSubscriptionID']);
                 $expiredCount++;
             }
         }
@@ -138,7 +178,7 @@ try {
 
         mlPushApiRespond(200, [
             'ok' => true,
-            'recipient_count' => count($adminSubscriptions),
+            'recipient_count' => count($adminTargets),
             'sent_count' => $sentCount,
             'failed_count' => $failedCount,
             'expired_count' => $expiredCount,

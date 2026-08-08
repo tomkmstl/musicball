@@ -12,10 +12,10 @@ if (!mlIsAdminUserId($pdo, $currentUserId)) {
     exit;
 }
 
-// The admin test targets real subscribed admin devices. Rewind snapshots
-// must not determine which live push subscriptions are available.
+// The admin test targets real subscribed admin devices from live or QA push data.
+// Rewind snapshots do not include these subscription tables.
 $livePdo = mlGetLivePdo();
-$pushStorageReady = mlPushStorageReady($livePdo);
+$pushStorageReady = mlPushStorageReady($livePdo) || mlPushStorageReady($pdo);
 if (empty($_SESSION['ml_push_csrf']) || !is_string($_SESSION['ml_push_csrf'])) {
     $_SESSION['ml_push_csrf'] = bin2hex(random_bytes(24));
 }
@@ -1395,7 +1395,7 @@ foreach ($qaAvailableRounds as $availableRound) {
             <p>Send any supported reminder, deadline notice, or playlist/voting timing fallback to every admin device with Push Notifications enabled. The QA Tools page can send from a desktop browser and does not need its own push subscription.</p>
 
             <div class="admin-push-test-control" data-push-admin-test>
-                <div class="admin-push-test-status" data-push-admin-status>Checking this device...</div>
+                <div class="admin-push-test-status" data-push-admin-status>Checking enabled admin devices...</div>
                 <div class="admin-inline-form admin-inline-form-wrap">
                     <div class="admin-inline-field">
                         <label class="admin-label" for="admin_push_test_notification">Notification type</label>

@@ -59,6 +59,6 @@ Add `--dry-run` to either command to count eligible device reminders without sen
 
 The reminder scheduler checks a 30-minute lookback window for deadlines. With the 15-minute cron cadence, this delivers one deduplicated deadline-reached notice to each subscribed player who is still incomplete without replaying stale notices after an extended scheduler outage.
 
-The QA Tools push tester is a server-side admin broadcast. An authenticated admin can run it from a desktop browser, and the selected test is delivered to every active admin subscription in live data; the desktop browser does not need to be subscribed.
+The QA Tools push tester is a server-side admin broadcast. An authenticated admin can run it from a desktop browser, and the selected test is delivered once to every unique active admin endpoint found in live or QA push data; the desktop browser does not need to be subscribed.
 
 The playlist scheduler also advances gameplay phases and uses the shared push service for timing fallbacks. In `Wait for everyone`, song submissions fall back 12 hours before Votes Due, while voting falls back 12 hours before the following round's Songs Due. With partial participation, the scheduler changes the league to `Build at Songs Due`, advances with the available work, and alerts subscribed admin devices. Push delivery is best-effort and never blocks the setting change or phase transition.
