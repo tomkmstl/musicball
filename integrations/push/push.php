@@ -129,7 +129,7 @@ function mlPushBuildNotificationCopy(
         case 'song_deadline_open':
             return [
                 'title' => 'You missed the deadline!!',
-                'body' => 'Submit now for ' . $roundLabel . ".... there's still time?",
+                'body' => 'Submit now for ' . $roundLabel . ".... there's still time!",
             ];
 
         case 'song_deadline_closed':
