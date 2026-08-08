@@ -57,35 +57,6 @@ function mlPushSchedulerLog(string $mode, string $message): void
     echo $line;
 }
 
-function mlPushLoadIncompleteSubscriptions(PDO $pdo, int $seasonRoundId, string $task): array
-{
-    if ($task === 'song') {
-        $completionJoin = 'LEFT JOIN ML_RoundSongs completed ON completed.SeasonRoundID = ? AND completed.UserID = ps.UserID';
-        $completionWhere = 'completed.RoundSongID IS NULL';
-    } else {
-        $completionJoin = 'LEFT JOIN ML_RoundVoteSubmissions completed ON completed.SeasonRoundID = ? AND completed.UserID = ps.UserID';
-        $completionWhere = 'completed.RoundVoteSubmissionID IS NULL';
-    }
-
-    $stmt = $pdo->prepare(
-        "SELECT ps.PushSubscriptionID,
-                ps.UserID,
-                ps.Endpoint,
-                ps.PublicKey,
-                ps.AuthToken,
-                ps.ContentEncoding
-         FROM ML_PushSubscriptions ps
-         INNER JOIN ML_Users u ON u.UserID = ps.UserID
-         {$completionJoin}
-         WHERE ps.DisabledAt IS NULL
-           AND {$completionWhere}
-         ORDER BY ps.UserID ASC, ps.PushSubscriptionID ASC"
-    );
-    $stmt->execute([$seasonRoundId]);
-
-    return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-}
-
 try {
     if (mlPushGetDataMode($pdo) !== $mode) {
         throw new RuntimeException('The requested scheduler mode could not be verified.');
@@ -98,6 +69,10 @@ try {
     $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
     $earliestDue = $now->modify('-30 minutes')->format('Y-m-d H:i:s');
     $latestDue = $now->modify('+24 hours')->format('Y-m-d H:i:s');
+    $roundTimingMode = strtolower(trim((string)mlGetSettingValue($pdo, 'playlist_build_mode', 'due'))) === 'wait'
+        ? 'wait'
+        : 'due';
+    $roundStateSelect = mlSeasonRoundsHasStateColumns($pdo) ? ', sr.RoundState' : ', NULL AS RoundState';
 
     $roundStmt = $pdo->prepare(
         "SELECT sr.SeasonRoundID,
@@ -108,6 +83,7 @@ try {
                 sr.VotesDue,
                 s.SeasonName,
                 CASE WHEN rp.SeasonRoundID IS NULL THEN 0 ELSE 1 END AS HasPlaylist
+                {$roundStateSelect}
          FROM ML_SeasonRounds sr
          INNER JOIN ML_Seasons s ON s.SeasonID = sr.SeasonID
          LEFT JOIN ML_RoundPlaylists rp ON rp.SeasonRoundID = sr.SeasonRoundID
@@ -132,13 +108,16 @@ try {
         $roundNumber = (int)$round['RoundNumber'];
         $roundTitle = trim((string)$round['Title']);
         $tasks = [];
+        $songPhaseClosed = false;
+        $votingPhaseClosed = false;
 
         $songsDue = mlCreateUtcDate((string)($round['SongsDue'] ?? ''));
         if ($songsDue instanceof DateTimeImmutable) {
             $window = mlPushResolveReminderWindow($songsDue, $now);
             if ($window !== null && ($window['key'] === 'deadline' || (int)$round['HasPlaylist'] === 0)) {
                 if ($window['key'] === 'deadline') {
-                    $notificationType = 'song_deadline';
+                    $songPhaseClosed = $roundTimingMode !== 'wait' || (int)$round['HasPlaylist'] === 1;
+                    $notificationType = mlPushResolveDeadlineNotificationType('song', $roundTimingMode, $songPhaseClosed);
                 } else {
                     $notificationType = $window['key'] === '2h' ? 'song_2h' : 'song_24h';
                 }
@@ -151,9 +130,16 @@ try {
                     'type' => 'song',
                     'due_at' => $songsDue,
                     'window' => $window,
+                    'reminder_key' => $window['key'] === 'deadline'
+                        ? mlPushBuildDeadlineDeliveryKey('song', $songPhaseClosed, $songsDue->format('Y-m-d H:i:s'))
+                        : '',
                     'title' => $notificationCopy['title'],
                     'body' => $notificationCopy['body'],
-                    'url' => mlUrl('song.php?season_round_id=' . $seasonRoundId),
+                    'url' => mlUrl(
+                        $songPhaseClosed
+                            ? 'season.php?season_id=' . (int)$round['SeasonID']
+                            : 'song.php?season_round_id=' . $seasonRoundId
+                    ),
                 ];
             }
         }
@@ -164,7 +150,8 @@ try {
                 $window = mlPushResolveReminderWindow($votesDue, $now);
                 if ($window !== null) {
                     if ($window['key'] === 'deadline') {
-                        $notificationType = 'vote_deadline';
+                        $votingPhaseClosed = strtolower(trim((string)($round['RoundState'] ?? ''))) === 'closed';
+                        $notificationType = mlPushResolveDeadlineNotificationType('vote', $roundTimingMode, $votingPhaseClosed);
                     } else {
                         $notificationType = $window['key'] === '2h' ? 'vote_2h' : 'vote_24h';
                     }
@@ -177,9 +164,16 @@ try {
                         'type' => 'vote',
                         'due_at' => $votesDue,
                         'window' => $window,
+                        'reminder_key' => $window['key'] === 'deadline'
+                            ? mlPushBuildDeadlineDeliveryKey('vote', $roundTimingMode !== 'wait' || $votingPhaseClosed, $votesDue->format('Y-m-d H:i:s'))
+                            : '',
                         'title' => $notificationCopy['title'],
                         'body' => $notificationCopy['body'],
-                        'url' => mlUrl('vote.php?season_round_id=' . $seasonRoundId),
+                        'url' => mlUrl(
+                            $roundTimingMode !== 'wait' || $votingPhaseClosed
+                                ? 'season.php?season_id=' . (int)$round['SeasonID']
+                                : 'vote.php?season_round_id=' . $seasonRoundId
+                        ),
                     ];
                 }
             }
@@ -187,8 +181,11 @@ try {
 
         foreach ($tasks as $task) {
             $deadlineScope = substr(hash('sha256', $task['due_at']->format('Y-m-d H:i:s')), 0, 12);
-            $reminderKey = $task['type'] . '_' . $task['window']['key'] . '_' . $deadlineScope;
-            $subscriptions = mlPushLoadIncompleteSubscriptions($pdo, $seasonRoundId, $task['type']);
+            $reminderKey = trim((string)($task['reminder_key'] ?? ''));
+            if ($reminderKey === '') {
+                $reminderKey = $task['type'] . '_' . $task['window']['key'] . '_' . $deadlineScope;
+            }
+            $subscriptions = mlPushLoadIncompleteRoundSubscriptions($pdo, $seasonRoundId, $task['type']);
 
             foreach ($subscriptions as $subscriptionRow) {
                 $subscriptionId = (int)$subscriptionRow['PushSubscriptionID'];
@@ -201,21 +198,17 @@ try {
                     continue;
                 }
 
-                $result = mlPushSendNotification($client, $subscriptionRow, [
+                $result = mlPushSendNotificationOnce($pdo, $client, $subscriptionRow, $seasonRoundId, $reminderKey, [
                     'title' => $task['title'],
                     'body' => $task['body'],
                     'url' => $task['url'],
                     'tag' => 'musicball-' . $reminderKey . '-' . $seasonRoundId,
                 ]);
 
-                mlPushRecordDeliveryAttempt(
-                    $pdo,
-                    $subscriptionId,
-                    (int)$subscriptionRow['UserID'],
-                    $seasonRoundId,
-                    $reminderKey,
-                    $result
-                );
+                if (empty($result['attempted'])) {
+                    $candidateCount--;
+                    continue;
+                }
 
                 if (!empty($result['success'])) {
                     $sentCount++;
@@ -224,7 +217,6 @@ try {
                 }
 
                 if (!empty($result['expired'])) {
-                    mlPushDisableSubscriptionById($pdo, $subscriptionId);
                     $expiredCount++;
                 }
             }

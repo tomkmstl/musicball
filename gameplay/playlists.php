@@ -621,6 +621,14 @@ function mlGeneratePlaylistForRound(PDO $pdo, array $round, bool $force = false)
         mlReleaseRoundPlaylistLock($pdo, $seasonRoundId);
     }
 }
+function mlNotifySongPhaseClosedBestEffort(PDO $pdo, array $round): void {
+    try {
+        require_once __DIR__ . '/../integrations/push/push.php';
+        mlPushSendIncompletePhaseClosed($pdo, $round, 'song');
+    } catch (Throwable $e) {
+        // Never interrupt playlist generation or the admin response for push failures.
+    }
+}
 function mlMaybeAutoGeneratePlaylists(PDO $pdo, array $presentedRounds, int $currentUserId = 0): bool {
     if (!mlIsAdminUserId($pdo, $currentUserId)) {
         return false;
@@ -653,6 +661,7 @@ function mlMaybeAutoGeneratePlaylists(PDO $pdo, array $presentedRounds, int $cur
 
         try {
             mlGeneratePlaylistForRound($pdo, $round, false);
+            mlNotifySongPhaseClosedBestEffort($pdo, $round);
             $generatedAny = true;
         } catch (Throwable $e) {
             $_SESSION['ml_playlist_auto_error'] = $e->getMessage();
@@ -690,6 +699,7 @@ function mlHandleManualPlaylistTrigger(PDO $pdo, array $presentedRounds): array 
         }
 
         mlGeneratePlaylistForRound($pdo, $round, true);
+        mlNotifySongPhaseClosedBestEffort($pdo, $round);
 
         return [
             'title' => $roundTitle,

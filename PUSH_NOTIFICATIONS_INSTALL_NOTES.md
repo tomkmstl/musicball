@@ -1,6 +1,6 @@
 # Push notification setup
 
-Musicball's push notifications include personalized advance reminders and deadline-reached notices for unfinished song submissions and voting, plus admin-only gameplay alerts for automatic playlist and voting timing fallbacks.
+Musicball's push notifications include personalized advance reminders and deadline notices for unfinished song submissions and voting, plus admin-only gameplay alerts for automatic playlist and voting timing fallbacks. In `Wait for everyone`, an incomplete player is told that the phase remains actionable after the deadline and receives a separate closed notice if the phase later advances while they are still incomplete.
 
 ## Server requirements
 
@@ -57,7 +57,7 @@ php /path/to/musicball/push_scheduler.php --mode=qa
 
 Add `--dry-run` to either command to count eligible device reminders without sending or recording them.
 
-The reminder scheduler checks a 30-minute lookback window for deadlines. With the 15-minute cron cadence, this delivers one deduplicated deadline-reached notice to each subscribed player who is still incomplete without replaying stale notices after an extended scheduler outage.
+The reminder scheduler checks a 30-minute lookback window for deadlines. With the 15-minute cron cadence, this delivers one deduplicated deadline notice to each subscribed player who is still incomplete without replaying stale notices after an extended scheduler outage. `Build at Songs Due` sends the closed notice at the deadline. `Wait for everyone` sends the actionable missed-deadline notice first, then the playlist/finalization transition sends the closed notice if needed. Shared delivery keys prevent the deadline and transition paths from sending the same closed notice twice.
 
 The QA Tools push tester is a server-side admin broadcast. An authenticated admin can run it from a desktop browser, and the selected test is delivered once to every unique active admin endpoint found in live or QA push data; the desktop browser does not need to be subscribed.
 

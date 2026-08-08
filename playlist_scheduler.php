@@ -108,6 +108,29 @@ function mlSchedulerSendAdminFallbackPush(
     return $result;
 }
 
+function mlSchedulerSendPhaseClosedPush(PDO $pdo, array $round, string $phase, string $title): void
+{
+    try {
+        $pushResult = mlPushSendIncompletePhaseClosed($pdo, $round, $phase);
+        if (empty($pushResult['available'])) {
+            mlSchedulerLog(ucfirst($phase) . ' phase-closed push skipped for ' . $title . ': push is unavailable in this data mode.');
+            return;
+        }
+
+        mlSchedulerLog(
+            ucfirst($phase) . ' phase-closed push for ' . $title . ': eligible ' . (int)$pushResult['eligible']
+            . '; sent ' . (int)$pushResult['sent']
+            . '; failed ' . (int)$pushResult['failed']
+            . '; expired subscriptions disabled ' . (int)$pushResult['expired'] . '.'
+        );
+    } catch (Throwable $pushError) {
+        mlSchedulerLog(
+            ucfirst($phase) . ' phase-closed push failed for ' . $title . ': '
+            . mlPushSanitizeDeliveryError($pushError->getMessage())
+        );
+    }
+}
+
 try {
     if (!mlTableExists($pdo, 'ML_SeasonRounds')) {
         throw new RuntimeException('ML_SeasonRounds does not exist.');
@@ -229,6 +252,7 @@ try {
             $playlistUrl = trim((string)($createdPlaylist['SpotifyPlaylistURL'] ?? ''));
             $generatedCount++;
             mlSchedulerLog('Generated playlist for ' . $title . ' (SeasonRoundID ' . $seasonRoundId . ')' . ($playlistUrl !== '' ? ': ' . $playlistUrl : '.'));
+            mlSchedulerSendPhaseClosedPush($pdo, $round, 'song', $title);
         } catch (Throwable $roundError) {
             mlSchedulerLog('Failed generating playlist for ' . $title . ' (SeasonRoundID ' . $seasonRoundId . '): ' . $roundError->getMessage());
         }
@@ -283,6 +307,7 @@ try {
             if ($playlistBuildMode !== 'wait' || mlRoundHasAllExpectedVotes($voteSubmissionCount, $expectedPlayers)) {
                 if (mlMarkRoundClosed($pdo, $seasonRoundId)) {
                     $finalizedCount++;
+                    mlSchedulerSendPhaseClosedPush($pdo, $round, 'vote', $title);
                 }
                 continue;
             }
@@ -300,6 +325,7 @@ try {
 
             if ($now >= $nextSongsDue) {
                 if (mlMarkRoundClosed($pdo, $seasonRoundId)) {
+                    mlSchedulerSendPhaseClosedPush($pdo, $round, 'vote', $title);
                     if ($voteSubmissionCount <= 0) {
                         $skippedVotingCount++;
                         mlSchedulerLog(
@@ -357,6 +383,7 @@ try {
             $playlistBuildMode = 'due';
             $finalizedCount++;
             $votingFallbackCount++;
+            mlSchedulerSendPhaseClosedPush($pdo, $round, 'vote', $title);
             mlSchedulerLog(
                 'Changed round timing to Build at Songs Due after ' . $title
                 . ' reached its voting fallback with ' . $voteSubmissionCount

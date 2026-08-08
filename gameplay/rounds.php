@@ -120,6 +120,14 @@ function mlMarkRoundClosed(PDO $pdo, int $seasonRoundId): bool {
     $stmt->execute([$seasonRoundId]);
     return true;
 }
+function mlNotifyVotingPhaseClosedBestEffort(PDO $pdo, array $round): void {
+    try {
+        require_once __DIR__ . '/../integrations/push/push.php';
+        mlPushSendIncompletePhaseClosed($pdo, $round, 'vote');
+    } catch (Throwable $e) {
+        // Never interrupt round finalization or the admin response for push failures.
+    }
+}
 function mlHandleManualRoundFinalization(PDO $pdo, int $seasonRoundId, int $seasonId): array {
     $round = mlFindRoundById($pdo, $seasonRoundId);
     if (!$round || (int)($round['SeasonID'] ?? 0) !== $seasonId) {
@@ -149,6 +157,7 @@ function mlHandleManualRoundFinalization(PDO $pdo, int $seasonRoundId, int $seas
     if (!mlMarkRoundClosed($pdo, $seasonRoundId)) {
         throw new RuntimeException('The round could not be finalized.');
     }
+    mlNotifyVotingPhaseClosedBestEffort($pdo, $round);
 
     return ['already_finalized' => false, 'round' => $round];
 }
