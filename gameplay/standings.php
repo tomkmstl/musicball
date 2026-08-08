@@ -342,7 +342,8 @@ function mlBuildStandingsBreakdown(PDO $pdo, int $seasonId, int $currentUserId):
 }
 function mlRoundIsFinishedForDisplay(array $round): bool {
     if (($round['status_key'] ?? '') === 'closed') {
-        return true;
+        return !empty($round['has_playlist'])
+            && (int)($round['vote_submission_count'] ?? 0) > 0;
     }
 
     $expectedPlayers = (int)($round['expected_players'] ?? 0);

@@ -47,6 +47,10 @@ $isLiveVoting = (($roundView['round_state'] ?? '') === 'voting') && !mlRoundIsFi
             <?php endif; ?>
         </div>
 
+        <?php if ($isLiveVoting && !empty($roundView['votes_due_passed'])): ?>
+            <div class="status-banner">These results are still live. Votes Due has passed, and Musicball is waiting for the remaining players before finalizing the round.</div>
+        <?php endif; ?>
+
         <?php if (!$isLiveVoting && !empty($roundPodium)): ?>
             <div class="game-round-reveal-podium" aria-label="Top finishers">
                 <?php

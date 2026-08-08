@@ -12,11 +12,10 @@ if (!mlIsAdminUserId($pdo, $currentUserId)) {
     exit;
 }
 
-// The admin test targets this device's real subscription. Rewind snapshots
-// must not determine whether a live PWA subscription is available.
+// The admin test targets real subscribed admin devices from live or QA push data.
+// Rewind snapshots do not include these subscription tables.
 $livePdo = mlGetLivePdo();
-$pushStorageReady = mlPushStorageReady($livePdo);
-$pushReady = mlPushServerReady($livePdo);
+$pushStorageReady = mlPushStorageReady($livePdo) || mlPushStorageReady($pdo);
 if (empty($_SESSION['ml_push_csrf']) || !is_string($_SESSION['ml_push_csrf'])) {
     $_SESSION['ml_push_csrf'] = bin2hex(random_bytes(24));
 }
@@ -1393,10 +1392,10 @@ foreach ($qaAvailableRounds as $availableRound) {
         <section class="admin-section-divider">
             <div class="qa-rewind-kicker">Push notifications</div>
             <h2>Push Notification Test</h2>
-            <p>Send any supported notification to this admin device. Push Notifications must be on for this device in Live Mode Settings.</p>
+            <p>Send any supported reminder, deadline notice, or playlist/voting timing fallback to every admin device with Push Notifications enabled. The QA Tools page can send from a desktop browser and does not need its own push subscription.</p>
 
             <div class="admin-push-test-control" data-push-admin-test>
-                <div class="admin-push-test-status" data-push-admin-status>Checking this device...</div>
+                <div class="admin-push-test-status" data-push-admin-status>Checking enabled admin devices...</div>
                 <div class="admin-inline-form admin-inline-form-wrap">
                     <div class="admin-inline-field">
                         <label class="admin-label" for="admin_push_test_notification">Notification type</label>
@@ -1439,7 +1438,6 @@ foreach ($qaAvailableRounds as $availableRound) {
 </script>
 <script>
 window.ML_PUSH_ADMIN_TEST = <?= json_encode([
-    'ready' => $pushReady,
     'endpoint' => mlUrl('integrations/push/subscription.php'),
     'csrfToken' => $pushCsrfToken,
 ], JSON_UNESCAPED_SLASHES) ?>;

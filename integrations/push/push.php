@@ -85,6 +85,12 @@ function mlPushTestNotificationOptions(): array
 {
     return [
         'connection_test' => 'Connection test',
+        'playlist_mode_fallback' => 'Round timing changed - playlist fallback',
+        'voting_mode_fallback' => 'Round timing changed - voting fallback',
+        'song_deadline_open' => 'Song deadline - Wait for Everyone (open)',
+        'song_deadline_closed' => 'Song deadline - submissions closed',
+        'vote_deadline_open' => 'Voting deadline - Wait for Everyone (open)',
+        'vote_deadline_closed' => 'Voting deadline - voting closed',
         'song_24h' => 'Song reminder — 24 hours',
         'song_2h' => 'Song reminder — 2 hours',
         'vote_24h' => 'Voting reminder — 24 hours',
@@ -120,10 +126,34 @@ function mlPushBuildNotificationCopy(
                 'body' => $roundLabel . ' songs due in 2 hours!',
             ];
 
+        case 'song_deadline_open':
+            return [
+                'title' => 'You missed the deadline!!',
+                'body' => 'Submit now for ' . $roundLabel . ".... there's still time!",
+            ];
+
+        case 'song_deadline_closed':
+            return [
+                'title' => 'SONG DEADLINE PASSED',
+                'body' => $roundLabel . ' deadline past. You cannot submit a song for this round.',
+            ];
+
         case 'vote_24h':
             return [
                 'title' => 'Finish Your Votes',
                 'body' => $roundLabel . ' closes in about 24 hours.',
+            ];
+
+        case 'playlist_mode_fallback':
+            return [
+                'title' => 'ROUND TIMING CHANGED',
+                'body' => $roundLabel . ' reached the playlist fallback. Musicball changed future phases to Build at Songs Due and will generate the available submissions.',
+            ];
+
+        case 'voting_mode_fallback':
+            return [
+                'title' => 'ROUND TIMING CHANGED',
+                'body' => $roundLabel . ' reached the voting fallback before the next Songs Due deadline. Musicball finalized the available votes and changed future phases to Build at Songs Due.',
             ];
 
         case 'vote_2h':
@@ -131,9 +161,65 @@ function mlPushBuildNotificationCopy(
                 'title' => 'VOTES ARE DUE',
                 'body' => $roundLabel . ' votes are due in 2 hours!',
             ];
+
+        case 'vote_deadline_open':
+            return [
+                'title' => 'You missed the deadline!!',
+                'body' => 'Vote now for ' . $roundLabel . ".... there's still time!",
+            ];
+
+        case 'vote_deadline_closed':
+            return [
+                'title' => 'VOTING DEADLINE PASSED',
+                'body' => $roundLabel . ' deadline past. Your votes will not be counted for the round.',
+            ];
     }
 
     throw new InvalidArgumentException('Unsupported notification type.');
+}
+
+function mlPushResolveDeadlineNotificationType(string $phase, string $roundTimingMode, bool $phaseClosed): string
+{
+    $phase = strtolower(trim($phase));
+    if (!in_array($phase, ['song', 'vote'], true)) {
+        throw new InvalidArgumentException('Unsupported deadline notification phase.');
+    }
+
+    $canStillAct = strtolower(trim($roundTimingMode)) === 'wait' && !$phaseClosed;
+    return $phase . '_deadline_' . ($canStillAct ? 'open' : 'closed');
+}
+
+function mlPushBuildDeadlineDeliveryKey(string $phase, bool $phaseClosed, string $dueAt = ''): string
+{
+    $phase = strtolower(trim($phase));
+    if (!in_array($phase, ['song', 'vote'], true)) {
+        throw new InvalidArgumentException('Unsupported deadline notification phase.');
+    }
+
+    if ($phaseClosed) {
+        return $phase . '_phase_closed_v1';
+    }
+
+    $deadlineScope = substr(hash('sha256', trim($dueAt)), 0, 12);
+    return $phase . '_deadline_open_' . $deadlineScope;
+}
+
+function mlPushResolveReminderWindow(DateTimeImmutable $dueAt, DateTimeImmutable $now): ?array
+{
+    $remainingSeconds = $dueAt->getTimestamp() - $now->getTimestamp();
+    if ($remainingSeconds <= 0) {
+        return $remainingSeconds >= -1800 ? ['key' => 'deadline'] : null;
+    }
+
+    if ($remainingSeconds > 86400) {
+        return null;
+    }
+
+    if ($remainingSeconds <= 7200) {
+        return ['key' => '2h'];
+    }
+
+    return ['key' => '24h'];
 }
 
 function mlPushEndpointHostAllowed(string $endpoint): bool
@@ -275,6 +361,29 @@ function mlPushLoadActiveSubscription(PDO $pdo, int $userId, string $endpoint): 
     return $row ?: null;
 }
 
+function mlPushLoadActiveAdminSubscriptions(PDO $pdo): array
+{
+    if (!mlUsersHasIsAdminColumn($pdo) || !mlPushTableExists($pdo, 'ML_PushSubscriptions')) {
+        return [];
+    }
+
+    $stmt = $pdo->query(
+        "SELECT ps.PushSubscriptionID,
+                ps.UserID,
+                ps.Endpoint,
+                ps.PublicKey,
+                ps.AuthToken,
+                ps.ContentEncoding
+         FROM ML_PushSubscriptions ps
+         INNER JOIN ML_Users u ON u.UserID = ps.UserID
+         WHERE ps.DisabledAt IS NULL
+           AND u.IsAdmin = 1
+         ORDER BY ps.UserID ASC, ps.PushSubscriptionID ASC"
+    );
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+}
+
 function mlPushCreateWebPushClient(): Minishlink\WebPush\WebPush
 {
     if (!class_exists('Minishlink\\WebPush\\WebPush')) {
@@ -402,4 +511,152 @@ function mlPushRecordDeliveryAttempt(
         $error,
         $success ? gmdate('Y-m-d H:i:s') : null,
     ]);
+}
+
+function mlPushSendNotificationOnce(
+    PDO $pdo,
+    Minishlink\WebPush\WebPush $client,
+    array $subscription,
+    int $seasonRoundId,
+    string $reminderKey,
+    array $payload
+): array {
+    $subscriptionId = (int)($subscription['PushSubscriptionID'] ?? 0);
+    if ($subscriptionId <= 0 || $seasonRoundId <= 0 || trim($reminderKey) === '') {
+        return ['attempted' => false, 'success' => false, 'expired' => false, 'error' => 'Invalid push delivery identity.'];
+    }
+
+    if (mlPushReminderWasSent($pdo, $subscriptionId, $seasonRoundId, $reminderKey)) {
+        return ['attempted' => false, 'success' => true, 'expired' => false, 'error' => ''];
+    }
+
+    $lockName = 'musicball_push_' . substr(hash(
+        'sha256',
+        mlPushGetDataMode($pdo) . ':' . $subscriptionId . ':' . $seasonRoundId . ':' . $reminderKey
+    ), 0, 40);
+    $lockStmt = $pdo->prepare('SELECT GET_LOCK(?, 5)');
+    $lockStmt->execute([$lockName]);
+    if ((int)$lockStmt->fetchColumn() !== 1) {
+        return ['attempted' => false, 'success' => false, 'expired' => false, 'error' => 'Push delivery is already in progress.'];
+    }
+
+    try {
+        if (mlPushReminderWasSent($pdo, $subscriptionId, $seasonRoundId, $reminderKey)) {
+            return ['attempted' => false, 'success' => true, 'expired' => false, 'error' => ''];
+        }
+
+        $delivery = mlPushSendNotification($client, $subscription, $payload);
+        mlPushRecordDeliveryAttempt(
+            $pdo,
+            $subscriptionId,
+            (int)($subscription['UserID'] ?? 0),
+            $seasonRoundId,
+            $reminderKey,
+            $delivery
+        );
+
+        if (!empty($delivery['expired'])) {
+            mlPushDisableSubscriptionById($pdo, $subscriptionId);
+        }
+
+        return ['attempted' => true] + $delivery;
+    } finally {
+        try {
+            $releaseStmt = $pdo->prepare('SELECT RELEASE_LOCK(?)');
+            $releaseStmt->execute([$lockName]);
+        } catch (Throwable $e) {
+            // The database releases named locks automatically when the connection closes.
+        }
+    }
+}
+
+function mlPushLoadIncompleteRoundSubscriptions(PDO $pdo, int $seasonRoundId, string $phase): array
+{
+    $phase = strtolower(trim($phase));
+    if ($phase === 'song') {
+        $completionJoin = 'LEFT JOIN ML_RoundSongs completed ON completed.SeasonRoundID = ? AND completed.UserID = ps.UserID';
+        $completionWhere = 'completed.RoundSongID IS NULL';
+    } elseif ($phase === 'vote') {
+        $completionJoin = 'LEFT JOIN ML_RoundVoteSubmissions completed ON completed.SeasonRoundID = ? AND completed.UserID = ps.UserID';
+        $completionWhere = 'completed.RoundVoteSubmissionID IS NULL';
+    } else {
+        throw new InvalidArgumentException('Unsupported incomplete-action phase.');
+    }
+
+    $stmt = $pdo->prepare(
+        "SELECT ps.PushSubscriptionID,
+                ps.UserID,
+                ps.Endpoint,
+                ps.PublicKey,
+                ps.AuthToken,
+                ps.ContentEncoding
+         FROM ML_PushSubscriptions ps
+         INNER JOIN ML_Users u ON u.UserID = ps.UserID
+         {$completionJoin}
+         WHERE ps.DisabledAt IS NULL
+           AND {$completionWhere}
+         ORDER BY ps.UserID ASC, ps.PushSubscriptionID ASC"
+    );
+    $stmt->execute([$seasonRoundId]);
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+}
+
+function mlPushSendIncompletePhaseClosed(PDO $pdo, array $round, string $phase): array
+{
+    $result = [
+        'available' => false,
+        'eligible' => 0,
+        'sent' => 0,
+        'failed' => 0,
+        'expired' => 0,
+    ];
+
+    $seasonRoundId = (int)($round['SeasonRoundID'] ?? 0);
+    if ($seasonRoundId <= 0 || !mlPushServerReady($pdo)) {
+        return $result;
+    }
+
+    $phase = strtolower(trim($phase));
+    $notificationType = mlPushResolveDeadlineNotificationType($phase, 'due', true);
+    $subscriptions = mlPushLoadIncompleteRoundSubscriptions($pdo, $seasonRoundId, $phase);
+    $result['available'] = true;
+    $result['eligible'] = count($subscriptions);
+
+    if (empty($subscriptions)) {
+        return $result;
+    }
+
+    $copy = mlPushBuildNotificationCopy(
+        $notificationType,
+        (int)($round['RoundNumber'] ?? 0),
+        trim((string)($round['Title'] ?? ''))
+    );
+    $reminderKey = mlPushBuildDeadlineDeliveryKey($phase, true);
+    $client = mlPushCreateWebPushClient();
+
+    foreach ($subscriptions as $subscription) {
+        $delivery = mlPushSendNotificationOnce($pdo, $client, $subscription, $seasonRoundId, $reminderKey, [
+            'title' => $copy['title'],
+            'body' => $copy['body'],
+            'url' => mlUrl('season.php?season_id=' . (int)($round['SeasonID'] ?? 0)),
+            'tag' => 'musicball-' . $reminderKey . '-' . $seasonRoundId,
+        ]);
+
+        if (empty($delivery['attempted'])) {
+            continue;
+        }
+
+        if (!empty($delivery['success'])) {
+            $result['sent']++;
+        } else {
+            $result['failed']++;
+        }
+
+        if (!empty($delivery['expired'])) {
+            $result['expired']++;
+        }
+    }
+
+    return $result;
 }

@@ -138,6 +138,9 @@ foreach ($ballot as $entry) {
         <?php if (!empty($roundView['vote_submitted'])): ?>
             <div class="status-banner">Your votes for this round have already been submitted and can no longer be changed.</div>
         <?php endif; ?>
+        <?php if (($roundView['round_state'] ?? '') === 'voting' && !empty($roundView['votes_due_passed'])): ?>
+            <div class="status-banner">Votes Due has passed, but voting remains open while Musicball waits for every player.</div>
+        <?php endif; ?>
         <?php if ($message !== ''): ?>
             <div class="status-banner success"><?= htmlspecialchars($message) ?></div>
         <?php endif; ?>

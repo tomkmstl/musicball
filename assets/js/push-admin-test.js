@@ -7,18 +7,15 @@
     var statusNode = root.querySelector('[data-push-admin-status]');
     var typeSelect = root.querySelector('[data-push-admin-type]');
     var sendButton = root.querySelector('[data-push-admin-send]');
-    var browserSubscription = null;
-    var serverSubscribed = false;
+    var recipientCount = 0;
+    var serverReady = false;
     var busy = false;
 
-    if (typeSelect) typeSelect.disabled = true;
+    if (typeSelect) typeSelect.disabled = false;
     if (sendButton) sendButton.disabled = true;
 
     function isReady() {
-        return !!browserSubscription
-            && serverSubscribed
-            && 'Notification' in window
-            && Notification.permission === 'granted';
+        return serverReady && recipientCount > 0;
     }
 
     function setStatus(message, state) {
@@ -30,7 +27,7 @@
     function setBusy(nextBusy) {
         var ready = isReady();
         busy = nextBusy;
-        if (typeSelect) typeSelect.disabled = busy || !ready;
+        if (typeSelect) typeSelect.disabled = busy;
         if (sendButton) sendButton.disabled = busy || !ready;
         root.classList.toggle('is-busy', busy);
     }
@@ -39,12 +36,15 @@
         var ready = isReady();
 
         setBusy(false);
-        if (ready) {
-            setStatus('Ready on this device', 'ready');
-        } else if ('Notification' in window && Notification.permission === 'denied') {
-            setStatus('Blocked in this device\'s notification settings', 'error');
+        if (!serverReady) {
+            setStatus('The push delivery service is not available yet.', 'unavailable');
+        } else if (ready) {
+            setStatus(
+                'Ready to send to ' + recipientCount + ' enabled admin device' + (recipientCount === 1 ? '' : 's') + '.',
+                'ready'
+            );
         } else {
-            setStatus('Turn on Push Notifications for this device in Live Mode Settings first.', 'unavailable');
+            setStatus('No admin devices currently have Push Notifications enabled.', 'unavailable');
         }
     }
 
@@ -70,53 +70,36 @@
     }
 
     function initialize() {
-        if (!config.ready) {
-            setBusy(false);
-            setStatus('Push notifications are not available yet.', 'unavailable');
-            return;
-        }
-
-        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-            setBusy(false);
-            setStatus('Push notifications are not supported on this device.', 'unavailable');
-            return;
-        }
-
-        navigator.serviceWorker.ready.then(function (registration) {
-            return registration.pushManager.getSubscription();
-        }).then(function (subscription) {
-            browserSubscription = subscription;
-
-            if (!browserSubscription) {
-                render();
-                return null;
-            }
-
-            return request('status', {
-                endpoint: browserSubscription.endpoint,
-                scope: 'admin_test'
-            }).then(function (body) {
-                serverSubscribed = !!body.subscribed;
-                render();
-            });
+        request('status', {
+            scope: 'admin_test'
+        }).then(function (body) {
+            serverReady = !!body.ready;
+            recipientCount = Math.max(0, Number(body.recipient_count) || 0);
+            render();
         }).catch(function () {
             setBusy(false);
-            setStatus('Push notification status could not be checked.', 'error');
+            setStatus('Enabled admin devices could not be checked.', 'error');
         });
     }
 
     if (sendButton) {
         sendButton.addEventListener('click', function () {
-            if (busy || !browserSubscription || !serverSubscribed) return;
+            if (busy || !isReady()) return;
 
             setBusy(true);
             request('test', {
-                endpoint: browserSubscription.endpoint,
                 notification_type: typeSelect ? typeSelect.value : 'connection_test',
                 scope: 'admin_test'
-            }).then(function () {
+            }).then(function (body) {
+                recipientCount = Math.max(0, Number(body.recipient_count) || recipientCount);
                 setBusy(false);
-                setStatus('Test sent', 'sent');
+                var sentCount = Math.max(0, Number(body.sent_count) || 0);
+                var failedCount = Math.max(0, Number(body.failed_count) || 0);
+                var message = 'Test sent to ' + sentCount + ' admin device' + (sentCount === 1 ? '' : 's') + '.';
+                if (failedCount > 0) {
+                    message += ' ' + failedCount + ' failed.';
+                }
+                setStatus(message, 'sent');
             }).catch(function (error) {
                 setBusy(false);
                 setStatus(error.message || 'The test could not be sent.', 'error');

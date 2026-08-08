@@ -452,6 +452,16 @@ function mlGetPlaylistBuildMode(PDO $pdo): string {
     $mode = strtolower(trim((string)mlGetSettingValue($pdo, 'playlist_build_mode', 'due')));
     return in_array($mode, ['due', 'wait'], true) ? $mode : 'due';
 }
+function mlGetPlaylistWaitFallbackAt(array $round): ?DateTimeImmutable {
+    $songsDue = mlCreateUtcDate(isset($round['SongsDue']) ? (string)$round['SongsDue'] : null);
+    $votesDue = mlCreateUtcDate(isset($round['VotesDue']) ? (string)$round['VotesDue'] : null);
+    if (!$songsDue instanceof DateTimeImmutable || !$votesDue instanceof DateTimeImmutable) {
+        return null;
+    }
+
+    $fallbackAt = $votesDue->modify('-12 hours');
+    return $fallbackAt < $songsDue ? $songsDue : $fallbackAt;
+}
 function mlAcquireRoundPlaylistLock(PDO $pdo, int $seasonRoundId, int $timeoutSeconds = 10): bool {
     try {
         $stmt = $pdo->prepare('SELECT GET_LOCK(?, ?) AS lock_status');
@@ -611,6 +621,14 @@ function mlGeneratePlaylistForRound(PDO $pdo, array $round, bool $force = false)
         mlReleaseRoundPlaylistLock($pdo, $seasonRoundId);
     }
 }
+function mlNotifySongPhaseClosedBestEffort(PDO $pdo, array $round): void {
+    try {
+        require_once __DIR__ . '/../integrations/push/push.php';
+        mlPushSendIncompletePhaseClosed($pdo, $round, 'song');
+    } catch (Throwable $e) {
+        // Never interrupt playlist generation or the admin response for push failures.
+    }
+}
 function mlMaybeAutoGeneratePlaylists(PDO $pdo, array $presentedRounds, int $currentUserId = 0): bool {
     if (!mlIsAdminUserId($pdo, $currentUserId)) {
         return false;
@@ -643,6 +661,7 @@ function mlMaybeAutoGeneratePlaylists(PDO $pdo, array $presentedRounds, int $cur
 
         try {
             mlGeneratePlaylistForRound($pdo, $round, false);
+            mlNotifySongPhaseClosedBestEffort($pdo, $round);
             $generatedAny = true;
         } catch (Throwable $e) {
             $_SESSION['ml_playlist_auto_error'] = $e->getMessage();
@@ -680,6 +699,7 @@ function mlHandleManualPlaylistTrigger(PDO $pdo, array $presentedRounds): array 
         }
 
         mlGeneratePlaylistForRound($pdo, $round, true);
+        mlNotifySongPhaseClosedBestEffort($pdo, $round);
 
         return [
             'title' => $roundTitle,

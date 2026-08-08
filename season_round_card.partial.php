@@ -46,6 +46,11 @@ $chosenSongSpotifyUrl = $hasChosenSong && preg_match('/^[A-Za-z0-9]{22}$/', $cho
                 </div>
             </div>
         <?php endif; ?>
+        <?php if (($round['round_state'] ?? '') === 'voting' && !empty($round['votes_due_passed']) && !$roundResultsFinal): ?>
+            <div class="note note-bottom-sm">
+                Votes Due has passed. Wait for everyone mode is keeping voting open for the remaining players.
+            </div>
+        <?php endif; ?>
         <?php if ($showRevealPodium && !empty($round['podium_finishers'])): ?>
             <div class="game-round-reveal-podium" aria-label="Top finishers">
                 <?php
@@ -132,6 +137,24 @@ $chosenSongSpotifyUrl = $hasChosenSong && preg_match('/^[A-Za-z0-9]{22}$/', $cho
                 <input type="hidden" name="season_action" value="generate_current_playlist">
                 <input type="hidden" name="season_csrf" value="<?= htmlspecialchars($seasonCsrfToken) ?>">
                 <button type="submit" class="button-secondary">Generate Current Playlist</button>
+            </form>
+        </div>
+    <?php elseif (!empty($isAdminUser) && ($round['round_state'] ?? '') === 'voting' && !empty($round['votes_due_passed']) && (int)($round['vote_submission_count'] ?? 0) === 0): ?>
+        <div class="game-round-admin-build">
+            <div class="note note-bottom-sm">
+                <strong>Admin: no votes have been submitted.</strong> The round cannot be finalized yet. If a following round exists and no votes arrive by its Songs Due deadline, the scheduler will skip these results.
+            </div>
+        </div>
+    <?php elseif (!empty($isAdminUser) && ($round['round_state'] ?? '') === 'voting' && !empty($round['can_manual_finalize_round'])): ?>
+        <div class="game-round-admin-build">
+            <div class="note note-bottom-sm">
+                Admin: Votes Due has passed. You can finalize the round now with the votes received, or continue waiting for every player.
+            </div>
+            <form method="post" action="season.php?season_id=<?= (int)($round['SeasonID'] ?? 0) ?>">
+                <input type="hidden" name="season_action" value="finalize_current_round">
+                <input type="hidden" name="season_round_id" value="<?= (int)$round['SeasonRoundID'] ?>">
+                <input type="hidden" name="season_csrf" value="<?= htmlspecialchars($seasonCsrfToken) ?>">
+                <button type="submit" class="button-secondary">Finalize Round</button>
             </form>
         </div>
     <?php endif; ?>
