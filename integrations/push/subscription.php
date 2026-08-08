@@ -61,6 +61,7 @@ try {
             $adminSubscriptions = mlPushLoadActiveAdminSubscriptions($pushPdo);
             mlPushApiRespond(200, [
                 'ok' => true,
+                'ready' => mlPushServerReady($pushPdo),
                 'subscribed' => !empty($adminSubscriptions),
                 'recipient_count' => count($adminSubscriptions),
             ]);

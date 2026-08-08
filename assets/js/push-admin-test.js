@@ -8,13 +8,14 @@
     var typeSelect = root.querySelector('[data-push-admin-type]');
     var sendButton = root.querySelector('[data-push-admin-send]');
     var recipientCount = 0;
+    var serverReady = false;
     var busy = false;
 
-    if (typeSelect) typeSelect.disabled = true;
+    if (typeSelect) typeSelect.disabled = false;
     if (sendButton) sendButton.disabled = true;
 
     function isReady() {
-        return !!config.ready && recipientCount > 0;
+        return serverReady && recipientCount > 0;
     }
 
     function setStatus(message, state) {
@@ -26,7 +27,7 @@
     function setBusy(nextBusy) {
         var ready = isReady();
         busy = nextBusy;
-        if (typeSelect) typeSelect.disabled = busy || !ready;
+        if (typeSelect) typeSelect.disabled = busy;
         if (sendButton) sendButton.disabled = busy || !ready;
         root.classList.toggle('is-busy', busy);
     }
@@ -35,7 +36,9 @@
         var ready = isReady();
 
         setBusy(false);
-        if (ready) {
+        if (!serverReady) {
+            setStatus('The push delivery service is not available yet.', 'unavailable');
+        } else if (ready) {
             setStatus(
                 'Ready to send to ' + recipientCount + ' enabled admin device' + (recipientCount === 1 ? '' : 's') + '.',
                 'ready'
@@ -67,15 +70,10 @@
     }
 
     function initialize() {
-        if (!config.ready) {
-            setBusy(false);
-            setStatus('Push notifications are not available yet.', 'unavailable');
-            return;
-        }
-
         request('status', {
             scope: 'admin_test'
         }).then(function (body) {
+            serverReady = !!body.ready;
             recipientCount = Math.max(0, Number(body.recipient_count) || 0);
             render();
         }).catch(function () {

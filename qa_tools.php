@@ -16,7 +16,6 @@ if (!mlIsAdminUserId($pdo, $currentUserId)) {
 // must not determine which live push subscriptions are available.
 $livePdo = mlGetLivePdo();
 $pushStorageReady = mlPushStorageReady($livePdo);
-$pushReady = mlPushServerReady($livePdo);
 if (empty($_SESSION['ml_push_csrf']) || !is_string($_SESSION['ml_push_csrf'])) {
     $_SESSION['ml_push_csrf'] = bin2hex(random_bytes(24));
 }
@@ -1439,7 +1438,6 @@ foreach ($qaAvailableRounds as $availableRound) {
 </script>
 <script>
 window.ML_PUSH_ADMIN_TEST = <?= json_encode([
-    'ready' => $pushReady,
     'endpoint' => mlUrl('integrations/push/subscription.php'),
     'csrfToken' => $pushCsrfToken,
 ], JSON_UNESCAPED_SLASHES) ?>;
