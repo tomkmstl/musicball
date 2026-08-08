@@ -111,6 +111,7 @@ function mlResolveRoundState(array $round, DateTimeImmutable $now, ?DateTimeImmu
         'votes_due_utc' => isset($round['VotesDue']) ? (string)$round['VotesDue'] : '',
         'songs_due_label' => mlFormatRoundDate(isset($round['SongsDue']) ? $round['SongsDue'] : null),
         'votes_due_label' => mlFormatRoundDate(isset($round['VotesDue']) ? $round['VotesDue'] : null),
+        'songs_due_passed' => $songsDue instanceof DateTimeImmutable && $now > $songsDue,
         'submission_closed' => ($roundState === 'submission' && !mlCanChooseSongForRound($round, $playlistRecord, $now, $playlistBuildMode, $songSubmissionCount, $expectedPlayers)),
     ];
 }
@@ -150,6 +151,7 @@ function mlComputeRoundPresentation(PDO $pdo, array $rounds, int $currentUserId)
         $seasonRoundId = (int)$round['SeasonRoundID'];
         $seasonIsActive = mlSeasonIsActiveForGameplay($pdo, (int)($round['SeasonID'] ?? 0));
         $playlistRecord = $playlistRecords[$seasonRoundId] ?? [];
+        $songsDue = mlCreateUtcDate(isset($round['SongsDue']) ? $round['SongsDue'] : null);
         $votesDue = mlCreateUtcDate(isset($round['VotesDue']) ? $round['VotesDue'] : null);
         $hasPlaylist = !empty($playlistRecord) && trim((string)($playlistRecord['SpotifyPlaylistURL'] ?? $playlistRecord['SpotifyPlaylistID'] ?? '')) !== '';
 
@@ -206,6 +208,7 @@ function mlComputeRoundPresentation(PDO $pdo, array $rounds, int $currentUserId)
         $round['votes_due_utc'] = isset($round['VotesDue']) ? (string)$round['VotesDue'] : '';
         $round['songs_due_label'] = mlFormatRoundDate(isset($round['SongsDue']) ? $round['SongsDue'] : null);
         $round['votes_due_label'] = mlFormatRoundDate(isset($round['VotesDue']) ? $round['VotesDue'] : null);
+        $round['songs_due_passed'] = $songsDue instanceof DateTimeImmutable && $now > $songsDue;
         $round['submission_closed'] = false;
 
         $resolved[] = $round;
