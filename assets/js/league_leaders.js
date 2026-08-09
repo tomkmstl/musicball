@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var metricLinks = Array.prototype.slice.call(section.querySelectorAll('[data-leader-metric-link]'));
     var activeMetric = '';
     var detailCleanupTimer = null;
+    var focusBoardAfterPopstate = false;
+    var lastPointerActivationAt = -Infinity;
     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var boardUrl = stage.dataset.leadersBoardUrl || backLink.href;
 
@@ -25,8 +27,26 @@ document.addEventListener('DOMContentLoaded', function () {
         window.history.scrollRestoration = 'manual';
     }
 
+    document.addEventListener('pointerdown', function () {
+        lastPointerActivationAt = window.performance.now();
+    }, true);
+    document.addEventListener('touchstart', function () {
+        lastPointerActivationAt = window.performance.now();
+    }, { capture: true, passive: true });
+    document.addEventListener('mousedown', function () {
+        lastPointerActivationAt = window.performance.now();
+    }, true);
+    document.addEventListener('keydown', function () {
+        lastPointerActivationAt = -Infinity;
+    }, true);
+
     function plainPrimaryClick(event) {
         return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+    }
+
+    function shouldMoveFocus(event) {
+        return event.detail === 0
+            && (window.performance.now() - lastPointerActivationAt) > 750;
     }
 
     function historyState(values) {
@@ -155,6 +175,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             event.preventDefault();
+            var moveFocus = shouldMoveFocus(event);
+            if (!moveFocus) {
+                link.blur();
+            }
             var savedScrollY = window.scrollY;
             window.history.replaceState(historyState({
                 leadersView: 'board',
@@ -166,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 leadersScrollY: savedScrollY,
                 leaderMetric: metric
             }), '', link.href);
-            showDetail(metric);
+            showDetail(metric, { focus: moveFocus });
         });
     });
 
@@ -176,7 +200,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         event.preventDefault();
+        var moveFocus = shouldMoveFocus(event);
+        if (!moveFocus) {
+            backLink.blur();
+        }
         if (locationMetric() && window.history.state && window.history.state.leadersView === 'detail') {
+            focusBoardAfterPopstate = moveFocus;
             window.history.back();
             return;
         }
@@ -189,7 +218,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }), '', boardUrl);
         showBoard({
             metric: activeMetric,
-            scrollY: Number.isFinite(scrollY) ? scrollY : stageTop()
+            scrollY: Number.isFinite(scrollY) ? scrollY : stageTop(),
+            focus: moveFocus
         });
     });
 
@@ -203,9 +233,12 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        var moveFocus = focusBoardAfterPopstate;
+        focusBoardAfterPopstate = false;
         showBoard({
             metric: state.leaderMetric || activeMetric,
-            scrollY: Number.isFinite(savedScrollY) ? savedScrollY : stageTop()
+            scrollY: Number.isFinite(savedScrollY) ? savedScrollY : stageTop(),
+            focus: moveFocus
         });
     });
 
