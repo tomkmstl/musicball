@@ -1480,6 +1480,67 @@ body.theme-light .admin-swap-dialog::backdrop {
     margin-top: 14px;
 }
 
+.song-current-pick-actions[hidden] {
+    display: none;
+}
+
+.song-current-pick-panel > .home-shell-kicker {
+    margin-bottom: 8px;
+}
+
+.song-current-pick-panel > .song-selected-card {
+    position: relative;
+}
+
+.song-remove-link {
+    position: absolute;
+    top: 5px;
+    right: 7px;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 5px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: lowercase;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.15s ease;
+}
+
+.song-remove-link:hover:not([disabled]),
+.song-remove-link:focus-visible {
+    color: var(--danger);
+}
+
+.song-remove-link:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 1px;
+    border-radius: 8px;
+}
+
+.song-remove-link[disabled] {
+    opacity: 0.42;
+    cursor: not-allowed;
+}
+
+.song-remove-link[hidden] {
+    display: none;
+}
+
+@media (min-width: 701px) {
+    .song-current-pick-panel > .song-selected-card {
+        padding-right: 82px;
+    }
+}
+
 .song-remove-confirm {
     margin-top: 12px;
     padding: 14px;
@@ -3220,6 +3281,13 @@ body.theme-light .settings-admin-link {
     pointer-events: none;
 }
 
+.song-search-shell-confirming > p,
+.song-search-shell-confirming .song-search-form-live,
+.song-search-shell-confirming > .spotify-search-status,
+.song-search-shell-confirming > .spotify-search-results {
+    display: none;
+}
+
 .spotify-selection-confirm-panel {
     margin-top: 16px;
     padding: 16px;
@@ -3365,52 +3433,157 @@ body.ml-pull-refreshing .wrapper {
     transform: translateY(34px);
 }
 
-.song-comment-form {
+.song-comment-composer {
     margin-top: 18px;
+}
+
+.song-comment-add-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 58px;
+    padding: 0 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.song-comment-add-button:hover,
+.song-comment-add-button:focus-visible {
+    border-color: var(--brand);
+    background: var(--surface-3);
+    outline: none;
+}
+
+.song-comment-add-button:focus-visible {
+    box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+.song-comment-add-button[hidden] {
+    display: none;
+}
+
+.song-comment-add-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.song-comment-add-icon {
+    color: var(--brand);
+    font-size: 1.35rem;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.song-comment-add-chevron {
+    color: var(--muted);
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.song-comment-form {
     display: grid;
     gap: 10px;
 }
 
-.song-comment-input {
+.song-comment-form[hidden] {
+    display: none;
+}
+
+.song-comment-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.song-comment-label-row .admin-label {
+    margin: 0;
+    color: var(--text);
+    font-weight: 700;
+}
+
+.song-comment-optional,
+.song-comment-editor-meta {
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.song-comment-editor-shell {
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    border-radius: 15px;
+    background: var(--surface);
+    transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.song-comment-editor-shell:focus-within {
+    border-color: rgba(61, 172, 236, 0.62);
+    box-shadow: 0 0 0 3px rgba(61, 172, 236, 0.13);
+}
+
+.song-comment-editor-shell .song-comment-input {
+    display: block;
+    min-height: 132px;
+    padding: 14px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
     overflow-y: auto;
     resize: none;
 }
 
-.song-comment-actions {
+.song-comment-editor-shell .song-comment-input:focus {
+    border: 0;
+    box-shadow: none;
+}
+
+.song-comment-editor-footer {
     display: flex;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: 14px;
-    margin-top: 16px;
-}
-
-.song-comment-actions .button-primary,
-.song-comment-actions .button-secondary,
-.song-comment-actions .song-current-pick-actions {
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     min-height: 58px;
+    padding: 7px 8px 7px 14px;
+    border-top: 1px solid var(--line);
+    background: var(--surface-3);
 }
 
-.song-comment-actions .song-current-pick-actions {
-    flex: 1 1 0;
-    margin: 0;
+.song-comment-editor-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.song-comment-actions .song-current-pick-actions .button-primary,
-.song-comment-actions .song-current-pick-actions .button-secondary,
-.song-comment-actions > .button-primary,
-.song-comment-actions > .button-secondary {
+.song-comment-quote {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    padding: 14px 22px;
-    border-radius: 16px;
-    text-align: center;
-    white-space: normal;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--line-strong);
+    border-radius: 9px;
+    color: var(--brand);
+    font-size: 1.1rem;
+    line-height: 1;
 }
 
-.song-comment-actions-split > * {
-    flex: 1 1 0;
+.song-comment-editor-footer .song-comment-save-button {
+    width: auto;
+    min-width: 86px;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 12px;
 }
 
 .status-banner-duplicate {
@@ -3426,13 +3599,6 @@ body.ml-pull-refreshing .wrapper {
     background: linear-gradient(180deg, rgba(254, 226, 226, 0.98), rgba(254, 202, 202, 0.98));
     color: #7f1d1d;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 10px 22px rgba(148, 19, 19, 0.08);
-}
-
-@media (max-width: 640px) {
-    .song-comment-actions,
-    .song-comment-actions-split {
-        flex-direction: column;
-    }
 }
 
 .vote-ballot-item-own {
