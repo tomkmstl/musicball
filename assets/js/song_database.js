@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var debounceTimer = null;
     var activeItems = [];
     var databaseContent = resultsWrap.parentElement;
-    var desktopDismissHandler = null;
+    var detailDismissHandler = null;
 
     function isDesktopDetailMode() {
         return replaceResultsMode && window.matchMedia('(min-width: 901px)').matches;
@@ -125,9 +125,9 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        if (!isFrozen && desktopDismissHandler && databaseContent) {
-            databaseContent.removeEventListener('click', desktopDismissHandler);
-            desktopDismissHandler = null;
+        if (!isFrozen && detailDismissHandler && databaseContent) {
+            databaseContent.removeEventListener('click', detailDismissHandler);
+            detailDismissHandler = null;
         }
 
         databaseShell.classList.toggle('song-database-shell-detail-open', isFrozen);
@@ -219,12 +219,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         detailsWrap.innerHTML = '' +
             (replaceResultsMode ? '<button type="button" class="song-database-back" aria-label="Back to ' + escapeHtml(activeItems.length) + ' search results">' +
+                    '<span class="song-database-back-visual">' +
                     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="song-database-result-icon song-database-back-icon" aria-hidden="true" focusable="false">' +
                         '<path stroke="none" d="M0 0h24v24H0z" fill="none"></path>' +
                         '<path d="M12 9v-3.586a1 1 0 0 1 1.707 -.707l6.586 6.586a1 1 0 0 1 0 1.414l-6.586 6.586a1 1 0 0 1 -1.707 -.707v-3.586h-6v-6h6"></path>' +
                         '<path d="M3 9v6"></path>' +
                     '</svg>' +
                     '<span>BACK</span>' +
+                    '</span>' +
                 '</button>' : '') +
             '<section class="song-database-detail-card">' +
                 '<div class="song-selected-card">' +
@@ -240,38 +242,38 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (replaceResultsMode) {
             var backButton = detailsWrap.querySelector('.song-database-back');
-            var restoreDesktopResults = function () {
-                detailsWrap.innerHTML = '';
-                setResultsFrozen(false);
-                setStatus('Select a song or artist from past rounds.', 'muted');
+            var restoreSearchResults = function () {
+                if (desktopDetailMode) {
+                    detailsWrap.innerHTML = '';
+                    setResultsFrozen(false);
+                    setStatus('Select a song or artist from past rounds.', 'muted');
 
-                if (resultsWrap.children[selectedIndex]) {
-                    resultsWrap.children[selectedIndex].focus({ preventScroll: true });
+                    if (resultsWrap.children[selectedIndex]) {
+                        resultsWrap.children[selectedIndex].focus({ preventScroll: true });
+                    }
+                    scrollDatabaseShellToTop();
+                } else {
+                    renderResults(activeItems, selectedIndex);
                 }
-                scrollDatabaseShellToTop();
             };
 
             backButton.addEventListener('click', function (event) {
                 event.stopPropagation();
 
-                if (desktopDetailMode) {
-                    restoreDesktopResults();
-                } else {
-                    renderResults(activeItems, selectedIndex);
-                }
+                restoreSearchResults();
             });
 
             if (desktopDetailMode && databaseContent) {
-                desktopDismissHandler = function (event) {
+                detailDismissHandler = function (event) {
                     var detailCard = detailsWrap.querySelector('.song-database-detail-card');
 
                     if (backButton.contains(event.target) || (detailCard && detailCard.contains(event.target))) {
                         return;
                     }
 
-                    restoreDesktopResults();
+                    restoreSearchResults();
                 };
-                databaseContent.addEventListener('click', desktopDismissHandler);
+                databaseContent.addEventListener('click', detailDismissHandler);
             }
 
             backButton.focus({ preventScroll: true });
