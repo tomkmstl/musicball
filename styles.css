@@ -4316,12 +4316,88 @@ body.playlist-page-loading .playlist-cta-button {
     max-width: 760px;
 }
 
+@media (min-width: 901px) {
+    .song-database-shell[data-song-database-mode="replace-results"] .song-database-results {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        max-width: none;
+    }
+
+    .song-database-shell-detail-open .song-database-content {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        align-items: start;
+        cursor: pointer;
+    }
+
+    .song-database-shell-detail-open .song-database-results {
+        grid-row: 1;
+        grid-column: 1 / -1;
+    }
+
+    .song-database-shell-detail-open .song-database-details {
+        z-index: 1;
+        grid-row: 1;
+        grid-column: 2;
+        width: 100%;
+        max-width: none;
+        margin-top: 12px;
+        border-radius: 18px;
+        background: var(--surface-2);
+        cursor: default;
+    }
+}
+
+.song-database-results {
+    transition: opacity 0.18s ease;
+}
+
+.song-database-results-frozen {
+    opacity: 0.34;
+    pointer-events: none;
+    user-select: none;
+}
+
 .song-database-result {
+    grid-template-columns: 52px minmax(0, 1fr) 24px;
+    gap: 10px;
+    padding: 9px 11px;
     background: rgba(255, 255, 255, 0.025);
 }
 
+.song-database-result .spotify-search-result-art {
+    width: 52px;
+    height: 52px;
+    border-radius: 10px;
+}
+
 .song-database-result .spotify-search-result-action {
-    color: #9bdcff;
+    grid-column: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    color: var(--brand);
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.song-database-result-icon {
+    display: block;
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.song-database-result:hover .song-database-result-action,
+.song-database-result:focus-visible .song-database-result-action {
+    color: var(--brand-strong);
+    transform: translateX(2px);
 }
 
 .song-database-details {
@@ -4336,31 +4412,38 @@ body.playlist-page-loading .playlist-cta-button {
     padding: 14px;
 }
 
-.song-database-count-pill {
-    display: inline-flex;
-    margin-top: 8px;
-    padding: 5px 10px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    color: var(--muted);
-    font-size: 0.9rem;
-    font-weight: 700;
+.song-database-detail-card .song-selected-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0 2px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.song-database-detail-card .song-artwork-large {
+    flex: 0 0 auto;
+    width: 72px;
+    height: 72px;
 }
 
 .song-database-usage-list {
     display: grid;
-    gap: 10px;
-    margin-top: 14px;
+    gap: 0;
+    margin-top: 12px;
+    border-top: 1px solid var(--line);
 }
 
 .song-database-usage-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 12px;
-    padding: 12px;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    background: var(--surface-2);
+    padding: 12px 0;
+}
+
+.song-database-usage-row + .song-database-usage-row {
+    border-top: 1px solid var(--line);
 }
 
 .song-database-usage-title {
@@ -4384,29 +4467,45 @@ body.playlist-page-loading .playlist-cta-button {
 .song-database-back {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 7px;
-    min-height: 44px;
-    margin-top: 4px;
-    padding: 10px 0;
-    border: 0;
+    width: auto;
+    height: 44px;
+    margin: 0 0 8px;
+    padding: 0 9px;
+    border: 1px solid transparent;
+    border-radius: 12px;
     background: transparent;
     color: var(--brand);
     font: inherit;
-    font-size: 0.9rem;
-    font-weight: 700;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
     cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.song-database-back-icon {
+    transform: scaleX(-1);
+    transition: transform 0.15s ease;
 }
 
 .song-database-back:hover,
 .song-database-back:focus-visible {
+    border-color: var(--line-strong);
+    background: var(--surface-3);
     color: var(--brand-strong);
-    text-decoration: underline;
-    text-underline-offset: 3px;
+}
+
+.song-database-back:hover .song-database-back-icon,
+.song-database-back:focus-visible .song-database-back-icon {
+    transform: translateX(-2px) scaleX(-1);
 }
 
 .song-database-back:focus-visible {
     outline: 2px solid var(--brand);
-    outline-offset: 3px;
+    outline-offset: 2px;
 }
 
 @media (max-width: 700px) {
@@ -4429,6 +4528,26 @@ body.playlist-page-loading .playlist-cta-button {
 
     .song-database-submit {
         width: 100%;
+    }
+
+    .song-database-result {
+        grid-template-columns: 48px minmax(0, 1fr) 24px;
+        padding: 8px 10px;
+    }
+
+    .song-database-result .spotify-search-result-art {
+        width: 48px;
+        height: 48px;
+    }
+
+    .song-database-result .spotify-search-result-action {
+        grid-column: 3;
+        grid-row: 1;
+    }
+
+    .song-database-detail-card .song-artwork-large {
+        width: 64px;
+        height: 64px;
     }
 
     .song-database-usage-row {

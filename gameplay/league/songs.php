@@ -30,8 +30,10 @@
     </div>
 
     <div id="league_song_database_status" class="spotify-search-status muted" role="status" aria-live="polite"></div>
-    <div id="league_song_database_results" class="spotify-search-results song-database-results"></div>
-    <div id="league_song_database_details" class="song-database-details"></div>
+    <div class="song-database-content">
+        <div id="league_song_database_results" class="spotify-search-results song-database-results"></div>
+        <div id="league_song_database_details" class="song-database-details"></div>
+    </div>
 </section>
 
 <section class="library-playlists" aria-labelledby="league-library-playlists-title">
