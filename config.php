@@ -351,6 +351,24 @@ function mlUsersHasProfileImageColumn(PDO $pdo): bool
     return $hasColumn;
 }
 
+function mlUsersHasShortDisplayNameColumn(PDO $pdo): bool
+{
+    static $hasColumn = null;
+
+    if ($hasColumn !== null) {
+        return $hasColumn;
+    }
+
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM ML_Users LIKE 'ShortDisplayName'");
+        $hasColumn = (bool)$stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $hasColumn = false;
+    }
+
+    return $hasColumn;
+}
+
 function mlResolveUserProfileFilename(int $userId, ?string $storedFilename = null): string
 {
     $candidate = trim((string)$storedFilename);

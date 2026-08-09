@@ -52,6 +52,9 @@ function mlFetchAuthenticatedUserById(PDO $pdo, int $userId): ?array {
     }
 
     $select = 'UserID, UserName, Email';
+    if (mlUsersHasShortDisplayNameColumn($pdo)) {
+        $select .= ', ShortDisplayName';
+    }
     if (mlUsersHasIsAdminColumn($pdo)) {
         $select .= ', IsAdmin';
     }

@@ -66,6 +66,7 @@ function mlBuildStandingsDataFromFinalRounds(PDO $pdo, array $finalRounds, int $
         $playerStats[$userId] = [
             'user_id' => $userId,
             'user_name' => (string)$user['UserName'],
+            'short_display_name' => trim((string)($user['ShortDisplayName'] ?? '')),
             'profile_image_path' => (string)($user['profile_image_path'] ?? mlGetUserProfilePath($userId, $user['ProfileImageFilename'] ?? null)),
             'points' => 0,
             'round_wins' => 0,
