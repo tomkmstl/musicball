@@ -4099,11 +4099,23 @@ html[data-theme="dark"] .discord-toggle-warning {
     padding: 0;
 }
 
+.standings-table-expanded th {
+    font-size: 0.68rem;
+}
+
+.standings-table-expanded td:nth-child(n + 3) {
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: 0.82rem;
+    text-align: center;
+}
+
 .standings-sort-link {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     width: 100%;
-    padding: 6px 10px;
+    padding: 6px 8px;
     color: inherit;
     text-decoration: none;
     border: 1px solid transparent;
@@ -4175,6 +4187,33 @@ html[data-theme="dark"] .discord-toggle-warning {
     line-height: 1.2;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.standings-player-name-desktop {
+    display: none;
+}
+
+@media (min-width: 701px) {
+    .standings-identity-heading,
+    .standings-identity-cell {
+        position: static;
+        width: calc(30ch + 56px);
+        min-width: calc(30ch + 56px);
+        max-width: calc(30ch + 56px);
+    }
+
+    .standings-identity-heading::after,
+    .standings-identity-cell::after {
+        content: none;
+    }
+
+    .standings-player-name-mobile {
+        display: none;
+    }
+
+    .standings-player-name-desktop {
+        display: block;
+    }
 }
 
 @media (max-width: 700px) {

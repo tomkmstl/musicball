@@ -90,15 +90,18 @@ function mlTruncateAdvancedStandingsName(string $name, int $limit = 12): string
                                 <?php
                                 $profileImagePath = !empty($row['profile_image_path']) ? $row['profile_image_path'] : mlGetUserProfilePath((int)$row['user_id']);
                                 $shortDisplayName = trim((string)($row['short_display_name'] ?? ''));
-                                $fullPlayerLabel = $shortDisplayName !== '' ? $shortDisplayName : (string)$row['user_name'];
-                                $displayPlayerLabel = mlTruncateAdvancedStandingsName($fullPlayerLabel);
+                                $mobilePlayerLabel = $shortDisplayName !== '' ? $shortDisplayName : (string)$row['user_name'];
+                                $mobileDisplayPlayerLabel = mlTruncateAdvancedStandingsName($mobilePlayerLabel);
+                                $desktopPlayerLabel = (string)$row['user_name'];
+                                $desktopDisplayPlayerLabel = mlTruncateAdvancedStandingsName($desktopPlayerLabel, 30);
                                 ?>
                                 <tr class="<?= !empty($row['is_current_user']) ? 'is-current-user' : '' ?>">
                                     <td class="standings-rank-cell" aria-label="Rank <?= (int)($row['display_rank'] ?? $row['rank']) ?>"><?= (int)($row['display_rank'] ?? $row['rank']) ?></td>
                                     <td class="standings-identity-cell">
                                         <div class="standings-identity">
                                             <img src="<?= htmlspecialchars($profileImagePath) ?>" alt="" title="<?= htmlspecialchars($row['user_name']) ?>" class="profile-avatar profile-avatar-standings">
-                                            <span class="standings-player-name" title="<?= htmlspecialchars($fullPlayerLabel) ?>" aria-label="<?= htmlspecialchars($fullPlayerLabel) ?>"><?= htmlspecialchars($displayPlayerLabel) ?></span>
+                                            <span class="standings-player-name standings-player-name-mobile" title="<?= htmlspecialchars($mobilePlayerLabel) ?>" aria-label="<?= htmlspecialchars($mobilePlayerLabel) ?>"><?= htmlspecialchars($mobileDisplayPlayerLabel) ?></span>
+                                            <span class="standings-player-name standings-player-name-desktop" title="<?= htmlspecialchars($desktopPlayerLabel) ?>" aria-label="<?= htmlspecialchars($desktopPlayerLabel) ?>"><?= htmlspecialchars($desktopDisplayPlayerLabel) ?></span>
                                         </div>
                                     </td>
                                     <td><?= (int)$row['points'] ?></td>
