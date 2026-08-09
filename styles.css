@@ -4381,6 +4381,34 @@ body.playlist-page-loading .playlist-cta-button {
     white-space: nowrap;
 }
 
+.song-database-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    margin-top: 4px;
+    padding: 10px 0;
+    border: 0;
+    background: transparent;
+    color: var(--brand);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.song-database-back:hover,
+.song-database-back:focus-visible {
+    color: var(--brand-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.song-database-back:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 3px;
+}
+
 @media (max-width: 700px) {
     .song-database-badge {
         width: 54px;
@@ -4390,8 +4418,8 @@ body.playlist-page-loading .playlist-cta-button {
         opacity: 0.82;
     }
 
-    .song-database-shell h2,
-    .song-database-intro {
+    .song-database-shell-with-badge h2,
+    .song-database-shell-with-badge .song-database-intro {
         padding-right: 62px;
     }
 
@@ -4411,6 +4439,7 @@ body.playlist-page-loading .playlist-cta-button {
         text-align: left;
         white-space: normal;
     }
+
 }
 
 /* =========================

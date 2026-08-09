@@ -94,6 +94,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var resultsWrap = document.getElementById('league_song_database_results');
     var detailsWrap = document.getElementById('league_song_database_details');
     var statusWrap = document.getElementById('league_song_database_status');
+    var databaseShell = searchInput ? searchInput.closest('.song-database-shell') : null;
+    var replaceResultsMode = databaseShell && databaseShell.dataset.songDatabaseMode === 'replace-results';
 
     attachSearchClearButton(document.getElementById('song_query'), {
         label: 'Clear Spotify search'
@@ -109,6 +111,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var activeRequest = 0;
     var debounceTimer = null;
+    var activeItems = [];
 
     function escapeHtml(value) {
         return String(value || '')
@@ -152,10 +155,16 @@ document.addEventListener('DOMContentLoaded', function () {
             '</div>';
     }
 
-
-    function renderDetails(item) {
+    function renderDetails(item, selectedIndex) {
         var noun = item.type === 'artist' ? 'artist' : 'song';
         var usageIntro = item.usage_count === 1 ? '1 league use' : item.usage_count + ' league uses';
+        var resultNoun = activeItems.length === 1 ? 'result' : 'results';
+
+        if (replaceResultsMode) {
+            resultsWrap.innerHTML = '';
+            setStatus('', '');
+        }
+
         detailsWrap.innerHTML = '' +
             '<section class="song-database-detail-card">' +
                 '<div class="song-selected-card">' +
@@ -167,13 +176,24 @@ document.addEventListener('DOMContentLoaded', function () {
                         '<div class="song-database-count-pill">' + escapeHtml(usageIntro) + '</div>' +
                     '</div>' +
                 '</div>' +
+                (replaceResultsMode ? '<button type="button" class="song-database-back"><span aria-hidden="true">&larr;</span> Back to ' + escapeHtml(activeItems.length) + ' ' + escapeHtml(resultNoun) + '</button>' : '') +
                 '<div class="song-database-usage-list">' + (item.usages || []).map(usageLine).join('') + '</div>' +
             '</section>';
+
+        if (replaceResultsMode) {
+            var backButton = detailsWrap.querySelector('.song-database-back');
+            backButton.addEventListener('click', function () {
+                renderResults(activeItems, selectedIndex);
+            });
+            backButton.focus({ preventScroll: true });
+        }
+
         detailsWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    function renderResults(items) {
+    function renderResults(items, focusIndex) {
         clearResults();
+        activeItems = (items || []).slice();
 
         if (!items || !items.length) {
             setStatus('No past-round songs or artists matched that search.', 'muted');
@@ -182,7 +202,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         setStatus('Select a song or artist from past rounds.', 'muted');
 
-        items.forEach(function (item) {
+        items.forEach(function (item, itemIndex) {
             var button = document.createElement('button');
             var typeLabel = item.type === 'artist' ? 'Artist' : 'Song';
             var countLabel = item.usage_count === 1 ? '1 use' : item.usage_count + ' uses';
@@ -199,11 +219,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<span class="spotify-search-result-action">View</span>';
 
             button.addEventListener('click', function () {
-                renderDetails(item);
+                renderDetails(item, itemIndex);
             });
 
             resultsWrap.appendChild(button);
         });
+
+        if (typeof focusIndex === 'number' && resultsWrap.children[focusIndex]) {
+            resultsWrap.children[focusIndex].focus({ preventScroll: true });
+            resultsWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     }
 
     function runSearch() {
@@ -211,6 +236,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (query.length < 2) {
             clearResults();
+            activeItems = [];
             setStatus(query.length === 0 ? 'Start typing to search past rounds in the league song database.' : 'Keep typing to narrow the database search.', 'muted');
             return;
         }
@@ -234,6 +260,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (!payload.data || !payload.data.ok) {
                     clearResults();
+                    activeItems = [];
                     setStatus((payload.data && payload.data.error) ? payload.data.error : 'League song database search could not be completed.', 'error');
                     return;
                 }
@@ -245,6 +272,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
                 clearResults();
+                activeItems = [];
                 setStatus('League song database search could not be completed right now.', 'error');
             });
     }
