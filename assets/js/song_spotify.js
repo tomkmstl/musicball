@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var confirmButton = document.getElementById('spotify_selection_confirm_button');
     var cancelButton = document.getElementById('spotify_selection_cancel_button');
     var searchSubmit = document.querySelector('.song-search-submit');
+    var searchShell = searchInput.closest('.song-search-shell');
     var activeRequest = 0;
     var debounceTimer = null;
 
@@ -56,6 +57,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         confirmPanel.hidden = true;
+        if (searchShell) {
+            searchShell.classList.remove('song-search-shell-confirming');
+        }
         setSearchLocked(false);
         resetSelectedTrackFields();
         setStatus('Select the correct song below.', 'muted');
@@ -89,6 +93,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         confirmPanel.hidden = false;
+        if (searchShell) {
+            searchShell.classList.add('song-search-shell-confirming');
+        }
         setSearchLocked(true);
         setStatus('Confirm this song before continuing.', 'muted');
         confirmPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });

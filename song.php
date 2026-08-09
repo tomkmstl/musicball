@@ -299,58 +299,84 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
             </section>
         <?php endif; ?>
 
-
+        <?php if (!empty($savedSong)): ?>
         <section class="admin-panel admin-panel-full song-current-pick-panel">
             <div class="home-shell-kicker">Your current pick</div>
-            <?php if (!empty($savedSong)): ?>
-                <div class="song-selected-card">
-                    <?php if (trim((string)$savedSong['artwork']) !== ''): ?>
-                        <img src="<?= htmlspecialchars($savedSong['artwork']) ?>" alt="Album art" class="song-artwork-large">
-                    <?php else: ?>
-                        <div class="song-artwork-large song-artwork-fallback" aria-hidden="true"></div>
-                    <?php endif; ?>
-                    <div>
-                        <div class="song-card-title"><?= htmlspecialchars($savedSong['title']) ?></div>
-                        <div class="song-card-meta"><?= htmlspecialchars($savedSong['artist']) ?> &middot; <?= htmlspecialchars($savedSong['album']) ?></div>
-                        <div class="song-card-meta">Saved <?= htmlspecialchars($savedSong['saved_at']) ?> UTC</div>
-                    </div>
+            <div class="song-selected-card">
+                <button type="button" id="show_remove_song_confirm_button" class="song-remove-link" aria-controls="remove_song_confirm_panel" aria-expanded="false" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>>remove</button>
+                <?php if (trim((string)$savedSong['artwork']) !== ''): ?>
+                    <img src="<?= htmlspecialchars($savedSong['artwork']) ?>" alt="Album art" class="song-artwork-large">
+                <?php else: ?>
+                    <div class="song-artwork-large song-artwork-fallback" aria-hidden="true"></div>
+                <?php endif; ?>
+                <div>
+                    <div class="song-card-title"><?= htmlspecialchars($savedSong['title']) ?></div>
+                    <div class="song-card-meta"><?= htmlspecialchars($savedSong['artist']) ?> &middot; <?= htmlspecialchars($savedSong['album']) ?></div>
                 </div>
+            </div>
 
-                <form method="post" action="<?= htmlspecialchars(mlUrl('song.php?season_round_id=' . (int)$seasonRoundId)) ?>" class="song-comment-form">
-                    <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
-                    <input type="hidden" name="song_action" value="save_comment">
-                    <label class="admin-label" for="saved_song_comment">Optional comment</label>
-                    <textarea name="song_comment" id="saved_song_comment" class="vote-comment-input song-comment-input" rows="4" maxlength="1000" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>><?= htmlspecialchars($savedSongComment) ?></textarea>
-                    <div class="song-comment-actions">
-                        <button type="submit" class="button-secondary" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>>Save Comment</button>
-                    </div>
-                </form>
+            <?php $commentComposerExpanded = $savedSongComment !== ''; ?>
+            <?php if ($roundView['can_choose_song'] || $commentComposerExpanded): ?>
+                <div class="song-comment-composer" data-song-comment-composer>
+                    <?php if ($roundView['can_choose_song']): ?>
+                        <button
+                            type="button"
+                            class="song-comment-add-button"
+                            data-song-comment-add
+                            aria-controls="saved_song_comment_editor"
+                            aria-expanded="<?= $commentComposerExpanded ? 'true' : 'false' ?>"
+                            <?= $commentComposerExpanded ? 'hidden' : '' ?>
+                        >
+                            <span class="song-comment-add-copy"><span class="song-comment-add-icon" aria-hidden="true">+</span><span>Add a comment</span></span>
+                            <span class="song-comment-add-chevron" aria-hidden="true">&rsaquo;</span>
+                        </button>
+                    <?php endif; ?>
 
-                <form method="post" action="<?= htmlspecialchars(mlUrl('song.php?season_round_id=' . (int)$seasonRoundId)) ?>" class="song-current-pick-actions" id="remove_song_form">
-                    <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
-                    <input type="hidden" name="song_action" value="remove_track">
-                    <button type="button" id="show_remove_song_confirm_button" class="button-secondary" aria-controls="remove_song_confirm_panel" aria-expanded="false" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>>Remove Song</button>
-
-                    <div id="remove_song_confirm_panel" class="song-remove-confirm" hidden>
-                        <div class="song-remove-confirm-copy">
-                            <strong>Remove this song?</strong>
-                            <span class="note">You'll need to choose another song before the deadline.</span>
+                    <form
+                        method="post"
+                        action="<?= htmlspecialchars(mlUrl('song.php?season_round_id=' . (int)$seasonRoundId)) ?>"
+                        class="song-comment-form"
+                        id="saved_song_comment_editor"
+                        data-song-comment-editor
+                        <?= $commentComposerExpanded ? '' : 'hidden' ?>
+                    >
+                        <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
+                        <input type="hidden" name="song_action" value="save_comment">
+                        <div class="song-comment-label-row">
+                            <label class="admin-label" for="saved_song_comment">Comment</label>
+                            <span class="song-comment-optional">Optional</span>
                         </div>
-                        <div class="song-remove-confirm-actions">
-                            <button type="button" id="cancel_remove_song_button" class="button-secondary">Cancel</button>
-                            <button type="submit" id="confirm_remove_song_button" class="button-primary button-danger">Remove Song</button>
+                        <div class="song-comment-editor-shell">
+                            <textarea name="song_comment" id="saved_song_comment" class="vote-comment-input song-comment-input" rows="4" maxlength="1000" placeholder="Why this song?" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>><?= htmlspecialchars($savedSongComment) ?></textarea>
+                            <div class="song-comment-editor-footer">
+                                <div class="song-comment-editor-meta">
+                                    <span class="song-comment-quote" aria-hidden="true">&ldquo;</span>
+                                    <span data-song-comment-count>0 / 1000</span>
+                                </div>
+                                <button type="submit" class="button-primary song-comment-save-button" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>>Save</button>
+                            </div>
                         </div>
-                    </div>
-                </form>
-            <?php else: ?>
-                <p>No song chosen yet.</p>
-                <div class="song-comment-form">
-                    <label class="admin-label" for="saved_song_comment">Optional comment</label>
-                    <textarea id="saved_song_comment" class="vote-comment-input song-comment-input" rows="4" maxlength="1000" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>><?= htmlspecialchars((string)($pendingSelectedTrack['comment'] ?? '')) ?></textarea>
-                    <div class="note">This comment will save with your song when you pick one.</div>
+                    </form>
                 </div>
             <?php endif; ?>
+
+            <form method="post" action="<?= htmlspecialchars(mlUrl('song.php?season_round_id=' . (int)$seasonRoundId)) ?>" class="song-current-pick-actions" id="remove_song_form" hidden>
+                <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
+                <input type="hidden" name="song_action" value="remove_track">
+
+                <div id="remove_song_confirm_panel" class="song-remove-confirm" hidden>
+                    <div class="song-remove-confirm-copy">
+                        <strong>Remove this song?</strong>
+                        <span class="note">You'll need to choose another song before the deadline.</span>
+                    </div>
+                    <div class="song-remove-confirm-actions">
+                        <button type="button" id="cancel_remove_song_button" class="button-secondary">Cancel</button>
+                        <button type="submit" id="confirm_remove_song_button" class="button-primary button-danger">Remove Song</button>
+                    </div>
+                </div>
+            </form>
         </section>
+        <?php endif; ?>
 
         <section class="admin-panel admin-panel-full song-search-shell">
             <div class="home-shell-kicker">Spotify search</div>
@@ -417,30 +443,7 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
             <?php endif; ?>
         </section>
 
-		<section class="admin-panel admin-panel-full song-database-shell song-database-shell-with-badge">
-			<img src="<?= htmlspecialchars(mlAssetUrl('assets/images/leagues/scone-ghetto.jpg')) ?>" alt="" class="song-database-badge" aria-hidden="true">
-			<div class="song-database-label">League Archive</div>
-			<h2><?= htmlspecialchars(mlGetLeagueName($pdo), ENT_QUOTES, 'UTF-8') ?> Song Database</h2>
-            <p class="song-database-intro">Search past rounds before picking your song. Results only appear for songs or artists that have already been used in completed rounds.</p>
-
-            <div class="song-database-form-live">
-                <div>
-                    <label for="league_song_database_query" class="game-visually-hidden">Search league song database</label>
-                    <input
-                        type="text"
-                        id="league_song_database_query"
-                        class="admin-input song-database-input"
-                        placeholder="Look up a used song or artist"
-                        autocomplete="off"
-                    >
-                </div>
-                <button type="button" class="button-secondary song-database-submit" onclick="document.getElementById('league_song_database_query').focus();">Look Up</button>
-            </div>
-
-            <div id="league_song_database_status" class="spotify-search-status muted"></div>
-            <div id="league_song_database_results" class="spotify-search-results song-database-results"></div>
-            <div id="league_song_database_details" class="song-database-details"></div>
-        </section>
+        <?php require __DIR__ . '/gameplay/league/past-picks.php'; ?>
     </div>
 </div>
 <?php if ($spotifyConfigured && $spotifyConnected && $roundView['can_choose_song']): ?>
@@ -466,24 +469,55 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    var commentComposer = document.querySelector('[data-song-comment-composer]');
+    if (commentComposer) {
+        var addCommentButton = commentComposer.querySelector('[data-song-comment-add]');
+        var commentEditor = commentComposer.querySelector('[data-song-comment-editor]');
+        var commentInput = commentComposer.querySelector('#saved_song_comment');
+        var commentCount = commentComposer.querySelector('[data-song-comment-count]');
+
+        function updateCommentCount() {
+            if (commentInput && commentCount) {
+                commentCount.textContent = commentInput.value.length + ' / 1000';
+            }
+        }
+
+        if (addCommentButton && commentEditor && commentInput) {
+            addCommentButton.addEventListener('click', function () {
+                addCommentButton.hidden = true;
+                addCommentButton.setAttribute('aria-expanded', 'true');
+                commentEditor.hidden = false;
+                commentInput.focus();
+            });
+        }
+
+        if (commentInput) {
+            commentInput.addEventListener('input', updateCommentCount);
+            updateCommentCount();
+        }
+    }
+
     var showRemoveButton = document.getElementById('show_remove_song_confirm_button');
+    var removeForm = document.getElementById('remove_song_form');
     var removeConfirmPanel = document.getElementById('remove_song_confirm_panel');
     var confirmRemoveButton = document.getElementById('confirm_remove_song_button');
     var cancelRemoveButton = document.getElementById('cancel_remove_song_button');
 
-    if (!showRemoveButton || !removeConfirmPanel || !confirmRemoveButton || !cancelRemoveButton) {
+    if (!showRemoveButton || !removeForm || !removeConfirmPanel || !confirmRemoveButton || !cancelRemoveButton) {
         return;
     }
 
     showRemoveButton.addEventListener('click', function () {
         showRemoveButton.hidden = true;
         showRemoveButton.setAttribute('aria-expanded', 'true');
+        removeForm.hidden = false;
         removeConfirmPanel.hidden = false;
         cancelRemoveButton.focus();
     });
 
     cancelRemoveButton.addEventListener('click', function () {
         removeConfirmPanel.hidden = true;
+        removeForm.hidden = true;
         showRemoveButton.hidden = false;
         showRemoveButton.setAttribute('aria-expanded', 'false');
         showRemoveButton.focus();
