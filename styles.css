@@ -4345,6 +4345,10 @@ body.playlist-page-loading .playlist-cta-button {
         margin-top: 12px;
         border-radius: 18px;
         background: var(--surface-2);
+        cursor: pointer;
+    }
+
+    .song-database-shell-detail-open .song-database-detail-card {
         cursor: default;
     }
 }

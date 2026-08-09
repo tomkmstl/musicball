@@ -263,7 +263,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (desktopDetailMode && databaseContent) {
                 desktopDismissHandler = function (event) {
-                    if (detailsWrap.contains(event.target)) {
+                    var detailCard = detailsWrap.querySelector('.song-database-detail-card');
+
+                    if (backButton.contains(event.target) || (detailCard && detailCard.contains(event.target))) {
                         return;
                     }
 
