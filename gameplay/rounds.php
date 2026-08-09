@@ -389,6 +389,9 @@ function mlLoadAllUsers(PDO $pdo): array {
     }
 
     $select = 'SELECT UserID, UserName';
+    if (mlUsersHasShortDisplayNameColumn($pdo)) {
+        $select .= ', ShortDisplayName';
+    }
     if (mlUsersHasProfileImageColumn($pdo)) {
         $select .= ', ProfileImageFilename';
     }

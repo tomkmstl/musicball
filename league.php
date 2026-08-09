@@ -10,6 +10,30 @@ if (!in_array($leagueView, $allowedLeagueViews, true)) {
     $leagueView = 'songs';
 }
 
+$leaderMetrics = [
+    'points' => 'Total Points',
+    'round_wins' => 'Round Wins',
+    'total_voters' => 'Total Voters',
+    'podiums' => 'Podiums',
+    'best_round_score' => 'Best Round',
+    'holdouts' => 'Hold Outs',
+];
+$leaderMetricKey = '';
+if ($leagueView === 'leaders') {
+    $requestedLeaderMetric = isset($_GET['metric']) ? strtolower(trim((string)$_GET['metric'])) : '';
+    if (isset($leaderMetrics[$requestedLeaderMetric])) {
+        $leaderMetricKey = $requestedLeaderMetric;
+    }
+}
+
+$standingsMode = 'standard';
+if ($leagueView === 'standings') {
+    $requestedStandingsMode = isset($_GET['mode']) ? strtolower(trim((string)$_GET['mode'])) : '';
+    if ($requestedStandingsMode === 'advanced') {
+        $standingsMode = 'advanced';
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $leagueView = 'songs';
     $playlistAction = trim((string)($_POST['playlist_action'] ?? ''));
@@ -169,6 +193,11 @@ if ($leagueView === 'songs') {
         $sortDir = 'desc';
     }
 
+    if ($leagueView === 'standings' && $standingsMode === 'standard') {
+        $sortKey = 'points';
+        $sortDir = 'desc';
+    }
+
     if (!empty($standings)) {
         usort($standings, static function (array $a, array $b) use ($sortKey, $sortDir): int {
             $valueA = (int)($a[$sortKey] ?? 0);
@@ -218,7 +247,7 @@ if ($leagueView === 'songs') {
     }
 }
 
-function mlLeagueUrl(string $targetView, bool $showAllTimeStandings, $seasonRow, string $sortKey, string $sortDir): string
+function mlLeagueUrl(string $targetView, bool $showAllTimeStandings, $seasonRow, string $sortKey, string $sortDir, string $standingsMode): string
 {
     $params = ['view' => $targetView];
 
@@ -231,8 +260,11 @@ function mlLeagueUrl(string $targetView, bool $showAllTimeStandings, $seasonRow,
     }
 
     if ($targetView === 'standings') {
-        $params['sort'] = $sortKey;
-        $params['dir'] = $sortDir;
+        $params['mode'] = $standingsMode;
+        if ($standingsMode === 'advanced') {
+            $params['sort'] = $sortKey;
+            $params['dir'] = $sortDir;
+        }
     }
 
     return mlUrl('league.php?' . http_build_query($params));
@@ -243,6 +275,7 @@ function mlLeagueStandingsSortUrl(string $targetSort, string $currentSort, strin
     $nextDir = ($currentSort === $targetSort && $currentDir === 'desc') ? 'asc' : 'desc';
     $params = [
         'view' => 'standings',
+        'mode' => 'advanced',
         'sort' => $targetSort,
         'dir' => $nextDir,
     ];
@@ -251,6 +284,64 @@ function mlLeagueStandingsSortUrl(string $targetSort, string $currentSort, strin
         $params['season_id'] = 'all';
     } elseif ($seasonRow && isset($seasonRow['SeasonID'])) {
         $params['season_id'] = (int)$seasonRow['SeasonID'];
+    }
+
+    return mlUrl('league.php?' . http_build_query($params));
+}
+
+function mlLeagueStandingsModeUrl(string $targetMode, bool $showAllTimeStandings, $seasonRow, string $sortKey, string $sortDir): string
+{
+    $params = [
+        'view' => 'standings',
+        'mode' => $targetMode === 'advanced' ? 'advanced' : 'standard',
+    ];
+
+    if ($showAllTimeStandings) {
+        $params['season_id'] = 'all';
+    } elseif ($seasonRow && isset($seasonRow['SeasonID'])) {
+        $params['season_id'] = (int)$seasonRow['SeasonID'];
+    }
+
+    if ($targetMode === 'advanced') {
+        $params['sort'] = $sortKey;
+        $params['dir'] = $sortDir;
+    }
+
+    return mlUrl('league.php?' . http_build_query($params));
+}
+
+function mlLeagueLeaderUrl(string $metricKey, bool $showAllTimeStandings, $seasonRow): string
+{
+    $params = ['view' => 'leaders'];
+
+    if ($showAllTimeStandings) {
+        $params['season_id'] = 'all';
+    } elseif ($seasonRow && isset($seasonRow['SeasonID'])) {
+        $params['season_id'] = (int)$seasonRow['SeasonID'];
+    }
+
+    if ($metricKey !== '') {
+        $params['metric'] = $metricKey;
+    }
+
+    return mlUrl('league.php?' . http_build_query($params));
+}
+
+function mlLeagueSeasonUrl($seasonId, string $leagueView, string $sortKey, string $sortDir, string $leaderMetricKey, string $standingsMode): string
+{
+    $params = [
+        'view' => $leagueView,
+        'season_id' => $seasonId,
+    ];
+
+    if ($leagueView === 'standings') {
+        $params['mode'] = $standingsMode;
+        if ($standingsMode === 'advanced') {
+            $params['sort'] = $sortKey;
+            $params['dir'] = $sortDir;
+        }
+    } elseif ($leagueView === 'leaders' && $leaderMetricKey !== '') {
+        $params['metric'] = $leaderMetricKey;
     }
 
     return mlUrl('league.php?' . http_build_query($params));
@@ -277,7 +368,7 @@ $leagueViewPath = $leagueViewPaths[$leagueView];
 <?php include 'header.php'; ?>
 <nav class="league-section-nav" aria-label="League sections">
     <?php foreach (['songs' => 'Songs', 'standings' => 'Standings', 'leaders' => 'Leaders', 'trends' => 'Trends'] as $viewKey => $viewLabel): ?>
-        <a href="<?= htmlspecialchars(mlLeagueUrl($viewKey, $showAllTimeStandings, $seasonRow, $sortKey, $sortDir)) ?>" class="league-section-nav-link<?= $leagueView === $viewKey ? ' league-section-nav-link-active' : '' ?>">
+        <a href="<?= htmlspecialchars(mlLeagueUrl($viewKey, $showAllTimeStandings, $seasonRow, $sortKey, $sortDir, $standingsMode)) ?>" class="league-section-nav-link<?= $leagueView === $viewKey ? ' league-section-nav-link-active' : '' ?>">
             <?= htmlspecialchars($viewLabel) ?>
         </a>
     <?php endforeach; ?>
@@ -301,14 +392,14 @@ $leagueViewPath = $leagueViewPaths[$leagueView];
                     </summary>
 
                     <div class="game-season-switcher-panel standings-season-options-panel">
-                        <a href="<?= htmlspecialchars(mlUrl('league.php?' . http_build_query(['view' => $leagueView, 'season_id' => 'all', 'sort' => $sortKey, 'dir' => $sortDir]))) ?>" class="standings-season-option">
+                        <a href="<?= htmlspecialchars(mlLeagueSeasonUrl('all', $leagueView, $sortKey, $sortDir, $leaderMetricKey, $standingsMode)) ?>" class="standings-season-option">
                             <span class="standings-season-switcher-league"><?= htmlspecialchars($leagueName) ?></span>
                             <span class="standings-season-switcher-separator">&bull;</span>
                             <span class="standings-season-switcher-season">All Time</span>
                         </a>
 
                         <?php foreach ($seasonList as $seasonOption): ?>
-                            <a href="<?= htmlspecialchars(mlUrl('league.php?' . http_build_query(['view' => $leagueView, 'season_id' => (int)$seasonOption['SeasonID'], 'sort' => $sortKey, 'dir' => $sortDir]))) ?>" class="standings-season-option">
+                            <a href="<?= htmlspecialchars(mlLeagueSeasonUrl((int)$seasonOption['SeasonID'], $leagueView, $sortKey, $sortDir, $leaderMetricKey, $standingsMode)) ?>" class="standings-season-option">
                                 <span class="standings-season-switcher-league"><?= htmlspecialchars($leagueName) ?></span>
                                 <span class="standings-season-switcher-separator">&bull;</span>
                                 <span class="standings-season-switcher-season"><?= htmlspecialchars($seasonOption['SeasonName']) ?></span>
@@ -372,6 +463,9 @@ $leagueViewPath = $leagueViewPaths[$leagueView];
     });
     </script>
 <?php endif; ?>
+<?php if ($leagueView === 'leaders'): ?>
+    <script src="<?= htmlspecialchars(mlAssetUrl('assets/js/league_leaders.js')) ?>"></script>
+<?php endif; ?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var body = document.body;
@@ -383,7 +477,7 @@ document.addEventListener('DOMContentLoaded', function () {
         body.classList.add('mb-page-leaving');
     }
 
-    document.querySelectorAll('.standings-sort-link, .league-section-nav-link, .standings-season-option').forEach(function (link) {
+    document.querySelectorAll('.standings-sort-link, .standings-view-toggle-link, .league-section-nav-link, .standings-season-option').forEach(function (link) {
         link.addEventListener('pointerdown', applyLeagueLeavingState, { passive: true });
         link.addEventListener('click', applyLeagueLeavingState);
     });

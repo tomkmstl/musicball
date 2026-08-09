@@ -7,6 +7,8 @@ $currentPage = 'settings';
 $message = '';
 $error = '';
 $hasProfileImageColumn = mlUsersHasProfileImageColumn($pdo);
+$hasShortDisplayNameColumn = mlUsersHasShortDisplayNameColumn($pdo);
+$shortDisplayNameValue = $hasShortDisplayNameColumn ? trim((string)($currentUser['ShortDisplayName'] ?? '')) : '';
 $privatePlaylistStorageReady = mlPlaylistPinsTableAvailable($pdo);
 $privatePlaylist = $privatePlaylistStorageReady
     ? mlLoadUserPrivatePlaylist($pdo, (int)$currentUser['UserID'])
@@ -58,11 +60,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'profile') {
         $displayName = trim((string)($_POST['display_name'] ?? ''));
+        $shortDisplayNameValue = trim((string)($_POST['short_display_name'] ?? ''));
         $email = trim((string)($_POST['email'] ?? ''));
         $uploadedFilename = null;
+        $shortDisplayNameLength = function_exists('mb_strlen')
+            ? mb_strlen($shortDisplayNameValue)
+            : strlen($shortDisplayNameValue);
 
         if ($displayName === '') {
             $error = 'Display name is required.';
+        } elseif ($shortDisplayNameLength > 12) {
+            $error = 'Short display name must be 12 characters or fewer.';
+        } elseif (!$hasShortDisplayNameColumn && $shortDisplayNameValue !== '') {
+            $error = 'Short display names require the ShortDisplayName database column to exist first.';
         } elseif ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error = 'Enter a valid email address.';
         } else {
@@ -119,21 +129,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($error === '') {
-            if ($hasProfileImageColumn) {
-                if ($uploadedFilename !== null) {
-                    $stmt = $pdo->prepare('UPDATE ML_Users SET UserName = ?, Email = ?, ProfileImageFilename = ? WHERE UserID = ?');
-                    $stmt->execute([$displayName, $email, $uploadedFilename, (int)$currentUser['UserID']]);
-                } else {
-                    $stmt = $pdo->prepare('UPDATE ML_Users SET UserName = ?, Email = ? WHERE UserID = ?');
-                    $stmt->execute([$displayName, $email, (int)$currentUser['UserID']]);
-                }
-            } else {
-                $stmt = $pdo->prepare('UPDATE ML_Users SET UserName = ?, Email = ? WHERE UserID = ?');
-                $stmt->execute([$displayName, $email, (int)$currentUser['UserID']]);
+            $updateFields = ['UserName = ?', 'Email = ?'];
+            $updateValues = [$displayName, $email];
+
+            if ($hasShortDisplayNameColumn) {
+                $updateFields[] = 'ShortDisplayName = ?';
+                $updateValues[] = $shortDisplayNameValue !== '' ? $shortDisplayNameValue : null;
             }
+            if ($hasProfileImageColumn && $uploadedFilename !== null) {
+                $updateFields[] = 'ProfileImageFilename = ?';
+                $updateValues[] = $uploadedFilename;
+            }
+
+            $updateValues[] = (int)$currentUser['UserID'];
+            $stmt = $pdo->prepare('UPDATE ML_Users SET ' . implode(', ', $updateFields) . ' WHERE UserID = ?');
+            $stmt->execute($updateValues);
 
             $_SESSION['UserName'] = $displayName;
             $currentUser = mlRequireAuthenticatedUser($pdo);
+            $shortDisplayNameValue = $hasShortDisplayNameColumn ? trim((string)($currentUser['ShortDisplayName'] ?? '')) : '';
             $message = $uploadedFilename !== null ? 'Profile updated and new photo saved.' : 'Profile updated.';
         }
     }
@@ -186,6 +200,20 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
                         </div>
 
                         <div class="settings-field">
+                            <label class="admin-label" for="short_display_name">Short Display Name (12 chars or less)</label>
+                            <input
+                                type="text"
+                                name="short_display_name"
+                                id="short_display_name"
+                                class="admin-input"
+                                value="<?= htmlspecialchars($shortDisplayNameValue) ?>"
+                                maxlength="12"
+                                autocomplete="off"
+                                <?= $hasShortDisplayNameColumn ? '' : 'disabled' ?>
+                            >
+                        </div>
+
+                        <div class="settings-field">
                             <label class="admin-label" for="email">Email</label>
                             <input type="email" name="email" id="email" class="admin-input" value="<?= htmlspecialchars((string)$currentUser['Email']) ?>" maxlength="255" required>
                         </div>
@@ -194,6 +222,9 @@ $currentProfileImage = $currentUser['profile_image_path'] ?? mlGetUserProfilePat
 
                 <?php if (!$hasProfileImageColumn): ?>
                     <p class="settings-inline-message">Photo uploads are not available yet.</p>
+                <?php endif; ?>
+                <?php if (!$hasShortDisplayNameColumn): ?>
+                    <p class="settings-inline-message">Short display names are not available until the database update is installed.</p>
                 <?php endif; ?>
 
                 <div class="game-form-actions settings-sheet-actions">
