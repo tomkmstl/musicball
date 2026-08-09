@@ -417,7 +417,7 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
             <?php endif; ?>
         </section>
 
-		<section class="admin-panel admin-panel-full song-database-shell">
+		<section class="admin-panel admin-panel-full song-database-shell song-database-shell-with-badge">
 			<img src="<?= htmlspecialchars(mlAssetUrl('assets/images/leagues/scone-ghetto.jpg')) ?>" alt="" class="song-database-badge" aria-hidden="true">
 			<div class="song-database-label">League Archive</div>
 			<h2><?= htmlspecialchars(mlGetLeagueName($pdo), ENT_QUOTES, 'UTF-8') ?> Song Database</h2>

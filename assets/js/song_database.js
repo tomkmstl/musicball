@@ -74,8 +74,9 @@ document.addEventListener('DOMContentLoaded', function () {
         button.addEventListener('click', function () {
             input.value = '';
             input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.focus();
             updateVisibility();
+            input.blur();
+            button.blur();
         });
 
         input.addEventListener('input', updateVisibility);
@@ -94,6 +95,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var resultsWrap = document.getElementById('league_song_database_results');
     var detailsWrap = document.getElementById('league_song_database_details');
     var statusWrap = document.getElementById('league_song_database_status');
+    var databaseShell = searchInput ? searchInput.closest('.song-database-shell') : null;
+    var replaceResultsMode = databaseShell && databaseShell.dataset.songDatabaseMode === 'replace-results';
 
     attachSearchClearButton(document.getElementById('song_query'), {
         label: 'Clear Spotify search'
@@ -109,6 +112,35 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var activeRequest = 0;
     var debounceTimer = null;
+    var activeItems = [];
+    var databaseContent = resultsWrap.parentElement;
+    var detailDismissHandler = null;
+
+    function isDesktopDetailMode() {
+        return replaceResultsMode && window.matchMedia('(min-width: 901px)').matches;
+    }
+
+    function setResultsFrozen(isFrozen) {
+        if (!replaceResultsMode) {
+            return;
+        }
+
+        if (!isFrozen && detailDismissHandler && databaseContent) {
+            databaseContent.removeEventListener('click', detailDismissHandler);
+            detailDismissHandler = null;
+        }
+
+        databaseShell.classList.toggle('song-database-shell-detail-open', isFrozen);
+        resultsWrap.classList.toggle('song-database-results-frozen', isFrozen);
+
+        if (isFrozen) {
+            resultsWrap.setAttribute('inert', '');
+            resultsWrap.setAttribute('aria-hidden', 'true');
+        } else {
+            resultsWrap.removeAttribute('inert');
+            resultsWrap.removeAttribute('aria-hidden');
+        }
+    }
 
     function escapeHtml(value) {
         return String(value || '')
@@ -125,8 +157,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function clearResults() {
+        setResultsFrozen(false);
         resultsWrap.innerHTML = '';
         detailsWrap.innerHTML = '';
+    }
+
+    function scrollDatabaseShellToTop() {
+        if (!databaseShell) {
+            return;
+        }
+
+        var stickyHeader = document.querySelector('.mb-header');
+        var headerOffset = stickyHeader ? stickyHeader.getBoundingClientRect().height : 0;
+        var shellTop = window.scrollY + databaseShell.getBoundingClientRect().top;
+
+        window.scrollTo({
+            top: Math.max(0, shellTop - headerOffset - 12),
+            behavior: 'smooth'
+        });
     }
 
     function usageLine(usage) {
@@ -152,28 +200,92 @@ document.addEventListener('DOMContentLoaded', function () {
             '</div>';
     }
 
-
-    function renderDetails(item) {
+    function renderDetails(item, selectedIndex) {
         var noun = item.type === 'artist' ? 'artist' : 'song';
-        var usageIntro = item.usage_count === 1 ? '1 league use' : item.usage_count + ' league uses';
+        var usageIntro = item.usage_count === 1 ? '1 use' : item.usage_count + ' uses';
+        var desktopDetailMode = isDesktopDetailMode();
+        var selectionMeta = item.type === 'song'
+            ? item.artist + (item.album ? ' · ' + item.album : '') + ' · ' + usageIntro
+            : usageIntro + ' across past rounds';
+
+        if (replaceResultsMode) {
+            if (desktopDetailMode) {
+                setResultsFrozen(true);
+            } else {
+                resultsWrap.innerHTML = '';
+            }
+            setStatus('', '');
+        }
+
         detailsWrap.innerHTML = '' +
+            (replaceResultsMode ? '<button type="button" class="song-database-back" aria-label="Back to ' + escapeHtml(activeItems.length) + ' search results">' +
+                    '<span class="song-database-back-visual">' +
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="song-database-result-icon song-database-back-icon" aria-hidden="true" focusable="false">' +
+                        '<path stroke="none" d="M0 0h24v24H0z" fill="none"></path>' +
+                        '<path d="M12 9v-3.586a1 1 0 0 1 1.707 -.707l6.586 6.586a1 1 0 0 1 0 1.414l-6.586 6.586a1 1 0 0 1 -1.707 -.707v-3.586h-6v-6h6"></path>' +
+                        '<path d="M3 9v6"></path>' +
+                    '</svg>' +
+                    '<span>BACK</span>' +
+                    '</span>' +
+                '</button>' : '') +
             '<section class="song-database-detail-card">' +
                 '<div class="song-selected-card">' +
                     (item.artwork ? '<img src="' + escapeHtml(item.artwork) + '" alt="Album art" class="song-artwork-large">' : '<div class="song-artwork-large song-artwork-fallback" aria-hidden="true"></div>') +
                     '<div>' +
                         '<div class="home-shell-kicker">Selected ' + escapeHtml(noun) + '</div>' +
                         '<div class="song-card-title">' + escapeHtml(item.title) + '</div>' +
-                        (item.type === 'song' ? '<div class="song-card-meta">' + escapeHtml(item.artist) + (item.album ? ' · ' + escapeHtml(item.album) : '') + '</div>' : '<div class="song-card-meta">Songs used by this artist</div>') +
-                        '<div class="song-database-count-pill">' + escapeHtml(usageIntro) + '</div>' +
+                        '<div class="song-card-meta">' + escapeHtml(selectionMeta) + '</div>' +
                     '</div>' +
                 '</div>' +
                 '<div class="song-database-usage-list">' + (item.usages || []).map(usageLine).join('') + '</div>' +
             '</section>';
-        detailsWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        if (replaceResultsMode) {
+            var backButton = detailsWrap.querySelector('.song-database-back');
+            var restoreSearchResults = function () {
+                if (desktopDetailMode) {
+                    detailsWrap.innerHTML = '';
+                    setResultsFrozen(false);
+                    setStatus('Select a song or artist from past rounds.', 'muted');
+
+                    if (resultsWrap.children[selectedIndex]) {
+                        resultsWrap.children[selectedIndex].focus({ preventScroll: true });
+                    }
+                    scrollDatabaseShellToTop();
+                } else {
+                    renderResults(activeItems, selectedIndex);
+                }
+            };
+
+            backButton.addEventListener('click', function (event) {
+                event.stopPropagation();
+
+                restoreSearchResults();
+            });
+
+            if (desktopDetailMode && databaseContent) {
+                detailDismissHandler = function (event) {
+                    var detailCard = detailsWrap.querySelector('.song-database-detail-card');
+
+                    if (backButton.contains(event.target) || (detailCard && detailCard.contains(event.target))) {
+                        return;
+                    }
+
+                    restoreSearchResults();
+                };
+                databaseContent.addEventListener('click', detailDismissHandler);
+            }
+
+            backButton.focus({ preventScroll: true });
+            scrollDatabaseShellToTop();
+        } else {
+            detailsWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     }
 
-    function renderResults(items) {
+    function renderResults(items, focusIndex) {
         clearResults();
+        activeItems = (items || []).slice();
 
         if (!items || !items.length) {
             setStatus('No past-round songs or artists matched that search.', 'muted');
@@ -182,12 +294,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
         setStatus('Select a song or artist from past rounds.', 'muted');
 
-        items.forEach(function (item) {
+        items.forEach(function (item, itemIndex) {
             var button = document.createElement('button');
             var typeLabel = item.type === 'artist' ? 'Artist' : 'Song';
             var countLabel = item.usage_count === 1 ? '1 use' : item.usage_count + ' uses';
             button.type = 'button';
             button.className = 'spotify-search-result song-database-result';
+            button.setAttribute('aria-label', 'View ' + item.title + (item.type === 'song' ? ' by ' + item.artist : '') + ' in the league archive');
             button.innerHTML = '' +
                 '<span class="spotify-search-result-art-wrap">' +
                     (item.artwork ? '<img src="' + escapeHtml(item.artwork) + '" alt="Album art" class="spotify-search-result-art">' : '<span class="spotify-search-result-art spotify-search-result-art-fallback"></span>') +
@@ -196,14 +309,30 @@ document.addEventListener('DOMContentLoaded', function () {
                     '<span class="spotify-search-result-title">' + escapeHtml(item.title) + '</span>' +
                     '<span class="spotify-search-result-meta">' + escapeHtml(typeLabel) + (item.type === 'song' ? ' · ' + escapeHtml(item.artist) : '') + ' · ' + escapeHtml(countLabel) + '</span>' +
                 '</span>' +
-                '<span class="spotify-search-result-action">View</span>';
+                '<span class="spotify-search-result-action song-database-result-action" aria-hidden="true">' +
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="song-database-result-icon" focusable="false">' +
+                        '<path stroke="none" d="M0 0h24v24H0z" fill="none"></path>' +
+                        '<path d="M12 9v-3.586a1 1 0 0 1 1.707 -.707l6.586 6.586a1 1 0 0 1 0 1.414l-6.586 6.586a1 1 0 0 1 -1.707 -.707v-3.586h-6v-6h6"></path>' +
+                        '<path d="M3 9v6"></path>' +
+                    '</svg>' +
+                '</span>';
 
-            button.addEventListener('click', function () {
-                renderDetails(item);
+            button.addEventListener('click', function (event) {
+                event.stopPropagation();
+                renderDetails(item, itemIndex);
             });
 
             resultsWrap.appendChild(button);
         });
+
+        if (typeof focusIndex === 'number' && resultsWrap.children[focusIndex]) {
+            resultsWrap.children[focusIndex].focus({ preventScroll: true });
+            if (replaceResultsMode) {
+                scrollDatabaseShellToTop();
+            } else {
+                resultsWrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
     }
 
     function runSearch() {
@@ -211,6 +340,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (query.length < 2) {
             clearResults();
+            activeItems = [];
             setStatus(query.length === 0 ? 'Start typing to search past rounds in the league song database.' : 'Keep typing to narrow the database search.', 'muted');
             return;
         }
@@ -234,6 +364,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (!payload.data || !payload.data.ok) {
                     clearResults();
+                    activeItems = [];
                     setStatus((payload.data && payload.data.error) ? payload.data.error : 'League song database search could not be completed.', 'error');
                     return;
                 }
@@ -245,6 +376,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
                 clearResults();
+                activeItems = [];
                 setStatus('League song database search could not be completed right now.', 'error');
             });
     }
