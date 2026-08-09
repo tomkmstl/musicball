@@ -74,8 +74,9 @@ document.addEventListener('DOMContentLoaded', function () {
         button.addEventListener('click', function () {
             input.value = '';
             input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.focus();
             updateVisibility();
+            input.blur();
+            button.blur();
         });
 
         input.addEventListener('input', updateVisibility);
