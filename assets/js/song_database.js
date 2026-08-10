@@ -394,5 +394,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    var searchButton = databaseShell ? databaseShell.querySelector('.song-database-submit') : null;
+    if (searchButton) {
+        searchButton.addEventListener('click', function () {
+            window.clearTimeout(debounceTimer);
+            runSearch();
+            searchInput.focus();
+        });
+    }
+
     setStatus('Start typing to search past rounds in the league song database.', 'muted');
 });
