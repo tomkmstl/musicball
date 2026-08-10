@@ -383,8 +383,21 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
 
         <?php if (empty($savedSong)): ?>
         <section class="admin-panel admin-panel-full song-search-shell">
-            <div class="home-shell-kicker">Spotify search</div>
-            <h2>Find a song</h2>
+            <div class="song-search-heading">
+                <div>
+                    <div class="home-shell-kicker">Spotify search</div>
+                    <h2>Find a song</h2>
+                </div>
+                <span class="song-search-heading-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-music" focusable="false">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M3 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+                        <path d="M13 17a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />
+                        <path d="M9 17v-13h10v13" />
+                        <path d="M9 8h10" />
+                    </svg>
+                </span>
+            </div>
 
             <?php if (!$spotifyConfigured): ?>
                 <p>Spotify is not configured in the app yet. Add your Spotify client ID and secret to <code>config/spotify_config.php</code>.</p>
@@ -410,7 +423,13 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                             <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>
                         >
                     </div>
-                    <button type="button" class="button-primary song-search-submit" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?> onclick="document.getElementById('song_query').focus();">Search</button>
+                    <button type="button" class="button-primary song-search-submit" aria-label="Search Spotify" title="Search" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="song-search-submit-icon" aria-hidden="true" focusable="false">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                            <path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
+                            <path d="M21 21l-6 -6" />
+                        </svg>
+                    </button>
                 </div>
 
                 <div id="spotify_search_status" class="spotify-search-status muted"></div>

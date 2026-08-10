@@ -2350,13 +2350,30 @@ body.theme-light .vote-comment-input-modern:focus {
 
 .song-search-form-live {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 8px;
     align-items: center;
 }
 
+.song-search-input {
+    width: 100%;
+    height: 48px;
+}
+
 .song-search-submit {
-    min-width: 120px;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+}
+
+.song-search-submit-icon {
+    display: block;
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
 }
 
 .results-song-list {
@@ -2533,7 +2550,6 @@ body.theme-light .vote-comment-input-modern:focus {
 }
 
 @media (max-width: 700px) {
-    .song-search-form-live,
     .settings-profile-grid {
         grid-template-columns: 1fr;
     }
@@ -4613,14 +4629,16 @@ body.playlist-page-loading .playlist-cta-button {
     color: var(--muted);
 }
 
-.song-database-heading-with-icon {
+.song-database-heading-with-icon,
+.song-search-heading {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
 }
 
-.song-database-library-icon {
+.song-database-library-icon,
+.song-search-heading-icon {
     display: inline-flex;
     flex: 0 0 52px;
     align-items: center;
@@ -4630,7 +4648,8 @@ body.playlist-page-loading .playlist-cta-button {
     color: var(--brand);
 }
 
-.song-database-library-icon svg {
+.song-database-library-icon svg,
+.song-search-heading-icon svg {
     display: block;
     width: 44px;
     height: 44px;
@@ -4638,7 +4657,7 @@ body.playlist-page-loading .playlist-cta-button {
 
 .song-database-form-live {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 48px;
+    grid-template-columns: minmax(0, 1fr) 44px;
     gap: 8px;
     align-items: center;
     max-width: none;
@@ -4651,10 +4670,10 @@ body.playlist-page-loading .playlist-cta-button {
 }
 
 .song-database-submit {
-    width: 48px;
-    min-width: 48px;
-    height: 48px;
-    min-height: 48px;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
     padding: 0;
 }
 
@@ -4899,13 +4918,15 @@ body.playlist-page-loading .playlist-cta-button {
         padding-right: 62px;
     }
 
-    .song-database-library-icon {
+    .song-database-library-icon,
+    .song-search-heading-icon {
         flex-basis: 44px;
         width: 44px;
         height: 44px;
     }
 
-    .song-database-library-icon svg {
+    .song-database-library-icon svg,
+    .song-search-heading-icon svg {
         width: 36px;
         height: 36px;
     }
