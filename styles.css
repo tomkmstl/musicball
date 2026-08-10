@@ -2360,29 +2360,62 @@ body.theme-light .vote-comment-input-modern:focus {
 }
 
 .results-song-list {
-    gap: 18px;
+    gap: 0;
 }
 
-.results-toggle-row {
-    display: flex;
-    justify-content: flex-end;
-    margin: -4px 0 18px;
+.card.game-card.game-card-wide.game-card-narrow.results-card {
+    position: relative;
+    gap: 0 !important;
 }
 
-.results-toggle-link {
-    font-size: 0.85rem;
-    color: var(--muted);
-    text-decoration: underline;
+.results-voting-toggle {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 8px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--brand);
     cursor: pointer;
-    transition: opacity 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
 }
 
-.results-toggle-link:hover {
-    opacity: 0.7;
+.results-voting-toggle + .game-page-intro {
+    padding-right: 48px;
 }
 
-.results-toggle-link[aria-pressed="true"] {
-    color: var(--text);
+.results-voting-toggle-icon,
+.results-voting-toggle-icon svg {
+    display: block;
+    width: 28px;
+    height: 28px;
+}
+
+.results-voting-toggle-icon svg {
+    fill: none;
+    stroke: currentColor;
+}
+
+.results-voting-toggle:hover:not(.is-disabled) {
+    color: var(--brand-strong);
+    transform: translateY(-1px);
+}
+
+.results-voting-toggle:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+}
+
+.results-voting-toggle.is-disabled {
+    opacity: 0.36;
 }
 
 .results-voting-hidden .result-voting-block {

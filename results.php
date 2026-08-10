@@ -31,7 +31,15 @@ $isLiveVoting = (($roundView['round_state'] ?? '') === 'voting') && !mlRoundIsFi
 <body class="<?= htmlspecialchars(mlGetThemeBodyClass()) ?>">
 <?php include 'header.php'; ?>
 <div class="wrapper">
-    <div class="card game-card game-card-wide game-card-narrow">
+    <div class="card game-card game-card-wide game-card-narrow results-card">
+        <?php if (!$isLiveVoting): ?>
+            <button type="button" id="toggle-voting" class="results-voting-toggle" aria-label="Hide voting" aria-pressed="false" title="Hide voting">
+                <span class="results-voting-toggle-icon" aria-hidden="true">
+                    <?php readfile(__DIR__ . '/assets/icons/vote.svg'); ?>
+                </span>
+            </button>
+        <?php endif; ?>
+
         <div class="game-page-intro game-round-page-intro">
             <?php if ($isLiveVoting): ?>
                 <div class="home-shell-kicker">Live voting snapshot</div>
@@ -71,14 +79,6 @@ $isLiveVoting = (($roundView['round_state'] ?? '') === 'voting') && !mlRoundIsFi
                     </div>
                 <?php endforeach; ?>
             </div>
-        <?php endif; ?>
-
-        <?php if (!$isLiveVoting): ?>
-        <div class="results-toggle-row">
-            <a href="#" id="toggle-comments" class="results-toggle-link" aria-pressed="false">
-                Hide Voting
-            </a>
-        </div>
         <?php endif; ?>
 
         <?php if (empty($results)): ?>
@@ -192,18 +192,19 @@ $isLiveVoting = (($roundView['round_state'] ?? '') === 'voting') && !mlRoundIsFi
 <?php if (!$isLiveVoting): ?>
 <script>
 (function () {
-    const toggleButton = document.getElementById('toggle-comments');
+    const toggleButton = document.getElementById('toggle-voting');
     if (!toggleButton) {
         return;
     }
 
     let votingHidden = false;
 
-    toggleButton.addEventListener('click', function (e) {
-		e.preventDefault();
+    toggleButton.addEventListener('click', function () {
         votingHidden = !votingHidden;
         document.body.classList.toggle('results-voting-hidden', votingHidden);
-        toggleButton.textContent = votingHidden ? 'Show Voting' : 'Hide Voting';
+        toggleButton.classList.toggle('is-disabled', votingHidden);
+        toggleButton.setAttribute('aria-label', votingHidden ? 'Show voting' : 'Hide voting');
+        toggleButton.setAttribute('title', votingHidden ? 'Show voting' : 'Hide voting');
         toggleButton.setAttribute('aria-pressed', votingHidden ? 'true' : 'false');
     });
 })();
