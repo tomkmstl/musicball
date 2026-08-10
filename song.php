@@ -381,7 +381,7 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
         <?php endif; ?>
 
         <?php if (empty($savedSong)): ?>
-        <section class="admin-panel admin-panel-full song-search-shell">
+        <section class="admin-panel admin-panel-full song-search-shell song-search-shell-primary">
             <div class="song-search-heading">
                 <div>
                     <div class="home-shell-kicker">Spotify search</div>
@@ -397,6 +397,7 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                     </svg>
                 </span>
             </div>
+            <div class="song-search-purpose">Choose your song for the round</div>
 
             <?php if (!$spotifyConfigured): ?>
                 <p>Spotify is not configured in the app yet. Add your Spotify client ID and secret to <code>config/spotify_config.php</code>.</p>
