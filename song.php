@@ -317,6 +317,22 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                 </div>
             </div>
 
+            <form method="post" action="<?= htmlspecialchars(mlUrl('song.php?season_round_id=' . (int)$seasonRoundId)) ?>" class="song-current-pick-actions" id="remove_song_form" hidden>
+                <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
+                <input type="hidden" name="song_action" value="remove_track">
+
+                <div id="remove_song_confirm_panel" class="song-remove-confirm" hidden>
+                    <div class="song-remove-confirm-copy">
+                        <strong>Remove this song?</strong>
+                        <span class="note">You'll need to choose another song before the deadline.</span>
+                    </div>
+                    <div class="song-remove-confirm-actions">
+                        <button type="button" id="cancel_remove_song_button" class="button-secondary">Cancel</button>
+                        <button type="submit" id="confirm_remove_song_button" class="button-primary button-danger">Remove Song</button>
+                    </div>
+                </div>
+            </form>
+
             <?php $commentComposerExpanded = $savedSongComment !== ''; ?>
             <?php if ($roundView['can_choose_song'] || $commentComposerExpanded): ?>
                 <div class="song-comment-composer" data-song-comment-composer>
@@ -362,21 +378,6 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                 </div>
             <?php endif; ?>
 
-            <form method="post" action="<?= htmlspecialchars(mlUrl('song.php?season_round_id=' . (int)$seasonRoundId)) ?>" class="song-current-pick-actions" id="remove_song_form" hidden>
-                <input type="hidden" name="season_round_id" value="<?= (int)$seasonRoundId ?>">
-                <input type="hidden" name="song_action" value="remove_track">
-
-                <div id="remove_song_confirm_panel" class="song-remove-confirm" hidden>
-                    <div class="song-remove-confirm-copy">
-                        <strong>Remove this song?</strong>
-                        <span class="note">You'll need to choose another song before the deadline.</span>
-                    </div>
-                    <div class="song-remove-confirm-actions">
-                        <button type="button" id="cancel_remove_song_button" class="button-secondary">Cancel</button>
-                        <button type="submit" id="confirm_remove_song_button" class="button-primary button-danger">Remove Song</button>
-                    </div>
-                </div>
-            </form>
         </section>
         <?php endif; ?>
 
