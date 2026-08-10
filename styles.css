@@ -1490,26 +1490,35 @@ body.theme-light .admin-swap-dialog::backdrop {
 
 .song-current-pick-panel > .song-selected-card {
     position: relative;
+    padding-top: 44px;
+}
+
+.song-current-pick-media {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: center;
 }
 
 .song-remove-link {
     position: absolute;
-    top: 5px;
-    right: 7px;
-    z-index: 1;
+    top: 0;
+    right: 4px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-width: 44px;
     min-height: 44px;
-    padding: 0 5px;
+    padding: 0 4px;
     border: 0;
     background: transparent;
-    color: var(--muted);
+    color: var(--danger);
     font: inherit;
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 700;
-    text-transform: lowercase;
+    line-height: 1.2;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: color 0.15s ease;
@@ -1521,7 +1530,7 @@ body.theme-light .admin-swap-dialog::backdrop {
 }
 
 .song-remove-link:focus-visible {
-    outline: 2px solid var(--brand);
+    outline: 2px solid var(--danger);
     outline-offset: 1px;
     border-radius: 8px;
 }
@@ -1533,12 +1542,6 @@ body.theme-light .admin-swap-dialog::backdrop {
 
 .song-remove-link[hidden] {
     display: none;
-}
-
-@media (min-width: 701px) {
-    .song-current-pick-panel > .song-selected-card {
-        padding-right: 82px;
-    }
 }
 
 .song-remove-confirm {

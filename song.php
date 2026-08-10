@@ -303,12 +303,14 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
         <section class="admin-panel admin-panel-full song-current-pick-panel">
             <div class="home-shell-kicker">Your current pick</div>
             <div class="song-selected-card">
-                <button type="button" id="show_remove_song_confirm_button" class="song-remove-link" aria-controls="remove_song_confirm_panel" aria-expanded="false" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>>remove</button>
-                <?php if (trim((string)$savedSong['artwork']) !== ''): ?>
-                    <img src="<?= htmlspecialchars($savedSong['artwork']) ?>" alt="Album art" class="song-artwork-large">
-                <?php else: ?>
-                    <div class="song-artwork-large song-artwork-fallback" aria-hidden="true"></div>
-                <?php endif; ?>
+                <div class="song-current-pick-media">
+                    <button type="button" id="show_remove_song_confirm_button" class="song-remove-link" aria-controls="remove_song_confirm_panel" aria-expanded="false" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>>remove</button>
+                    <?php if (trim((string)$savedSong['artwork']) !== ''): ?>
+                        <img src="<?= htmlspecialchars($savedSong['artwork']) ?>" alt="Album art" class="song-artwork-large">
+                    <?php else: ?>
+                        <div class="song-artwork-large song-artwork-fallback" aria-hidden="true"></div>
+                    <?php endif; ?>
+                </div>
                 <div>
                     <div class="song-card-title"><?= htmlspecialchars($savedSong['title']) ?></div>
                     <div class="song-card-meta"><?= htmlspecialchars($savedSong['artist']) ?> &middot; <?= htmlspecialchars($savedSong['album']) ?></div>
@@ -378,6 +380,7 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
         </section>
         <?php endif; ?>
 
+        <?php if (empty($savedSong)): ?>
         <section class="admin-panel admin-panel-full song-search-shell">
             <div class="home-shell-kicker">Spotify search</div>
             <h2>Find a song</h2>
@@ -442,6 +445,7 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                 </form>
             <?php endif; ?>
         </section>
+        <?php endif; ?>
 
         <?php require __DIR__ . '/gameplay/league/past-picks.php'; ?>
     </div>
