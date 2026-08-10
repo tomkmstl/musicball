@@ -2374,11 +2374,13 @@ body.theme-light .vote-comment-input-modern:focus {
     right: 12px;
     z-index: 1;
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
-    padding: 8px;
+    gap: 0;
+    width: 52px;
+    min-height: 48px;
+    padding: 3px 4px;
     border: 0;
     border-radius: 10px;
     background: transparent;
@@ -2389,7 +2391,7 @@ body.theme-light .vote-comment-input-modern:focus {
 }
 
 .results-voting-toggle + .game-page-intro {
-    padding-right: 48px;
+    padding-right: 56px;
 }
 
 .results-voting-toggle-icon,
@@ -2402,6 +2404,13 @@ body.theme-light .vote-comment-input-modern:focus {
 .results-voting-toggle-icon svg {
     fill: none;
     stroke: currentColor;
+}
+
+.results-voting-toggle-label {
+    margin-top: -1px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    line-height: 1;
 }
 
 .results-voting-toggle:hover:not(.is-disabled) {

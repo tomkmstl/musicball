@@ -37,6 +37,7 @@ $isLiveVoting = (($roundView['round_state'] ?? '') === 'voting') && !mlRoundIsFi
                 <span class="results-voting-toggle-icon" aria-hidden="true">
                     <?php readfile(__DIR__ . '/assets/icons/vote.svg'); ?>
                 </span>
+                <span class="results-voting-toggle-label" aria-hidden="true">Hide</span>
             </button>
         <?php endif; ?>
 
@@ -203,6 +204,10 @@ $isLiveVoting = (($roundView['round_state'] ?? '') === 'voting') && !mlRoundIsFi
         votingHidden = !votingHidden;
         document.body.classList.toggle('results-voting-hidden', votingHidden);
         toggleButton.classList.toggle('is-disabled', votingHidden);
+        const toggleLabel = toggleButton.querySelector('.results-voting-toggle-label');
+        if (toggleLabel) {
+            toggleLabel.textContent = votingHidden ? 'Show' : 'Hide';
+        }
         toggleButton.setAttribute('aria-label', votingHidden ? 'Show voting' : 'Hide voting');
         toggleButton.setAttribute('title', votingHidden ? 'Show voting' : 'Hide voting');
         toggleButton.setAttribute('aria-pressed', votingHidden ? 'true' : 'false');
