@@ -10,9 +10,7 @@
     <div class="status-banner <?= $statusType === 'success' ? 'success' : 'error' ?>"><?= htmlspecialchars($statusMessage) ?></div>
 <?php endif; ?>
 
-<?php $showLeaguePastPicksIcon = true; ?>
 <?php require __DIR__ . '/past-picks.php'; ?>
-<?php unset($showLeaguePastPicksIcon); ?>
 
 <section class="library-playlists" aria-labelledby="league-library-playlists-title">
     <div class="playlist-section-heading-wrap library-section-heading">

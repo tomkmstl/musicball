@@ -202,6 +202,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    if (searchSubmit) {
+        searchSubmit.addEventListener('click', function () {
+            window.clearTimeout(debounceTimer);
+            runSearch();
+            searchInput.focus();
+        });
+    }
+
     if (confirmButton) {
         confirmButton.addEventListener('click', function () {
             if (!trackIdField.value || !trackUriField.value || !trackTitleField.value || !trackArtistField.value) {
