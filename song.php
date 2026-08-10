@@ -368,7 +368,6 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
                             <textarea name="song_comment" id="saved_song_comment" class="vote-comment-input song-comment-input" rows="4" maxlength="1000" placeholder="Why this song?" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>><?= htmlspecialchars($savedSongComment) ?></textarea>
                             <div class="song-comment-editor-footer">
                                 <div class="song-comment-editor-meta">
-                                    <span class="song-comment-quote" aria-hidden="true">&ldquo;</span>
                                     <span data-song-comment-count>0 / 1000</span>
                                 </div>
                                 <button type="submit" class="button-primary song-comment-save-button" <?= !$roundView['can_choose_song'] ? 'disabled' : '' ?>>Save</button>
