@@ -7,6 +7,8 @@ if (!$showHeader) {
     return;
 }
 
+require_once __DIR__ . '/integrations/spotify/client.php';
+
 $currentPage = isset($currentPage) ? (string)$currentPage : '';
 $headerScriptName = basename((string)($_SERVER['PHP_SELF'] ?? ''));
 $headerActivePrimaryPage = '';
@@ -18,6 +20,11 @@ if ($headerScriptName === 'season.php') {
 $headerUserId = isset($_SESSION['UserID']) ? (int)$_SESSION['UserID'] : (isset($_SESSION['ml_user_id']) ? (int)$_SESSION['ml_user_id'] : 0);
 $isAdminUser = mlIsAdminUserId($pdo, $headerUserId);
 $mlIsQaMode = function_exists('mlIsQaMode') && mlIsQaMode();
+$headerSpotifyPlaylistNeedsAttention = false;
+if ($isAdminUser && !$mlIsQaMode && mlSpotifyAppConfigured()) {
+    $headerSpotifyConnection = mlSpotifyConnectionSummary($pdo);
+    $headerSpotifyPlaylistNeedsAttention = empty($headerSpotifyConnection['is_connected']);
+}
 $showAdminBanner = !$mlIsQaMode && $headerScriptName === 'admin.php';
 $nextSeasonImageSrc = 'assets/images/navigation/next_season.png';
 $nextSeasonImagePath = __DIR__ . '/assets/images/navigation/next_season.png';
@@ -64,6 +71,12 @@ if ($headerNextSeason) {
 <?php if ($showAdminBanner): ?>
     <div class="ml-admin-tools-banner" style="background:#12324f;color:#fff;padding:10px 14px;text-align:center;font-weight:700;letter-spacing:.02em;">
         ADMIN &nbsp;|&nbsp; <a href="<?= htmlspecialchars(mlUrl('season.php?testing=live')) ?>" style="color:#fff;text-decoration:underline;">Return Home</a>
+    </div>
+<?php endif; ?>
+<?php if ($headerSpotifyPlaylistNeedsAttention): ?>
+    <div role="alert" style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;background:#8f1d2c;color:#fff;padding:12px 16px;text-align:center;font-weight:700;">
+        <span><strong>Spotify action required:</strong> Song choices will keep working, but playlists will not generate until Spotify is reconnected.</span>
+        <a href="<?= htmlspecialchars(mlUrl('integrations/spotify/connect.php')) ?>" style="display:inline-flex;align-items:center;min-height:40px;padding:8px 14px;border:2px solid #fff;border-radius:9px;color:#fff;text-decoration:none;">Reconnect Spotify</a>
     </div>
 <?php endif; ?>
 <header class="mb-header">

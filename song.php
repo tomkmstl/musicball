@@ -170,7 +170,6 @@ $savedSong = mlGetRoundSongDraft($pdo, $currentUserId, (int)$round['SeasonID'], 
 $roundView['song_draft'] = $savedSong;
 $roundView['song_saved'] = !empty($savedSong);
 $spotifyConfigured = mlSpotifyAppConfigured();
-$spotifyConnected = $spotifyConfigured && mlSpotifyIsConnected($pdo);
 $savedSongComment = trim((string)($savedSong['comment'] ?? ''));
 $hasPendingHistoricalDuplicate = !empty($pendingDuplicateTrack) && is_array($pendingDuplicateMatch);
 $hasPendingArtistSeasonDuplicate = is_array($pendingArtistSeasonMatch) && !empty($pendingArtistSeasonMatch);
@@ -401,8 +400,6 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
 
             <?php if (!$spotifyConfigured): ?>
                 <p>Spotify is not configured in the app yet. Add your Spotify client ID and secret to <code>config/spotify_config.php</code>.</p>
-            <?php elseif (!$spotifyConnected): ?>
-                <p>Spotify is not connected yet. Ask the admin to connect the playlist account in Settings before searching.</p>
             <?php else: ?>
                 <?php if (!empty($roundView['submission_closed'])): ?>
                     <p>Songs Due has passed. Song changes are closed while Musicball waits for the playlist to be generated.</p>
@@ -470,7 +467,7 @@ $hasPendingWarnings = $hasPendingHistoricalDuplicate || $hasPendingArtistSeasonD
         <?php require __DIR__ . '/gameplay/league/past-picks.php'; ?>
     </div>
 </div>
-<?php if ($spotifyConfigured && $spotifyConnected && $roundView['can_choose_song']): ?>
+<?php if ($spotifyConfigured && $roundView['can_choose_song']): ?>
     <script>
     (function () {
         var visibleComment = document.getElementById('saved_song_comment');

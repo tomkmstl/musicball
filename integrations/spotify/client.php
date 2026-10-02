@@ -298,6 +298,60 @@ function mlSpotifyExchangeCodeForToken(PDO $pdo, string $code): array
     return mlSpotifyStoreTokenRow($pdo, $payload, $profile);
 }
 
+function mlSpotifyGetCatalogAccessToken(): string
+{
+    $cachedToken = trim((string)($_SESSION['ml_spotify_catalog_access_token'] ?? ''));
+    $cachedExpiresAt = (int)($_SESSION['ml_spotify_catalog_token_expires_at'] ?? 0);
+    if ($cachedToken !== '' && $cachedExpiresAt > time() + 30) {
+        return $cachedToken;
+    }
+
+    if (!mlSpotifyAppConfigured()) {
+        throw new RuntimeException('Spotify song search is not configured yet.');
+    }
+
+    $config = mlSpotifyConfig();
+    $authHeader = base64_encode($config['client_id'] . ':' . $config['client_secret']);
+    $response = mlSpotifyHttpRequest('POST', 'https://accounts.spotify.com/api/token', [
+        'Authorization' => 'Basic ' . $authHeader,
+        'Content-Type' => 'application/x-www-form-urlencoded',
+    ], [
+        'grant_type' => 'client_credentials',
+    ], true);
+
+    $payload = is_array($response['body']) ? $response['body'] : [];
+    $accessToken = trim((string)($payload['access_token'] ?? ''));
+    if ($response['status_code'] < 200 || $response['status_code'] >= 300 || $accessToken === '') {
+        throw new RuntimeException('Spotify song search is temporarily unavailable. Please try again shortly.');
+    }
+
+    $expiresIn = max(1, (int)($payload['expires_in'] ?? 3600));
+    $_SESSION['ml_spotify_catalog_access_token'] = $accessToken;
+    $_SESSION['ml_spotify_catalog_token_expires_at'] = time() + $expiresIn - 60;
+
+    return $accessToken;
+}
+
+function mlSpotifyCatalogApiRequest(string $method, string $endpoint, array $query = [], bool $retryOnUnauthorized = true): array
+{
+    $accessToken = mlSpotifyGetCatalogAccessToken();
+    $url = 'https://api.spotify.com/v1' . $endpoint;
+    if (!empty($query)) {
+        $url .= (strpos($url, '?') === false ? '?' : '&') . http_build_query($query);
+    }
+
+    $response = mlSpotifyHttpRequest($method, $url, [
+        'Authorization' => 'Bearer ' . $accessToken,
+    ]);
+
+    if ($response['status_code'] === 401 && $retryOnUnauthorized) {
+        unset($_SESSION['ml_spotify_catalog_access_token'], $_SESSION['ml_spotify_catalog_token_expires_at']);
+        return mlSpotifyCatalogApiRequest($method, $endpoint, $query, false);
+    }
+
+    return $response;
+}
+
 function mlSpotifyRefreshAccessToken(PDO $pdo): array
 {
     $existing = mlSpotifyConnectionRow($pdo);
@@ -321,6 +375,12 @@ function mlSpotifyRefreshAccessToken(PDO $pdo): array
     ], true);
 
     if ($response['status_code'] < 200 || $response['status_code'] >= 300) {
+        $errorCode = strtolower(trim((string)($response['body']['error'] ?? '')));
+        if ($errorCode === 'invalid_grant') {
+            mlSpotifyDisconnect($pdo);
+            throw new RuntimeException('Spotify authorization has expired. Ask the admin to reconnect Spotify in Admin, then try again.');
+        }
+
         $message = trim((string)($response['body']['error_description'] ?? $response['body']['error'] ?? 'Spotify token refresh failed.'));
         throw new RuntimeException($message);
     }
@@ -463,7 +523,7 @@ function mlSpotifyGetTrackById(PDO $pdo, string $trackId): ?array
         return null;
     }
 
-    $response = mlSpotifyApiRequest($pdo, 'GET', '/tracks/' . rawurlencode($trackId), [], []);
+    $response = mlSpotifyCatalogApiRequest('GET', '/tracks/' . rawurlencode($trackId));
     if ($response['status_code'] < 200 || $response['status_code'] >= 300 || !is_array($response['body'])) {
         return null;
     }
@@ -487,12 +547,12 @@ function mlSpotifySearchTracks(PDO $pdo, string $query, int $limit = 8): array
     $config = mlSpotifyConfig();
     $limit = max(1, min(10, $limit > 0 ? $limit : (int)$config['search_limit']));
 
-    $response = mlSpotifyApiRequest($pdo, 'GET', '/search', [
+    $response = mlSpotifyCatalogApiRequest('GET', '/search', [
         'q' => $query,
         'type' => 'track',
         'limit' => $limit,
         'market' => $config['default_market'],
-    ], []);
+    ]);
 
     if ($response['status_code'] < 200 || $response['status_code'] >= 300) {
         $message = trim((string)($response['body']['error']['message'] ?? 'Spotify search failed.'));
@@ -524,6 +584,21 @@ function mlSpotifyConnectionSummary(PDO $pdo): array
             'spotify_user_id' => '',
             'updated_at' => '',
         ];
+    }
+
+    try {
+        mlSpotifyGetValidAccessToken($pdo);
+        $row = mlSpotifyConnectionRow($pdo) ?? $row;
+    } catch (Throwable $e) {
+        $row = mlSpotifyConnectionRow($pdo);
+        if (!is_array($row)) {
+            return [
+                'is_connected' => false,
+                'display_name' => '',
+                'spotify_user_id' => '',
+                'updated_at' => '',
+            ];
+        }
     }
 
     return [

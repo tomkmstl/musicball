@@ -39,7 +39,6 @@ foreach ($seasonRows as $seasonRow) {
 }
 
 $spotifyConfigured = mlSpotifyAppConfigured();
-$spotifyConnected = $spotifyConfigured && mlSpotifyIsConnected($pdo);
 $message = '';
 $error = '';
 $checkResult = null;
@@ -160,8 +159,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['song_test_action']) &
             <h2>Find a song</h2>
             <?php if (!$spotifyConfigured): ?>
                 <p>Spotify is not configured in the app yet. Add your Spotify client ID and secret to <code>config/spotify_config.php</code>.</p>
-            <?php elseif (!$spotifyConnected): ?>
-                <p>Spotify is not connected yet. Ask the admin to connect the playlist account in Settings before searching.</p>
             <?php else: ?>
                 <p>Search Spotify and click a result to run the duplicate test. This page does not save anything.</p>
                 <div class="song-search-form-live">
@@ -220,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['song_test_action']) &
         <?php endif; ?>
     </div>
 </div>
-<?php if ($spotifyConfigured && $spotifyConnected): ?>
+<?php if ($spotifyConfigured): ?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var searchInput = document.getElementById('song_query');
