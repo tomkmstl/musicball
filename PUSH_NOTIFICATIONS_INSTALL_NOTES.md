@@ -1,0 +1,64 @@
+# Push notification setup
+
+Musicball's push notifications include personalized advance reminders and deadline notices for unfinished song submissions and voting, plus admin-only gameplay alerts for automatic playlist and voting timing fallbacks. In `Wait for everyone`, an incomplete player is told that the phase remains actionable after the deadline and receives a separate closed notice if the phase later advances while they are still incomplete.
+
+## Server requirements
+
+- PHP 8.2 or newer with `curl`, `mbstring`, and `openssl`
+- HTTPS
+- Composer dependencies installed with `composer install --no-dev --optimize-autoloader`
+- A scheduler that can run PHP every 15 minutes
+
+## Database setup
+
+Run `push_notifications_setup.sql` against each target database. It creates separate live and QA subscription and delivery tables. QA subscriptions start empty and must never be populated by copying live subscription rows.
+
+## VAPID configuration
+
+Generate one VAPID key pair using the included one-time setup command. Keep the pair stable; changing it invalidates existing browser subscriptions.
+
+For QA-only configuration:
+
+```text
+php push_configure.php --enable-qa
+```
+
+For the live application:
+
+```text
+php push_configure.php --enable-live
+```
+
+The command creates the ignored `config/push_secrets.php` file and refuses to overwrite an existing key pair. It never prints either key.
+
+Provide these values through environment variables:
+
+- `MUSICBALL_PUSH_ENABLED=1`
+- `MUSICBALL_PUSH_QA_ENABLED=1` only where QA push testing is desired
+- `MUSICBALL_PUSH_VAPID_PUBLIC_KEY`
+- `MUSICBALL_PUSH_VAPID_PRIVATE_KEY`
+- `MUSICBALL_PUSH_VAPID_SUBJECT=https://musicball.net`
+
+For manually managed local configuration, the same values may be defined with `_LOCAL` appended to their names in the ignored `config/push_secrets.php` file.
+
+## Scheduler
+
+Run live reminders every 15 minutes:
+
+```text
+php /path/to/musicball/push_scheduler.php --mode=live
+```
+
+QA is always explicit and uses only QA tables:
+
+```text
+php /path/to/musicball/push_scheduler.php --mode=qa
+```
+
+Add `--dry-run` to either command to count eligible device reminders without sending or recording them.
+
+The reminder scheduler checks a 30-minute lookback window for deadlines. With the 15-minute cron cadence, this delivers one deduplicated deadline notice to each subscribed player who is still incomplete without replaying stale notices after an extended scheduler outage. `Build at Songs Due` sends the closed notice at the deadline. `Wait for everyone` sends the actionable missed-deadline notice first, then the playlist/finalization transition sends the closed notice if needed. Shared delivery keys prevent the deadline and transition paths from sending the same closed notice twice.
+
+The QA Tools push tester is a server-side admin broadcast. An authenticated admin can run it from a desktop browser, and the selected test is delivered once to every unique active admin endpoint found in live or QA push data; the desktop browser does not need to be subscribed.
+
+The playlist scheduler also advances gameplay phases and uses the shared push service for timing fallbacks. In `Wait for everyone`, song submissions fall back 12 hours before Votes Due, while voting falls back 12 hours before the following round's Songs Due. With partial participation, the scheduler changes the league to `Build at Songs Due`, advances with the available work, and alerts subscribed admin devices. Push delivery is best-effort and never blocks the setting change or phase transition.

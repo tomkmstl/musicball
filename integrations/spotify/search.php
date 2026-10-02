@@ -20,10 +20,6 @@ try {
         throw new RuntimeException('Spotify has not been configured in the app yet.');
     }
 
-    if (!mlSpotifyIsConnected($pdo)) {
-        throw new RuntimeException('Spotify is not connected yet. Ask the admin to connect the playlist account in Settings.');
-    }
-
     $tracks = mlSpotifySearchTracks($pdo, $query, 8);
 
     echo json_encode([

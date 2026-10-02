@@ -591,7 +591,7 @@ $adminDbName = ($adminEnvName === 'dev') ? 'musicball_future' : (($adminEnvName 
                     <div class="home-shell-kicker">Spotify</div>
                     <h2>Playlist Account</h2>
                     <p>
-                        Connect the single Spotify account Musicball uses for song search and playlist generation. This is now an admin-only function.
+                        Connect the Spotify account Musicball uses for playlist generation. Song search stays available if this account needs to be reauthorized.
                     </p>
 
                     <?php if (!$spotifyConfigured): ?>
